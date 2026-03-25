@@ -6,6 +6,7 @@
 //! (compatible with the Xilem licence).
 
 //! Tree widget demo.
+//! HINT: This is just a sketch. Ti will be moved into the lib later.
 
 use masonry::layout::AsUnit;
 use xilem::masonry::properties::Padding;
