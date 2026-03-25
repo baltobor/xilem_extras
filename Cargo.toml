@@ -1,0 +1,19 @@
+[package]
+name = "xilem_extras"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "High-level widget library for xilem: Tree, List, Table, and Popup widgets with SwiftUI-inspired APIs"
+
+[dependencies]
+xilem = { git = "https://github.com/linebender/xilem", branch = "main" }
+masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
+tracing = "0.1"
+smallvec = "1"
+
+[dev-dependencies]
+xilem_material_icons = { git = "https://github.com/baltobor/xilem_material_icons", branch = "main" }
+
+[[example]]
+name = "gallery"
+path = "examples/gallery/src/main.rs"
