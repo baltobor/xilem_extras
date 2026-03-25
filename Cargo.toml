@@ -1,6 +1,6 @@
 [package]
 name = "xilem_extras"
-version = "0.1.0"
+version = "0.0.2"
 edition = "2024"
 license = "Apache-2.0"
 description = "High-level widget library for xilem: Tree, List, Table, and Popup widgets with SwiftUI-inspired APIs"

@@ -246,11 +246,7 @@ pub fn mock_cyclists() -> Vec<Cyclist> {
     ]
 }
 
-// Legacy alias for compatibility
-pub type Employee = Cyclist;
-pub fn mock_employees() -> Vec<Cyclist> {
-    mock_cyclists()
-}
+
 
 #[cfg(test)]
 mod tests {

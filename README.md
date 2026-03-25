@@ -127,11 +127,10 @@ menu_button(
 )
 ```
 
-## Technical Details
+## Compatibility
 
 - **Compatibility**: Xilem main branch (git)
-- **License**: Apache-2.0
-- **Platform**: Tested on macOS
+- **Platforms**: Tested on macOS Tahoe 26.3.1
 
 ## Just Commands
 
