@@ -10,7 +10,7 @@
 use masonry::layout::AsUnit;
 use xilem::masonry::vello::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{button, flex_col, flex_row, label, portal, FlexExt as _};
+use xilem::view::{button, flex_col, flex_row, label, portal};
 use xilem::WidgetView;
 
 use xilem_extras::{TabBar, TabBarColors, TabItem};
