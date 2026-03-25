@@ -30,6 +30,8 @@ Or directly:
 cargo run --example gallery
 ```
 
+<img width="654" height="496" alt="xilem_extras_gallery" src="https://github.com/user-attachments/assets/70053df6-ca28-4d39-9a97-93f77bd3f15d" />
+
 ## Core Traits
 
 The library uses trait-based design for flexibility:
