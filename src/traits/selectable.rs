@@ -53,6 +53,30 @@ impl SelectionModifiers {
         shift: true,
         alt: false,
     };
+
+    /// Create from masonry's Modifiers type.
+    ///
+    /// Maps Cmd (macOS) or Ctrl (Windows/Linux) to `command`.
+    #[cfg(target_os = "macos")]
+    pub fn from_modifiers(modifiers: xilem::masonry::core::Modifiers) -> Self {
+        Self {
+            command: modifiers.meta(),
+            shift: modifiers.shift(),
+            alt: modifiers.alt(),
+        }
+    }
+
+    /// Create from masonry's Modifiers type.
+    ///
+    /// Maps Cmd (macOS) or Ctrl (Windows/Linux) to `command`.
+    #[cfg(not(target_os = "macos"))]
+    pub fn from_modifiers(modifiers: xilem::masonry::core::Modifiers) -> Self {
+        Self {
+            command: modifiers.ctrl(),
+            shift: modifiers.shift(),
+            alt: modifiers.alt(),
+        }
+    }
 }
 
 /// Strategy trait for managing selection state.

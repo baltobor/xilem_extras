@@ -72,10 +72,12 @@ let filtered = sort_order.filter_sorted(&cyclists, |c| c.joy_level >= 8);
 
 ## Examples
 
-### Row Button with Selection
+### Row Button with Multi-Selection
+
+Use `row_button_with_modifiers` to capture Cmd/Ctrl+Click for multi-selection:
 
 ```rust
-use xilem_extras::{row_button, SelectionState, SelectionModifiers};
+use xilem_extras::{row_button_with_modifiers, SelectionState, SelectionModifiers};
 
 fn contact_row(contact: &Contact, selected: bool) -> impl WidgetView<AppModel> {
     let id = contact.id;
@@ -84,8 +86,11 @@ fn contact_row(contact: &Contact, selected: bool) -> impl WidgetView<AppModel> {
         label(contact.email.clone()),
     ));
 
-    row_button(row, move |model: &mut AppModel| {
-        model.selection.select(id, SelectionModifiers::NONE);
+    row_button_with_modifiers(row, move |model: &mut AppModel, modifiers| {
+        // Convert platform modifiers to SelectionModifiers
+        // (Cmd on macOS, Ctrl on Windows/Linux)
+        let sel_mods = SelectionModifiers::from_modifiers(modifiers);
+        model.selection.select(id, sel_mods);
     })
     .hover_bg(BG_HOVER)
     .background_color(if selected { BG_SELECTED } else { Color::TRANSPARENT })

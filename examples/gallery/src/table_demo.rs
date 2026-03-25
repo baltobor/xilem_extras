@@ -15,7 +15,7 @@ use xilem::WidgetView;
 
 use xilem_extras::{
     SelectionState, SelectionModifiers, SortOrder, SortDirection,
-    row_button, resizable_header,
+    row_button, row_button_with_modifiers, resizable_header,
 };
 use xilem_extras::components::icon::{icons, MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
 
@@ -113,8 +113,14 @@ fn cyclist_row<'a>(
     .gap(0.px());
 
     sized_box(
-        row_button(row, move |model: &mut AppModel| {
-            model.table_selection.select(id, SelectionModifiers::NONE);
+        row_button_with_modifiers(row, move |model: &mut AppModel, modifiers| {
+            // Store modifier state for UI feedback
+            model.last_click_mods = format!(
+                "meta={}, ctrl={}, shift={}, alt={}",
+                modifiers.meta(), modifiers.ctrl(), modifiers.shift(), modifiers.alt()
+            );
+            let sel_mods = SelectionModifiers::from_modifiers(modifiers);
+            model.table_selection.select(id, sel_mods);
         })
         .hover_bg(BG_HOVER)
         .background_color(row_bg)
@@ -125,6 +131,10 @@ fn cyclist_row<'a>(
 pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     // Sort the data
     let sorted_cyclists = model.table_sort.sorted(&model.cyclists);
+
+    // Update selection item order for shift+click range selection
+    let sorted_ids: Vec<u64> = sorted_cyclists.iter().map(|c| c.id).collect();
+    model.table_selection.set_items(sorted_ids);
 
     // Get column widths
     let name_w = model.table_column_widths.get("name");
@@ -197,24 +207,31 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         .gap(0.px()),
 
         // Info and actions
-        flex_row((
-            label(format!(
-                "Sort: {} {}",
-                model.table_sort.primary_column().unwrap_or("none"),
-                match model.table_sort.direction() {
-                    Some(SortDirection::Ascending) => "(asc)",
-                    Some(SortDirection::Descending) => "(desc)",
-                    None => "",
-                }
-            ))
-            .text_size(12.0)
-            .color(TEXT_SECONDARY),
+        flex_col((
+            flex_row((
+                label(format!(
+                    "Sort: {} {}",
+                    model.table_sort.primary_column().unwrap_or("none"),
+                    match model.table_sort.direction() {
+                        Some(SortDirection::Ascending) => "(asc)",
+                        Some(SortDirection::Descending) => "(desc)",
+                        None => "",
+                    }
+                ))
+                .text_size(12.0)
+                .color(TEXT_SECONDARY),
 
-            label(format!("Selected: {} cyclists", model.table_selection.count()))
+                label(format!("Selected: {} cyclists", model.table_selection.count()))
+                    .text_size(12.0)
+                    .color(TEXT_SECONDARY),
+            ))
+            .gap(16.px()),
+
+            label(format!("Last click modifiers: {}", model.last_click_mods))
                 .text_size(12.0)
                 .color(TEXT_SECONDARY),
         ))
-        .gap(16.px()),
+        .gap(4.px()),
 
         flex_row((
             button(label("Clear Sort"), |model: &mut AppModel| {

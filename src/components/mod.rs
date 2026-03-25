@@ -10,5 +10,5 @@ mod row_button;
 mod disclosure;
 
 pub use icon::{icon, icon_sm, icon_md, icon_lg, Icon};
-pub use row_button::{row_button, row_button_with_clicks, RowButtonView};
+pub use row_button::{row_button, row_button_with_clicks, row_button_with_modifiers, RowButtonView};
 pub use disclosure::{disclosure, Disclosure};

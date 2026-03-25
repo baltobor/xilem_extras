@@ -44,6 +44,7 @@ pub struct AppModel {
     pub table_selection: MultiSelection<u64>,
     pub table_sort: SortOrder,
     pub table_column_widths: ColumnWidths,
+    pub last_click_mods: String,
 
     // Tabs demo state
     pub demo_tabs: Vec<DemoTab>,
@@ -80,6 +81,7 @@ impl AppModel {
                 ("distance_km", 80.0),
                 ("joy_level", 60.0),
             ]),
+            last_click_mods: "(click a row)".to_string(),
 
             // Tabs
             demo_tabs: create_demo_tabs(),

@@ -80,6 +80,7 @@ pub use components::{
     Icon,
     row_button,
     row_button_with_clicks,
+    row_button_with_modifiers,
     RowButtonView,
     disclosure,
     Disclosure,

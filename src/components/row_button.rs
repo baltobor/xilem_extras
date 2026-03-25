@@ -18,9 +18,9 @@ use xilem::masonry::vello::peniko::{Color, Fill};
 use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget, PaintCtx,
-    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update,
-    UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, Modifiers, NewWidget,
+    PaintCtx, PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx,
+    TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::layout::{LenReq, LayoutSize, SizeDef};
 use xilem::masonry::properties::Background;
@@ -30,10 +30,11 @@ use xilem::{Pod, ViewCtx, WidgetView};
 const CHILD_VIEW_ID: ViewId = ViewId::new(0);
 
 /// Action emitted when a row button is pressed.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct RowButtonPress {
     pub button: Option<PointerButton>,
     pub click_count: u8,
+    pub modifiers: Modifiers,
 }
 
 /// A button widget designed for list/tree rows.
@@ -47,6 +48,7 @@ pub struct RowButton {
     child: WidgetPod<dyn Widget>,
     hover_bg: Color,
     click_count: u8,
+    modifiers: Modifiers,
     size: Size,
 }
 
@@ -56,6 +58,7 @@ impl RowButton {
             child: child.erased().to_pod(),
             hover_bg: Color::TRANSPARENT,
             click_count: 0,
+            modifiers: Modifiers::default(),
             size: Size::ZERO,
         }
     }
@@ -87,16 +90,18 @@ impl Widget for RowButton {
         match event {
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 self.click_count = state.count as u8;
+                // Capture modifiers at click time (they may be released before Up)
+                self.modifiers = state.modifiers;
                 ctx.request_focus();
                 ctx.capture_pointer();
                 ctx.request_render();
             }
-            PointerEvent::Up(PointerButtonEvent { button, state, .. }) => {
+            PointerEvent::Up(PointerButtonEvent { button, .. }) => {
                 if ctx.is_active() && ctx.is_hovered() {
-                    let count = state.count as u8;
                     ctx.submit_action::<Self::Action>(RowButtonPress {
                         button: *button,
-                        click_count: count,
+                        click_count: self.click_count,
+                        modifiers: self.modifiers,
                     });
                 }
                 ctx.request_render();
@@ -119,6 +124,7 @@ impl Widget for RowButton {
                     ctx.submit_action::<Self::Action>(RowButtonPress {
                         button: None,
                         click_count: 1,
+                        modifiers: event.modifiers,
                     });
                 }
             }
@@ -136,6 +142,7 @@ impl Widget for RowButton {
             ctx.submit_action::<Self::Action>(RowButtonPress {
                 button: None,
                 click_count: 1,
+                modifiers: Modifiers::default(),
             });
         }
     }
@@ -264,12 +271,12 @@ pub fn row_button<State: 'static, Action: 'static, V: WidgetView<State, Action>>
     child: V,
     callback: impl Fn(&mut State) -> Action + Send + Sync + 'static,
 ) -> RowButtonView<
-    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8) -> MessageResult<Action> + Send + 'static,
+    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + 'static,
     V,
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, button: Option<PointerButton>, _click_count: u8| {
+        callback: move |state: &mut State, button: Option<PointerButton>, _click_count: u8, _modifiers: Modifiers| {
             match button {
                 None | Some(PointerButton::Primary) => MessageResult::Action(callback(state)),
                 _ => MessageResult::Nop,
@@ -285,15 +292,43 @@ pub fn row_button_with_clicks<State: 'static, Action: 'static, V: WidgetView<Sta
     child: V,
     callback: impl Fn(&mut State, u8) -> Action + Send + Sync + 'static,
 ) -> RowButtonView<
-    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8) -> MessageResult<Action> + Send + 'static,
+    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + 'static,
     V,
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, button: Option<PointerButton>, click_count: u8| {
+        callback: move |state: &mut State, button: Option<PointerButton>, click_count: u8, _modifiers: Modifiers| {
             match button {
                 None | Some(PointerButton::Primary) => {
                     MessageResult::Action(callback(state, click_count))
+                }
+                _ => MessageResult::Nop,
+            }
+        },
+        hover_bg: Color::TRANSPARENT,
+        disabled: false,
+    }
+}
+
+/// Create a row button that receives keyboard modifiers (for Cmd+click, Shift+click, etc.).
+///
+/// This is useful for implementing multi-selection where:
+/// - No modifiers: replace selection
+/// - Cmd/Ctrl: toggle individual item
+/// - Shift: extend selection range
+pub fn row_button_with_modifiers<State: 'static, Action: 'static, V: WidgetView<State, Action>>(
+    child: V,
+    callback: impl Fn(&mut State, Modifiers) -> Action + Send + Sync + 'static,
+) -> RowButtonView<
+    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + 'static,
+    V,
+> {
+    RowButtonView {
+        child,
+        callback: move |state: &mut State, button: Option<PointerButton>, _click_count: u8, modifiers: Modifiers| {
+            match button {
+                None | Some(PointerButton::Primary) => {
+                    MessageResult::Action(callback(state, modifiers))
                 }
                 _ => MessageResult::Nop,
             }
@@ -322,7 +357,7 @@ impl<F, V> ViewMarker for RowButtonView<F, V> {}
 impl<F, V, State, Action> View<State, Action, ViewCtx> for RowButtonView<F, V>
 where
     V: WidgetView<State, Action>,
-    F: Fn(&mut State, Option<PointerButton>, u8) -> MessageResult<Action> + Send + Sync + 'static,
+    F: Fn(&mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + Sync + 'static,
     State: 'static,
     Action: 'static,
 {
@@ -401,7 +436,7 @@ where
                 app_state,
             ),
             None => match message.take_message::<RowButtonPress>() {
-                Some(press) => (self.callback)(app_state, press.button, press.click_count),
+                Some(press) => (self.callback)(app_state, press.button, press.click_count, press.modifiers),
                 None => MessageResult::Stale,
             },
             _ => MessageResult::Stale,

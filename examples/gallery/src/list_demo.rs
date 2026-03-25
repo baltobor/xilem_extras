@@ -13,7 +13,7 @@ use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button, portal};
 use xilem::WidgetView;
 
-use xilem_extras::{SelectionState, SelectionModifiers, row_button};
+use xilem_extras::{SelectionState, SelectionModifiers, row_button_with_modifiers};
 use xilem_extras::components::icon::{MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
 use xilem_material_icons::icons;
 
@@ -51,15 +51,19 @@ fn contact_row(contact: &Contact, is_selected: bool) -> impl WidgetView<AppModel
     .gap(8.px())
     .padding(8.0);
 
-    row_button(row, move |model: &mut AppModel| {
-        // Single click replaces selection, Cmd+click toggles (handled by MultiSelection)
-        model.list_selection.select(id, SelectionModifiers::NONE);
+    row_button_with_modifiers(row, move |model: &mut AppModel, modifiers| {
+        let sel_mods = SelectionModifiers::from_modifiers(modifiers);
+        model.list_selection.select(id, sel_mods);
     })
     .hover_bg(BG_HOVER)
     .background_color(row_bg)
 }
 
 pub fn list_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
+    // Update selection item order for shift+click range selection
+    let contact_ids: Vec<u64> = model.contacts.iter().map(|c| c.id).collect();
+    model.list_selection.set_items(contact_ids);
+
     // Build all contact rows
     let rows: Vec<_> = model.contacts.iter().map(|contact| {
         let is_selected = model.list_selection.is_selected(&contact.id);

@@ -45,6 +45,8 @@ pub struct MultiSelection<Id: Clone + Eq + Hash> {
     anchor: Option<Id>,
     /// All items in order (for range selection)
     all_items: Vec<Id>,
+    /// When false, ignores modifiers and behaves like single selection.
+    multi_select_enabled: bool,
 }
 
 impl<Id: Clone + Eq + Hash> Default for MultiSelection<Id> {
@@ -60,6 +62,7 @@ impl<Id: Clone + Eq + Hash> MultiSelection<Id> {
             selected: HashSet::new(),
             anchor: None,
             all_items: Vec::new(),
+            multi_select_enabled: true,
         }
     }
 
@@ -70,7 +73,21 @@ impl<Id: Clone + Eq + Hash> MultiSelection<Id> {
             selected,
             anchor: None,
             all_items: Vec::new(),
+            multi_select_enabled: true,
         }
+    }
+
+    /// Enables or disables multi-selection behavior.
+    ///
+    /// When disabled, modifiers are ignored and clicking always replaces
+    /// the selection (like `SingleSelection`).
+    pub fn set_multi_select_enabled(&mut self, enabled: bool) {
+        self.multi_select_enabled = enabled;
+    }
+
+    /// Returns whether multi-selection is enabled.
+    pub fn is_multi_select_enabled(&self) -> bool {
+        self.multi_select_enabled
     }
 
     /// Sets the ordered list of all items for range selection.
@@ -147,6 +164,13 @@ impl<Id: Clone + Eq + Hash> SelectionState<Id> for MultiSelection<Id> {
     }
 
     fn select(&mut self, id: Id, modifiers: SelectionModifiers) {
+        // When multi-select is disabled, ignore modifiers
+        let modifiers = if self.multi_select_enabled {
+            modifiers
+        } else {
+            SelectionModifiers::NONE
+        };
+
         // Alt works like Command for toggle behavior
         let toggle_modifier = modifiers.command || modifiers.alt;
 
@@ -422,5 +446,41 @@ mod tests {
         selection.select(1, SelectionModifiers::NONE);
         selection.select(3, SelectionModifiers::SHIFT);
         assert_eq!(selection.count(), 3);
+    }
+
+    #[test]
+    fn multi_select_disabled_ignores_command() {
+        let mut selection = MultiSelection::<u64>::new();
+        selection.set_multi_select_enabled(false);
+
+        selection.select(1, SelectionModifiers::NONE);
+        // Cmd+click should NOT toggle, just replace
+        selection.select(2, SelectionModifiers::COMMAND);
+
+        assert!(!selection.is_selected(&1));
+        assert!(selection.is_selected(&2));
+        assert_eq!(selection.count(), 1);
+    }
+
+    #[test]
+    fn multi_select_disabled_ignores_shift() {
+        let mut selection = MultiSelection::<u64>::new();
+        selection.set_items(vec![1, 2, 3, 4, 5]);
+        selection.set_multi_select_enabled(false);
+
+        selection.select(1, SelectionModifiers::NONE);
+        // Shift+click should NOT range select, just replace
+        selection.select(3, SelectionModifiers::SHIFT);
+
+        assert!(!selection.is_selected(&1));
+        assert!(!selection.is_selected(&2));
+        assert!(selection.is_selected(&3));
+        assert_eq!(selection.count(), 1);
+    }
+
+    #[test]
+    fn multi_select_enabled_by_default() {
+        let selection = MultiSelection::<u64>::new();
+        assert!(selection.is_multi_select_enabled());
     }
 }
