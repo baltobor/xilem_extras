@@ -9,9 +9,14 @@
 
 use std::marker::PhantomData;
 
+use xilem::masonry::layout::AsUnit;
 use xilem::masonry::vello::peniko::Color;
+use xilem::style::{Padding, Style};
+use xilem::view::{button, flex_row, label, portal, FlexExt};
+use xilem::{AnyWidgetView, WidgetView};
 
 use super::TabItem;
+use crate::components::icon::{icons, ICON_SIZE_SM, MATERIAL_SYMBOLS_FAMILY};
 
 /// Golden ratio for proportional spacing.
 const PHI: f64 = 1.618;
@@ -49,7 +54,7 @@ impl Default for TabBarColors {
 ///
 /// Renders a horizontal strip of tabs with:
 /// - Scrollable tab area (via portal)
-/// - Previous/Next navigation buttons
+/// - Optional previous/next navigation buttons
 /// - Close button per tab
 /// - Dirty state indicator
 ///
@@ -66,6 +71,7 @@ impl Default for TabBarColors {
 /// ```ignore
 /// TabBar::new(&model.tabs, model.active_tab)
 ///     .colors(TabBarColors::default())
+///     .show_nav_buttons(true)
 ///     .on_select(|model, idx| model.active_tab = idx)
 ///     .on_close(|model, idx| model.close_tab(idx))
 /// ```
@@ -73,6 +79,7 @@ pub struct TabBar<'a, State, Action, T, S, C> {
     tabs: &'a [T],
     active_index: usize,
     colors: TabBarColors,
+    show_nav_buttons: bool,
     on_select: Option<S>,
     on_close: Option<C>,
     _phantom: PhantomData<(State, Action)>,
@@ -90,6 +97,7 @@ impl<'a, State, Action, T: TabItem> TabBar<'a, State, Action, T, (), ()> {
             tabs,
             active_index,
             colors: TabBarColors::default(),
+            show_nav_buttons: true,
             on_select: None,
             on_close: None,
             _phantom: PhantomData,
@@ -104,6 +112,14 @@ impl<'a, State, Action, T: TabItem, S, C> TabBar<'a, State, Action, T, S, C> {
         self
     }
 
+    /// Sets whether to show navigation buttons (< >) for cycling through tabs.
+    ///
+    /// Default is `true`.
+    pub fn show_nav_buttons(mut self, show: bool) -> Self {
+        self.show_nav_buttons = show;
+        self
+    }
+
     /// Sets the callback for tab selection.
     ///
     /// Called when a tab is clicked (not the close button).
@@ -115,6 +131,7 @@ impl<'a, State, Action, T: TabItem, S, C> TabBar<'a, State, Action, T, S, C> {
             tabs: self.tabs,
             active_index: self.active_index,
             colors: self.colors,
+            show_nav_buttons: self.show_nav_buttons,
             on_select: Some(callback),
             on_close: self.on_close,
             _phantom: PhantomData,
@@ -132,6 +149,7 @@ impl<'a, State, Action, T: TabItem, S, C> TabBar<'a, State, Action, T, S, C> {
             tabs: self.tabs,
             active_index: self.active_index,
             colors: self.colors,
+            show_nav_buttons: self.show_nav_buttons,
             on_select: self.on_select,
             on_close: Some(callback),
             _phantom: PhantomData,
@@ -168,6 +186,167 @@ impl<'a, State, Action, T: TabItem, S, C> TabBar<'a, State, Action, T, S, C> {
         let pad_v = 3.0;
         let pad_h = (pad_v * PHI).round();
         (pad_h, pad_v)
+    }
+}
+
+impl<'a, State, Action, T, S, C> TabBar<'a, State, Action, T, S, C>
+where
+    State: 'static,
+    Action: 'static,
+    T: TabItem,
+    S: Fn(&mut State, usize) -> Action + Clone + Send + Sync + 'static,
+    C: Fn(&mut State, usize) -> Action + Clone + Send + Sync + 'static,
+{
+    /// Builds the tab bar view.
+    ///
+    /// Returns a complete tab bar widget with scrollable tabs,
+    /// close buttons, and optional navigation arrows.
+    pub fn build(self) -> impl WidgetView<State, Action> + use<'a, State, Action, T, S, C> {
+        let colors = self.colors;
+        let active_idx = self.active_index;
+        let can_prev = self.can_go_prev();
+        let can_next = self.can_go_next();
+        let show_nav = self.show_nav_buttons;
+
+        let (pad_h, pad_v) = Self::tab_padding();
+        let tab_padding = Padding {
+            top: pad_v,
+            bottom: pad_v,
+            left: pad_h,
+            right: pad_h,
+        };
+
+        // Build tab buttons
+        let tab_buttons: Vec<Box<AnyWidgetView<State, Action>>> = self
+            .tabs
+            .iter()
+            .enumerate()
+            .map(|(i, tab)| {
+                let is_active = i == active_idx;
+                let bg = if is_active {
+                    colors.active_bg
+                } else {
+                    colors.inactive_bg
+                };
+
+                let display_title = if tab.is_dirty() {
+                    format!("{} *", tab.title())
+                } else {
+                    tab.title().to_string()
+                };
+
+                let on_close = self.on_close.clone();
+                let close_btn = button(
+                    label(icons::CLOSE.to_string())
+                        .font(MATERIAL_SYMBOLS_FAMILY)
+                        .text_size(12.0)
+                        .color(colors.text_secondary),
+                    move |state: &mut State| {
+                        if let Some(ref cb) = on_close {
+                            cb(state, i)
+                        } else {
+                            unreachable!()
+                        }
+                    },
+                )
+                .background_color(bg)
+                .border(Color::TRANSPARENT, 0.0)
+                .padding(0.0);
+
+                let on_select = self.on_select.clone();
+                let select_btn = button(
+                    label(display_title).text_size(13.0).color(colors.text),
+                    move |state: &mut State| {
+                        if let Some(ref cb) = on_select {
+                            cb(state, i)
+                        } else {
+                            unreachable!()
+                        }
+                    },
+                )
+                .background_color(bg)
+                .border(Color::TRANSPARENT, 0.0)
+                .padding(0.0);
+
+                flex_row((close_btn, select_btn))
+                    .gap(2.px())
+                    .padding(tab_padding)
+                    .background_color(bg)
+                    .boxed()
+            })
+            .collect();
+
+        // Scrollable tabs via portal
+        let scrollable_tabs = portal(flex_row(tab_buttons).gap(1.px())).flex(1.0);
+
+        if show_nav {
+            // Navigation buttons
+            let on_select_prev = self.on_select.clone();
+            let prev_color = if can_prev {
+                colors.text
+            } else {
+                colors.text_secondary
+            };
+            let prev_btn = button(
+                label(icons::CHEVRON_LEFT.to_string())
+                    .font(MATERIAL_SYMBOLS_FAMILY)
+                    .text_size(ICON_SIZE_SM)
+                    .color(prev_color),
+                move |state: &mut State| {
+                    if can_prev {
+                        if let Some(ref cb) = on_select_prev {
+                            cb(state, active_idx - 1)
+                        } else {
+                            unreachable!()
+                        }
+                    } else {
+                        unreachable!()
+                    }
+                },
+            )
+            .disabled(!can_prev)
+            .background_color(colors.bar_bg)
+            .border(Color::TRANSPARENT, 0.0)
+            .padding(2.0);
+
+            let on_select_next = self.on_select.clone();
+            let next_color = if can_next {
+                colors.text
+            } else {
+                colors.text_secondary
+            };
+            let next_btn = button(
+                label(icons::CHEVRON_RIGHT.to_string())
+                    .font(MATERIAL_SYMBOLS_FAMILY)
+                    .text_size(ICON_SIZE_SM)
+                    .color(next_color),
+                move |state: &mut State| {
+                    if can_next {
+                        if let Some(ref cb) = on_select_next {
+                            cb(state, active_idx + 1)
+                        } else {
+                            unreachable!()
+                        }
+                    } else {
+                        unreachable!()
+                    }
+                },
+            )
+            .disabled(!can_next)
+            .background_color(colors.bar_bg)
+            .border(Color::TRANSPARENT, 0.0)
+            .padding(2.0);
+
+            flex_row((scrollable_tabs, prev_btn, next_btn))
+                .gap(1.px())
+                .background_color(colors.bar_bg)
+                .boxed()
+        } else {
+            flex_row((scrollable_tabs,))
+                .gap(1.px())
+                .background_color(colors.bar_bg)
+                .boxed()
+        }
     }
 }
 
@@ -215,5 +394,19 @@ mod tests {
     fn default_colors() {
         let colors = TabBarColors::default();
         assert_ne!(colors.active_bg, colors.inactive_bg);
+    }
+
+    #[test]
+    fn show_nav_buttons_default() {
+        let tabs = vec![SimpleTab::new("Tab 1")];
+        let bar: TabBar<(), (), _, (), ()> = TabBar::new(&tabs, 0);
+        assert!(bar.show_nav_buttons);
+    }
+
+    #[test]
+    fn show_nav_buttons_disabled() {
+        let tabs = vec![SimpleTab::new("Tab 1")];
+        let bar: TabBar<(), (), _, (), ()> = TabBar::new(&tabs, 0).show_nav_buttons(false);
+        assert!(!bar.show_nav_buttons);
     }
 }

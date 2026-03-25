@@ -49,6 +49,7 @@ pub struct AppModel {
     // Tabs demo state
     pub demo_tabs: Vec<DemoTab>,
     pub demo_active_tab: usize,
+    pub demo_show_tab_nav: bool,
 
     // Menu demo state
     pub menu_last_action: String,
@@ -86,6 +87,7 @@ impl AppModel {
             // Tabs
             demo_tabs: create_demo_tabs(),
             demo_active_tab: 0,
+            demo_show_tab_nav: true,
 
             // Menu
             menu_last_action: "(none)".to_string(),
