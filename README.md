@@ -74,6 +74,39 @@ let filtered = sort_order.filter_sorted(&cyclists, |c| c.joy_level >= 8);
 
 ## Examples
 
+### Tree Group
+
+```rust
+use xilem_extras::{tree_group, TreeAction, ExpansionState, SingleSelection};
+
+tree_group(
+    &model.file_tree,           // root node (implements TreeNode)
+    &model.expansion,           // ExpansionState<NodeId>
+    Some(&model.selection),     // Option<&impl SelectionState<NodeId>>
+    |node, depth, is_expanded, is_selected| {
+        // Build row view for each node
+        flex_row((
+            if node.is_expandable() {
+                disclosure(is_expanded).boxed()
+            } else {
+                sized_box(()).width(16.0).boxed()
+            },
+            label(node.label()),
+        ))
+        .padding_left(depth as f64 * 16.0)
+        .background_color(if is_selected { BG_SELECTED } else { Color::TRANSPARENT })
+        .boxed()
+    },
+    |state, node_id, action| {
+        match action {
+            TreeAction::Toggle => state.expansion.toggle(node_id),
+            TreeAction::Select => state.selection.set(Some(node_id.clone())),
+            TreeAction::DoubleClick => state.open_file(node_id),
+        }
+    },
+)
+```
+
 ### Row Button with Multi-Selection
 
 Use `row_button_with_modifiers` to capture Cmd/Ctrl+Click for multi-selection:

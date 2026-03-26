@@ -88,9 +88,10 @@ pub use components::{
 
 pub use tree::{
     tree,
-    TreeView,
+    tree_group,
     TreeAction,
     ExpansionState,
+    flatten_tree,
 };
 
 pub use list::{
