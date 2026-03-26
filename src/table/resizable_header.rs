@@ -11,9 +11,9 @@ use std::any::TypeId;
 
 use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
 use xilem::core::MessageResult;
-use xilem::masonry::vello::Scene;
-use xilem::masonry::vello::kurbo::{Affine, Point, Rect, Size};
-use xilem::masonry::vello::peniko::{Color, Fill};
+use xilem::masonry::imaging::Painter;
+use xilem::masonry::vello::kurbo::{Point, Rect, Size};
+use xilem::masonry::vello::peniko::Color;
 use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
@@ -282,12 +282,12 @@ impl Widget for ResizableHeader {
         }
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, scene: &mut Scene) {
+    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
 
         if let Some(bg) = props.get_defined::<Background>() {
             let brush = bg.get_peniko_brush_for_rect(rect);
-            scene.fill(Fill::NonZero, Affine::IDENTITY, &brush, None, &rect);
+            painter.fill(rect, &brush).draw();
         }
 
         for (i, col) in self.columns.iter().enumerate() {
@@ -306,7 +306,7 @@ impl Widget for ResizableHeader {
                     divider_x + 0.5,
                     self.size.height,
                 );
-                scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &divider_rect);
+                painter.fill(divider_rect, color).draw();
             }
         }
     }

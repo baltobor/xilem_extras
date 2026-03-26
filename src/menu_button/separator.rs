@@ -11,9 +11,9 @@ use std::any::TypeId;
 
 use xilem::masonry::accesskit::{Node, Role};
 use tracing::{Span, trace_span};
-use xilem::masonry::vello::Scene;
+use xilem::masonry::imaging::Painter;
 use xilem::masonry::vello::kurbo::Rect;
-use xilem::masonry::vello::peniko::{Color, Fill};
+use xilem::masonry::vello::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
@@ -120,7 +120,7 @@ impl Widget for MenuSeparator {
         self.size = size;
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, scene: &mut Scene) {
+    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let y = self.size.height / 2.0;
         // Full width line - spans the entire allocated width
         let rect = Rect::new(
@@ -129,7 +129,7 @@ impl Widget for MenuSeparator {
             self.size.width,
             y + SEPARATOR_HEIGHT / 2.0,
         );
-        scene.fill(Fill::NonZero, Default::default(), self.color, None, &rect);
+        painter.fill(rect, self.color).draw();
     }
 
     fn accessibility_role(&self) -> Role {

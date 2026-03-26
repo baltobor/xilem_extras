@@ -12,9 +12,9 @@ use xilem::core::MessageResult;
 use xilem::masonry::core::keyboard::{Key, NamedKey};
 use xilem::masonry::core::PointerButton;
 use xilem::masonry::accesskit::{self, Node, Role};
-use xilem::masonry::vello::Scene;
-use xilem::masonry::vello::kurbo::{Affine, Point, Rect, Size};
-use xilem::masonry::vello::peniko::{Color, Fill};
+use xilem::masonry::imaging::Painter;
+use xilem::masonry::vello::kurbo::{Point, Rect, Size};
+use xilem::masonry::vello::peniko::Color;
 use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
@@ -208,17 +208,17 @@ impl Widget for RowButton {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, scene: &mut Scene) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
         let use_hover = ctx.is_hovered() && !ctx.is_disabled();
 
         if use_hover {
             if self.hover_bg != Color::TRANSPARENT {
-                scene.fill(Fill::NonZero, Affine::IDENTITY, self.hover_bg, None, &rect);
+                painter.fill(rect, self.hover_bg).draw();
             }
         } else if let Some(bg) = props.get_defined::<Background>() {
             let brush = bg.get_peniko_brush_for_rect(rect);
-            scene.fill(Fill::NonZero, Affine::IDENTITY, &brush, None, &rect);
+            painter.fill(rect, &brush).draw();
         }
     }
 

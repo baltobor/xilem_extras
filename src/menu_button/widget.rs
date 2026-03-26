@@ -11,7 +11,7 @@ use std::any::TypeId;
 
 use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
-use xilem::masonry::vello::Scene;
+use xilem::masonry::imaging::Painter;
 
 use xilem::masonry::core::keyboard::{Key, NamedKey};
 use xilem::masonry::core::{
@@ -189,7 +189,7 @@ impl Widget for MenuButton {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _scene: &mut Scene) {}
+    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _painter: &mut Painter<'_>) {}
 
     fn accessibility_role(&self) -> Role {
         Role::Button

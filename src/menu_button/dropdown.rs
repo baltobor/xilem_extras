@@ -9,9 +9,9 @@
 
 use xilem::masonry::accesskit::{Node, Role};
 use tracing::{Span, trace_span};
-use xilem::masonry::vello::Scene;
+use xilem::masonry::imaging::Painter;
 use xilem::masonry::vello::kurbo::{Rect, RoundedRect, Stroke};
-use xilem::masonry::vello::peniko::{Color, Fill};
+use xilem::masonry::vello::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, HasProperty, Layer, LayoutCtx,
@@ -219,7 +219,7 @@ impl Widget for MenuDropdown {
 
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, scene: &mut Scene) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let size = ctx.border_box_size();
         let padding = 6.0;
         let rect = Rect::new(
@@ -230,8 +230,8 @@ impl Widget for MenuDropdown {
         );
         let rounded = RoundedRect::from_rect(rect, 4.0);
 
-        scene.fill(Fill::NonZero, Default::default(), self.bg_color, None, &rounded);
-        scene.stroke(&Stroke::new(1.0), Default::default(), self.border_color, None, &rounded);
+        painter.fill(rounded, self.bg_color).draw();
+        painter.stroke(rounded, &Stroke::new(1.0), self.border_color).draw();
     }
 
     fn accessibility_role(&self) -> Role {

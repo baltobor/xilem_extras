@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
-use xilem::masonry::vello::Scene;
+use xilem::masonry::imaging::Painter;
 use xilem::masonry::vello::kurbo::{Rect, RoundedRect};
-use xilem::masonry::vello::peniko::{Color, Fill};
+use xilem::masonry::vello::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
@@ -167,14 +167,14 @@ impl Widget for SelectOptionItem {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, scene: &mut Scene) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
         let rounded = RoundedRect::from_rect(rect, 3.0);
 
         if self.is_selected {
-            scene.fill(Fill::NonZero, Default::default(), self.selected_bg, None, &rounded);
+            painter.fill(rounded, self.selected_bg).draw();
         } else if ctx.is_hovered() {
-            scene.fill(Fill::NonZero, Default::default(), self.hover_bg, None, &rounded);
+            painter.fill(rounded, self.hover_bg).draw();
         }
     }
 
