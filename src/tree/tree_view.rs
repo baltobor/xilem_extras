@@ -6,6 +6,7 @@
 //! (compatible with the Xilem licence).
 
 use masonry::layout::AsUnit;
+use xilem::masonry::vello::peniko::Color;
 use xilem::style::Style;
 use xilem::view::flex_col;
 use xilem::{WidgetView, AnyWidgetView};
@@ -23,6 +24,54 @@ pub enum TreeAction {
     Select,
     /// Double click activation (e.g., open file)
     DoubleClick,
+    /// Right click context menu
+    ContextMenu,
+}
+
+/// Style configuration for tree rows.
+#[derive(Debug, Clone)]
+pub struct TreeStyle {
+    /// Background color on hover.
+    pub hover_bg: Color,
+    /// Indentation per depth level in pixels.
+    pub indent: f64,
+    /// Gap between rows in pixels.
+    pub gap: f64,
+}
+
+impl Default for TreeStyle {
+    fn default() -> Self {
+        Self {
+            hover_bg: Color::TRANSPARENT,
+            indent: 16.0,
+            gap: 0.0,
+        }
+    }
+}
+
+impl TreeStyle {
+    /// Creates a new TreeStyle with default values.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the hover background color.
+    pub fn hover_bg(mut self, color: Color) -> Self {
+        self.hover_bg = color;
+        self
+    }
+
+    /// Sets the indentation per depth level.
+    pub fn indent(mut self, indent: f64) -> Self {
+        self.indent = indent;
+        self
+    }
+
+    /// Sets the gap between rows.
+    pub fn gap(mut self, gap: f64) -> Self {
+        self.gap = gap;
+        self
+    }
 }
 
 /// Collects visible tree nodes into a flat list for rendering.
@@ -77,6 +126,7 @@ pub fn flatten_tree<'a, N: TreeNode>(
 ///             TreeAction::Toggle => state.expansion.toggle(node_id),
 ///             TreeAction::Select => state.selected = Some(node_id.clone()),
 ///             TreeAction::DoubleClick => state.open(node_id),
+///             TreeAction::ContextMenu => state.show_context_menu(node_id),
 ///         }
 ///     },
 /// )
@@ -85,6 +135,42 @@ pub fn tree_group<'a, State, N, R, F, H, Sel>(
     root: &'a N,
     expansion: &'a ExpansionState<N::Id>,
     selection: Option<&'a Sel>,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    tree_group_styled(root, expansion, selection, TreeStyle::default(), row_builder, handler)
+}
+
+/// Creates a tree group with custom styling.
+///
+/// Same as [`tree_group`] but accepts a [`TreeStyle`] for customization.
+///
+/// # Example
+///
+/// ```ignore
+/// tree_group_styled(
+///     &model.file_tree,
+///     &model.expansion,
+///     Some(&model.selection),
+///     TreeStyle::new().hover_bg(Color::from_rgb8(55, 53, 50)),
+///     |node, depth, is_expanded, is_selected| { ... },
+///     |state, node_id, action| { ... },
+/// )
+/// ```
+pub fn tree_group_styled<'a, State, N, R, F, H, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    style: TreeStyle,
     row_builder: F,
     handler: H,
 ) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, Sel>
@@ -111,6 +197,7 @@ where
             let node_id = node.id();
             let is_expandable = node.is_expandable();
             let handler = handler.clone();
+            let hover_bg = style.hover_bg;
 
             let btn = row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
                 let action = if click_count >= 2 {
@@ -121,13 +208,18 @@ where
                     TreeAction::Select
                 };
                 handler(state, &node_id, action);
-            });
+            })
+            .hover_bg(hover_bg);
 
             btn.boxed()
         })
         .collect();
 
-    flex_col(rows).gap(0.px())
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
 }
 
 /// Alias for tree_group.
@@ -273,5 +365,25 @@ mod tests {
         assert_eq!(TreeAction::Toggle, TreeAction::Toggle);
         assert_ne!(TreeAction::Toggle, TreeAction::Select);
         assert_ne!(TreeAction::Select, TreeAction::DoubleClick);
+        assert_ne!(TreeAction::DoubleClick, TreeAction::ContextMenu);
+    }
+
+    #[test]
+    fn tree_style_default() {
+        let style = TreeStyle::default();
+        assert_eq!(style.hover_bg, Color::TRANSPARENT);
+        assert_eq!(style.indent, 16.0);
+        assert_eq!(style.gap, 0.0);
+    }
+
+    #[test]
+    fn tree_style_builder() {
+        let style = TreeStyle::new()
+            .hover_bg(Color::from_rgb8(50, 50, 50))
+            .indent(20.0)
+            .gap(2.0);
+
+        assert_eq!(style.indent, 20.0);
+        assert_eq!(style.gap, 2.0);
     }
 }

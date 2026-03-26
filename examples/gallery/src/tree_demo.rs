@@ -14,7 +14,7 @@ use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
 use xilem::{WidgetView, AnyWidgetView};
 
-use xilem_extras::{tree_group, TreeAction};
+use xilem_extras::{tree_group_styled, TreeAction, TreeStyle};
 use xilem_extras::components::icon::{icons, MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
@@ -84,11 +84,14 @@ fn build_tree_row(
     }
 }
 
+const BG_HOVER: Color = Color::from_rgb8(55, 53, 50);
+
 pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_> {
-    let tree_view = tree_group(
+    let tree_view = tree_group_styled(
         &model.file_tree,
         &model.tree_expansion,
         Some(&model.tree_selection),
+        TreeStyle::new().hover_bg(BG_HOVER),
         |node: &FileNode, depth, is_expanded, is_selected| {
             build_tree_row(node, depth, is_expanded, is_selected)
         },
@@ -99,6 +102,9 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
                 TreeAction::DoubleClick => {
                     // Could open file here
                     state.select_tree_node(node_id.clone());
+                }
+                TreeAction::ContextMenu => {
+                    // Could show context menu here
                 }
             }
         },

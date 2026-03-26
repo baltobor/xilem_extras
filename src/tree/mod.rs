@@ -9,4 +9,4 @@ mod expansion_state;
 mod tree_view;
 
 pub use expansion_state::ExpansionState;
-pub use tree_view::{tree, tree_group, TreeAction, flatten_tree};
+pub use tree_view::{tree, tree_group, tree_group_styled, TreeAction, TreeStyle, flatten_tree};

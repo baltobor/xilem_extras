@@ -89,7 +89,9 @@ pub use components::{
 pub use tree::{
     tree,
     tree_group,
+    tree_group_styled,
     TreeAction,
+    TreeStyle,
     ExpansionState,
     flatten_tree,
 };
