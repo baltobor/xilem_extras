@@ -38,7 +38,8 @@ cargo run --example gallery --features rust-logos
 
 The `rust-logos` feature is required for the gallery to display Rust file icons.
 
-<img width="654" height="496" alt="xilem_extras_gallery" src="https://github.com/user-attachments/assets/70053df6-ca28-4d39-9a97-93f77bd3f15d" />
+<img width="1012" height="744" alt="xilem_extras_gallery" src="https://github.com/user-attachments/assets/4eab7538-43f5-4cbd-a527-8182c0e78ddb" />
+
 
 ## Core Traits
 
