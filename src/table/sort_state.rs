@@ -7,7 +7,10 @@
 
 use std::cmp::Ordering;
 
-use crate::traits::{CellValue, TableRow};
+use crate::traits::TableRow;
+
+#[cfg(test)]
+use crate::traits::CellValue;
 
 /// Sort direction for a column.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

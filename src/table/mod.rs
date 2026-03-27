@@ -15,4 +15,4 @@ pub use column::{column, ColumnBuilder, ColumnDef, Alignment, ColumnWidth};
 pub use column_widths::ColumnWidths;
 pub use resizable_header::{resizable_header, ResizableHeaderView, ResizableHeader, ColumnResizeAction};
 pub use sort_state::{SortOrder, SortDirection, SortDescriptor};
-pub use table_view::{table, TableView, TableAction};
+pub use table_view::{table, table_styled, TableAction, TableStyle};

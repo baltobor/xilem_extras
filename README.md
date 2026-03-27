@@ -173,6 +173,65 @@ context_menu(
 )
 ```
 
+### List
+
+```rust
+use xilem_extras::{list_styled, ListAction, ListStyle};
+
+list_styled(
+    &model.contacts,
+    &model.selection,
+    ListStyle::new().hover_bg(BG_HOVER),
+    |contact, is_selected| {
+        // Build row view - clone data, don't borrow
+        let name = contact.name.clone();
+        flex_row((label(name),))
+            .background_color(if is_selected { BG_SELECTED } else { Color::TRANSPARENT })
+    },
+    |state, action| {
+        match action {
+            ListAction::Select(id, mods) => state.selection.select(id, mods),
+            ListAction::Activate(id) => state.open_contact(&id),
+        }
+    },
+)
+```
+
+### Table
+
+```rust
+use xilem_extras::{table, column, TableAction, Alignment};
+
+table(
+    &model.employees,
+    &[
+        column("name", "Name").flex(2.0).build(),
+        column("department", "Department").flex(1.5).build(),
+        column("salary", "Salary").fixed(100.0).align(Alignment::End).build(),
+    ],
+    &model.selection,
+    &model.sort_order,
+    |employee, column_key| {
+        // Build cell view - clone data from employee
+        let text = match column_key {
+            "name" => employee.name.clone(),
+            "department" => employee.department.clone(),
+            "salary" => format!("${:.0}", employee.salary),
+            _ => String::new(),
+        };
+        label(text)
+    },
+    |state, action| {
+        match action {
+            TableAction::Sort(col, _) => state.sort_order.toggle_column(&col, false),
+            TableAction::Select(id, mods) => state.selection.select(id, mods),
+            TableAction::Activate(id) => state.edit_employee(&id),
+            TableAction::ColumnResized(_, _) => {}
+        }
+    },
+)
+```
+
 ## Compatibility
 
 - **Compatibility**: Xilem main branch (git)

@@ -29,6 +29,7 @@ use xilem::masonry::accesskit::{Node, Role};
 
 const DIVIDER_HIT_AREA: f64 = 8.0;
 const MIN_COLUMN_WIDTH: f64 = 40.0;
+const DIVIDER_WIDTH: f64 = 2.0;
 
 /// Action emitted when a column is resized.
 #[derive(Debug, Clone, PartialEq)]
@@ -80,8 +81,8 @@ impl ResizableHeader {
             dragging_index: None,
             drag_start_x: 0.0,
             drag_start_width: 0.0,
-            divider_color: Color::from_rgb8(60, 58, 55),
-            divider_hover_color: Color::from_rgb8(100, 98, 95),
+            divider_color: Color::from_rgb8(120, 118, 115),
+            divider_hover_color: Color::from_rgb8(100, 150, 255),
             hovered_divider: None,
         }
     }
@@ -93,12 +94,14 @@ impl ResizableHeader {
     }
 
     /// Returns the index of the divider at the given x position, if any.
-    /// Dividers are located at the right edge of each column (except the last).
+    /// Dividers are located in the gap after each column (except the last).
     fn hit_test_divider(&self, x: f64) -> Option<usize> {
         for (i, col) in self.columns.iter().enumerate() {
             if i < self.columns.len() - 1 {
-                let divider_x = col.x_offset + col.width;
-                if (x - divider_x).abs() <= DIVIDER_HIT_AREA {
+                let divider_start = col.x_offset + col.width;
+                let divider_center = divider_start + DIVIDER_WIDTH / 2.0;
+                // Hit test with some padding beyond the divider
+                if (x - divider_center).abs() <= DIVIDER_HIT_AREA {
                     return Some(i);
                 }
             }
@@ -107,6 +110,7 @@ impl ResizableHeader {
     }
 
     /// Updates column layout info based on current widths.
+    /// Leaves gaps between columns for dividers.
     fn update_column_layout(&mut self) {
         self.columns.clear();
         let mut x = 0.0;
@@ -117,7 +121,12 @@ impl ResizableHeader {
                 width,
                 x_offset: x,
             });
-            x += width;
+            // Add divider gap after each column except the last
+            if i < self.column_keys.len() - 1 {
+                x += width + DIVIDER_WIDTH;
+            } else {
+                x += width;
+            }
         }
     }
 
@@ -290,23 +299,20 @@ impl Widget for ResizableHeader {
             painter.fill(rect, &brush).draw();
         }
 
+        // Paint dividers only on hover
         for (i, col) in self.columns.iter().enumerate() {
             if i < self.columns.len() - 1 {
-                let divider_x = col.x_offset + col.width;
                 let is_hovered = self.hovered_divider == Some(i) || self.dragging_index == Some(i);
-                let color = if is_hovered {
-                    self.divider_hover_color
-                } else {
-                    self.divider_color
-                };
 
-                let divider_rect = Rect::new(
-                    divider_x - 0.5,
-                    0.0,
-                    divider_x + 0.5,
-                    self.size.height,
-                );
-                painter.fill(divider_rect, color).draw();
+                if is_hovered {
+                    let divider_rect = Rect::new(
+                        col.x_offset + col.width,
+                        0.0,
+                        col.x_offset + col.width + DIVIDER_WIDTH,
+                        self.size.height,
+                    );
+                    painter.fill(divider_rect, self.divider_hover_color).draw();
+                }
             }
         }
     }

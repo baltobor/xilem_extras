@@ -123,8 +123,9 @@ pub use list::{
 
 pub use table::{
     table,
-    TableView,
+    table_styled,
     TableAction,
+    TableStyle,
     column,
     ColumnBuilder,
     ColumnDef,

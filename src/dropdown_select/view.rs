@@ -10,7 +10,7 @@
 use std::marker::PhantomData;
 
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
-use xilem::{Pod, ViewCtx, WidgetView};
+use xilem::{Pod, ViewCtx};
 
 use super::widget::{DropdownSelect, DropdownSelectAction};
 
