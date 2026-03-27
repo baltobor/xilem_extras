@@ -75,11 +75,6 @@ pub use selection::{
 };
 
 pub use components::{
-    icon,
-    icon_sm,
-    icon_md,
-    icon_lg,
-    Icon,
     row_button,
     row_button_with_clicks,
     row_button_with_modifiers,

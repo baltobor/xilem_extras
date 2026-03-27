@@ -18,7 +18,7 @@ use xilem_extras::{
     tree_group_with_context_menu, TreeAction, TreeStyle, svg_icon, rust_gear, ferris,
     menu_item, separator,
 };
-use xilem_extras::components::icon::{icons, MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
+use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
 use crate::mock_data::FileNode;
@@ -53,11 +53,11 @@ fn build_tree_row(
 
         flex_row((
             label(chevron.to_string())
-                .font(MATERIAL_SYMBOLS_FAMILY)
+                .font(FONT_FAMILY)
                 .text_size(ICON_SIZE_SM)
                 .color(TEXT_COLOR),
             label(folder_icon.to_string())
-                .font(MATERIAL_SYMBOLS_FAMILY)
+                .font(FONT_FAMILY)
                 .text_size(ICON_SIZE_SM)
                 .color(FOLDER_COLOR),
             label(node.name.clone())
@@ -100,7 +100,7 @@ fn build_tree_row(
             // Other files with document icon
             flex_row((
                 label(icons::DESCRIPTION.to_string())
-                    .font(MATERIAL_SYMBOLS_FAMILY)
+                    .font(FONT_FAMILY)
                     .text_size(ICON_SIZE_SM)
                     .color(TEXT_COLOR),
                 label(node.name.clone())

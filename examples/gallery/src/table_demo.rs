@@ -17,7 +17,7 @@ use xilem_extras::{
     SelectionState, SelectionModifiers, SortOrder, SortDirection,
     row_button, row_button_with_modifiers, resizable_header,
 };
-use xilem_extras::components::icon::{icons, MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
+use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
 use crate::mock_data::Cyclist;
@@ -55,7 +55,7 @@ fn column_header<'a>(
             .weight(xilem::FontWeight::BOLD)
             .color(TEXT_COLOR),
         label(indicator.to_string())
-            .font(MATERIAL_SYMBOLS_FAMILY)
+            .font(FONT_FAMILY)
             .text_size(ICON_SIZE_SM)
             .color(TEXT_COLOR),
     ))
@@ -101,7 +101,7 @@ fn cyclist_row<'a>(
 
     let row = flex_row((
         label(icons::PEDAL_BIKE.to_string())
-            .font(MATERIAL_SYMBOLS_FAMILY)
+            .font(FONT_FAMILY)
             .text_size(ICON_SIZE_SM)
             .color(BIKE_COLOR)
             .width((ICON_COL_WIDTH as i32).px()),
@@ -186,7 +186,7 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             sized_box(
                 flex_row((
                     label(icons::PEDAL_BIKE.to_string())
-                        .font(MATERIAL_SYMBOLS_FAMILY)
+                        .font(FONT_FAMILY)
                         .text_size(ICON_SIZE_SM)
                         .color(BIKE_COLOR)
                         .width((ICON_COL_WIDTH as i32).px())

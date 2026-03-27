@@ -6,8 +6,8 @@
 //! (compatible with the Xilem licence).
 
 use xilem::masonry::vello::peniko::Color;
-
-use super::icon::{ICON_SIZE_SM, icons};
+use xilem::AnyWidgetView;
+use xilem_material_icons::{icon, icons, ICON_SIZE_SM};
 
 /// A disclosure indicator (chevron) for expand/collapse.
 ///
@@ -64,6 +64,15 @@ impl Disclosure {
     /// Returns the configured color, if any.
     pub fn icon_color(&self) -> Option<Color> {
         self.color
+    }
+
+    /// Builds the disclosure as a xilem view.
+    pub fn build<State: 'static, Action: 'static>(self) -> Box<AnyWidgetView<State, Action>> {
+        let mut ic = icon(self.codepoint()).size(self.size);
+        if let Some(color) = self.color {
+            ic = ic.color(color);
+        }
+        ic.build()
     }
 }
 

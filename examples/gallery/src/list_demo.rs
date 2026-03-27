@@ -14,8 +14,7 @@ use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button, portal}
 use xilem::{AnyWidgetView, WidgetView};
 
 use xilem_extras::{list_styled, ListAction, ListStyle, SelectionState};
-use xilem_extras::components::icon::{MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
-use xilem_material_icons::icons;
+use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
 use crate::mock_data::Contact;
@@ -33,7 +32,7 @@ fn contact_row(contact: &Contact, is_selected: bool) -> Box<AnyWidgetView<AppMod
 
     flex_row((
         label(icons::PERSON.to_string())
-            .font(MATERIAL_SYMBOLS_FAMILY)
+            .font(FONT_FAMILY)
             .text_size(ICON_SIZE_SM)
             .color(ICON_COLOR)
             .width(24.px()),
