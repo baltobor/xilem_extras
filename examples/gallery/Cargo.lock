@@ -585,9 +585,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.57"
+version = "1.2.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a0dd1ca384932ff3641c8718a02769f1698e7563dc6974ffd03346116310423"
+checksum = "e1e928d4b69e3077709075a938a05ffbedfa53a84c8f766efbf8220bb1ff60e1"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -1369,6 +1369,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09e54e57b4c48b40f7aec75635392b12b3421fa26fe8b4332e63138ed278459c"
 
 [[package]]
+name = "imaging"
+version = "0.0.1"
+source = "git+https://github.com/forest-rs/imaging.git?rev=850af057d4c56cf644f37aaa644c7814a7a03a4b#850af057d4c56cf644f37aaa644c7814a7a03a4b"
+dependencies = [
+ "kurbo",
+ "peniko",
+]
+
+[[package]]
+name = "imaging_vello"
+version = "0.0.1"
+source = "git+https://github.com/forest-rs/imaging.git?rev=850af057d4c56cf644f37aaa644c7814a7a03a4b#850af057d4c56cf644f37aaa644c7814a7a03a4b"
+dependencies = [
+ "imaging",
+ "kurbo",
+ "peniko",
+ "pollster",
+ "vello",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1556,9 +1577,9 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "libredox"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1744e39d1d6a9948f4f388969627434e31128196de472883b39f148769bfe30a"
+checksum = "7ddbf48fd451246b1f8c2610bd3b4ac0cc6e149d89832867093ab69a17194f08"
 dependencies = [
  "bitflags 2.11.0",
  "libc",
@@ -1569,7 +1590,7 @@ dependencies = [
 [[package]]
 name = "linebender_include_doc_path"
 version = "0.1.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1632,7 +1653,7 @@ dependencies = [
 [[package]]
 name = "masonry"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "accesskit",
  "dpi",
@@ -1649,7 +1670,7 @@ dependencies = [
 [[package]]
 name = "masonry_core"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "accesskit",
  "anymap3",
@@ -1657,6 +1678,7 @@ dependencies = [
  "console_error_panic_hook",
  "cursor-icon",
  "dpi",
+ "imaging",
  "kurbo",
  "parley",
  "peniko",
@@ -1676,11 +1698,12 @@ dependencies = [
 [[package]]
 name = "masonry_testing"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "accesskit_consumer",
  "futures-intrusive",
  "image",
+ "imaging_vello",
  "masonry_core",
  "oxipng",
  "pollster",
@@ -1690,14 +1713,16 @@ dependencies = [
 [[package]]
 name = "masonry_winit"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "accesskit_winit",
  "copypasta",
+ "imaging_vello",
  "masonry_core",
  "pollster",
  "tracing",
  "ui-events-winit",
+ "wgpu",
  "winit",
 ]
 
@@ -1847,9 +1872,9 @@ dependencies = [
 
 [[package]]
 name = "num-conv"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf97ec579c3c42f953ef76dbf8d55ac91fb219dde70e49aa4a6b7d74e9919050"
+checksum = "c6673768db2d862beb9b39a78fdcb1a69439615d5794a1be50caa9bc92c81967"
 
 [[package]]
 name = "num-traits"
@@ -2151,9 +2176,9 @@ dependencies = [
 
 [[package]]
 name = "ordered-float"
-version = "5.0.0"
+version = "5.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2c1f9f56e534ac6a9b8a4600bdf0f530fb393b5f393e7b4d03489c3cf0c3f01"
+checksum = "0218004a4aae742209bee9c3cef05672f6b2708be36a50add8eb613b1f2a4008"
 dependencies = [
  "num-traits",
 ]
@@ -2782,9 +2807,9 @@ dependencies = [
 
 [[package]]
 name = "simd-adler32"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e320a6c5ad31d271ad523dcf3ad13e2767ad8b1cb8f047f75a8aeaf8da139da2"
+checksum = "703d5c7ef118737c72f1af64ad2f6f8c5e1921f818cdcb97b8fe6fc69bf66214"
 
 [[package]]
 name = "simd_cesu8"
@@ -3344,7 +3369,7 @@ dependencies = [
 [[package]]
 name = "tree_arena"
 version = "0.2.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "hashbrown 0.16.1",
 ]
@@ -3429,9 +3454,9 @@ checksum = "383ad40bb927465ec0ce7720e033cb4ca06912855fc35db31b5755d0de75b1ee"
 
 [[package]]
 name = "unicode-segmentation"
-version = "1.13.0"
+version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a559e63b5d8004e12f9bce88af5c6d939c58de839b7532cfe9653846cedd2a9e"
+checksum = "9629274872b2bfaf8d66f5f15725007f635594914870f65218920345aa11aa8c"
 
 [[package]]
 name = "unicode-vo"
@@ -3481,9 +3506,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.22.0"
+version = "1.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
+checksum = "5ac8b6f42ead25368cf5b098aeb3dc8a1a2c05a3eee8a9a1a68c640edbfc79d9"
 dependencies = [
  "js-sys",
  "serde_core",
@@ -4572,13 +4597,12 @@ checksum = "bec9e4a500ca8864c5b47b8b482a73d62e4237670e5b5f1d6b9e3cae50f28f2b"
 [[package]]
 name = "xilem"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "masonry",
  "masonry_winit",
  "tokio",
  "tracing",
- "vello",
  "winit",
  "xilem_core",
  "xilem_masonry",
@@ -4587,7 +4611,7 @@ dependencies = [
 [[package]]
 name = "xilem_core"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "anymore",
  "hashbrown 0.16.1",
@@ -4596,7 +4620,7 @@ dependencies = [
 
 [[package]]
 name = "xilem_extras"
-version = "0.1.0"
+version = "0.0.2"
 dependencies = [
  "masonry",
  "smallvec",
@@ -4607,12 +4631,11 @@ dependencies = [
 [[package]]
 name = "xilem_masonry"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#007d652e88366637ae72e690cee04aa661b98998"
+source = "git+https://github.com/linebender/xilem?branch=main#05db61685e17f4f1acc8bc7ab4080f8579dacee6"
 dependencies = [
  "masonry",
  "tokio",
  "tracing",
- "vello",
  "xilem_core",
 ]
 
@@ -4821,9 +4844,9 @@ checksum = "cb8a0807f7c01457d0379ba880ba6322660448ddebc890ce29bb64da71fb40f9"
 
 [[package]]
 name = "zune-jpeg"
-version = "0.5.14"
+version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b7a1c0af6e5d8d1363f4994b7a091ccf963d8b694f7da5b0b9cceb82da2c0a6"
+checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
 dependencies = [
  "zune-core",
 ]

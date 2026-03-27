@@ -6,17 +6,22 @@
 //! (compatible with the Xilem licence).
 
 use masonry::layout::AsUnit;
+use xilem::masonry::vello::kurbo::Point;
 use xilem::masonry::vello::peniko::Color;
 use xilem::style::Style;
 use xilem::view::flex_col;
 use xilem::{WidgetView, AnyWidgetView};
 
+use xilem::masonry::core::PointerButton;
+
 use crate::traits::{SelectionState, TreeNode};
-use crate::row_button_with_clicks;
+use crate::components::{row_button_with_press, row_button_with_clicks, RowButtonPress};
+use crate::context_menu::context_menu;
+use crate::menu_items::MenuItems;
 use super::ExpansionState;
 
 /// Actions that can occur on tree nodes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TreeAction {
     /// Expand or collapse (single click on expandable node)
     Toggle,
@@ -24,8 +29,8 @@ pub enum TreeAction {
     Select,
     /// Double click activation (e.g., open file)
     DoubleClick,
-    /// Right click context menu
-    ContextMenu,
+    /// Right click context menu at the given position
+    ContextMenu(Point),
 }
 
 /// Style configuration for tree rows.
@@ -199,6 +204,108 @@ where
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
 
+            let btn = row_button_with_press(row_view, move |state: &mut State, press: &RowButtonPress| {
+                let action = match press.button {
+                    Some(PointerButton::Secondary) => TreeAction::ContextMenu(press.position),
+                    None | Some(PointerButton::Primary) => {
+                        if press.click_count >= 2 {
+                            TreeAction::DoubleClick
+                        } else if is_expandable {
+                            TreeAction::Toggle
+                        } else {
+                            TreeAction::Select
+                        }
+                    }
+                    _ => return,
+                };
+                handler(state, &node_id, action);
+            })
+            .hover_bg(hover_bg);
+
+            btn.boxed()
+        })
+        .collect();
+
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
+}
+
+/// Creates a tree group with type-safe context menu support on each row.
+///
+/// Each menu item carries its own action callback, eliminating index matching errors.
+/// The callback is invoked with the node id when a menu item is selected.
+///
+/// # Arguments
+///
+/// * `root` - The root node of the tree
+/// * `expansion` - Tracks which nodes are expanded
+/// * `selection` - Optional selection state
+/// * `style` - Tree styling options
+/// * `context_menu_items_fn` - Function that returns menu items for a node
+/// * `row_builder` - Function that builds a view for each node
+/// * `handler` - Function that handles tree actions (Toggle, Select, DoubleClick)
+///
+/// # Example
+///
+/// ```ignore
+/// use xilem_extras::{tree_group_with_context_menu, menu_item, separator};
+///
+/// tree_group_with_context_menu(
+///     &model.file_tree,
+///     &model.expansion,
+///     Some(&model.selection),
+///     TreeStyle::new().hover_bg(Color::from_rgb8(55, 53, 50)),
+///     |node_id| (
+///         menu_item("Open", move |state: &mut AppState| state.open_file(node_id)),
+///         menu_item("Delete", move |state| state.delete_file(node_id)),
+///         separator(),
+///         menu_item("Properties", move |state| state.show_properties(node_id)),
+///     ),
+///     |node, depth, is_expanded, is_selected| { ... },
+///     |state, node_id, action| { ... },
+/// )
+/// ```
+pub fn tree_group_with_context_menu<'a, State, N, R, F, H, I, MI, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    style: TreeStyle,
+    context_menu_items_fn: MI,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, I, MI, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + Send + Sync + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    I: MenuItems<State, ()> + Clone,
+    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
+    flatten_tree(root, expansion, 0, &mut flat_nodes);
+
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = flat_nodes
+        .into_iter()
+        .map(|(node, depth, is_expanded)| {
+            let is_selected = selection
+                .map(|sel| sel.is_selected(&node.id()))
+                .unwrap_or(false);
+
+            let row_view = row_builder(node, depth, is_expanded, is_selected);
+            let node_id = node.id();
+            let is_expandable = node.is_expandable();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
+            let menu_items = context_menu_items_fn(&node_id);
+
+            // Wrap row in row_button for click handling
             let btn = row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
                 let action = if click_count >= 2 {
                     TreeAction::DoubleClick
@@ -211,7 +318,10 @@ where
             })
             .hover_bg(hover_bg);
 
-            btn.boxed()
+            // Wrap in context menu
+            let with_menu = context_menu(btn, menu_items);
+
+            with_menu.boxed()
         })
         .collect();
 
@@ -365,7 +475,7 @@ mod tests {
         assert_eq!(TreeAction::Toggle, TreeAction::Toggle);
         assert_ne!(TreeAction::Toggle, TreeAction::Select);
         assert_ne!(TreeAction::Select, TreeAction::DoubleClick);
-        assert_ne!(TreeAction::DoubleClick, TreeAction::ContextMenu);
+        assert_ne!(TreeAction::DoubleClick, TreeAction::ContextMenu(Point::ZERO));
     }
 
     #[test]

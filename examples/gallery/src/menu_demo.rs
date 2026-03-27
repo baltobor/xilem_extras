@@ -13,7 +13,7 @@ use xilem::style::{Style, Padding};
 use xilem::view::{flex_col, flex_row, label};
 use xilem::WidgetView;
 
-use xilem_extras::{menu_button, dropdown_select};
+use xilem_extras::{menu_button, menu_item, separator, dropdown_select};
 use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
 
 use crate::app_model::AppModel;
@@ -41,85 +41,79 @@ fn menu_bar_button(text: &str) -> impl WidgetView<AppModel> + use<'_> {
 }
 
 pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
-    // Menu bar with File, View, About menus
+    // Menu bar with File, View, About menus using the new type-safe API
     let menu_bar = flex_row((
         menu_button(
             menu_bar_button("File"),
-            vec![
-                "New".to_string(),
-                "Open...".to_string(),
-                "---".to_string(),
-                "Save".to_string(),
-                "Save As...".to_string(),
-                "---".to_string(),
-                "Exit".to_string(),
-            ],
-            |model: &mut AppModel, index: usize| {
-                model.menu_last_action = match index {
-                    0 => "File > New".to_string(),
-                    1 => "File > Open...".to_string(),
-                    // index 2 is separator
-                    3 => "File > Save".to_string(),
-                    4 => "File > Save As...".to_string(),
-                    // index 5 is separator
-                    6 => "File > Exit".to_string(),
-                    _ => format!("File > Item {}", index),
-                };
-            },
+            (
+                menu_item("New", |model: &mut AppModel| {
+                    model.menu_last_action = "File > New".to_string();
+                }),
+                menu_item("Open...", |model: &mut AppModel| {
+                    model.menu_last_action = "File > Open...".to_string();
+                }),
+                separator(),
+                menu_item("Save", |model: &mut AppModel| {
+                    model.menu_last_action = "File > Save".to_string();
+                }),
+                menu_item("Save As...", |model: &mut AppModel| {
+                    model.menu_last_action = "File > Save As...".to_string();
+                }),
+                separator(),
+                menu_item("Exit", |model: &mut AppModel| {
+                    model.menu_last_action = "File > Exit".to_string();
+                }),
+            ),
         ),
         menu_button(
             menu_bar_button("Edit"),
-            vec![
-                "Undo".to_string(),
-                "Redo".to_string(),
-                "---".to_string(),
-                "Cut".to_string(),
-                "Copy".to_string(),
-                "Paste".to_string(),
-            ],
-            |model: &mut AppModel, index: usize| {
-                model.menu_last_action = match index {
-                    0 => "Edit > Undo".to_string(),
-                    1 => "Edit > Redo".to_string(),
-                    // index 2 is separator
-                    3 => "Edit > Cut".to_string(),
-                    4 => "Edit > Copy".to_string(),
-                    5 => "Edit > Paste".to_string(),
-                    _ => format!("Edit > Item {}", index),
-                };
-            },
+            (
+                menu_item("Undo", |model: &mut AppModel| {
+                    model.menu_last_action = "Edit > Undo".to_string();
+                }),
+                menu_item("Redo", |model: &mut AppModel| {
+                    model.menu_last_action = "Edit > Redo".to_string();
+                }),
+                separator(),
+                menu_item("Cut", |model: &mut AppModel| {
+                    model.menu_last_action = "Edit > Cut".to_string();
+                }),
+                menu_item("Copy", |model: &mut AppModel| {
+                    model.menu_last_action = "Edit > Copy".to_string();
+                }),
+                menu_item("Paste", |model: &mut AppModel| {
+                    model.menu_last_action = "Edit > Paste".to_string();
+                }),
+            ),
         ),
         menu_button(
             menu_bar_button("View"),
-            vec![
-                "Zoom In".to_string(),
-                "Zoom Out".to_string(),
-                "Reset Zoom".to_string(),
-                "Full Screen".to_string(),
-            ],
-            |model: &mut AppModel, index: usize| {
-                model.menu_last_action = match index {
-                    0 => "View > Zoom In".to_string(),
-                    1 => "View > Zoom Out".to_string(),
-                    2 => "View > Reset Zoom".to_string(),
-                    3 => "View > Full Screen".to_string(),
-                    _ => format!("View > Item {}", index),
-                };
-            },
+            (
+                menu_item("Zoom In", |model: &mut AppModel| {
+                    model.menu_last_action = "View > Zoom In".to_string();
+                }),
+                menu_item("Zoom Out", |model: &mut AppModel| {
+                    model.menu_last_action = "View > Zoom Out".to_string();
+                }),
+                menu_item("Reset Zoom", |model: &mut AppModel| {
+                    model.menu_last_action = "View > Reset Zoom".to_string();
+                }),
+                menu_item("Full Screen", |model: &mut AppModel| {
+                    model.menu_last_action = "View > Full Screen".to_string();
+                }),
+            ),
         ),
         menu_button(
             menu_bar_button("Help"),
-            vec![
-                "Documentation".to_string(),
-                "About".to_string(),
-            ],
-            |model: &mut AppModel, index: usize| {
-                model.menu_last_action = match index {
-                    0 => "Help > Documentation".to_string(),
-                    1 => "Help > About".to_string(),
-                    _ => format!("Help > Item {}", index),
-                };
-            },
+            (
+                menu_item("Documentation", |model: &mut AppModel| {
+                    model.menu_last_action = "Help > Documentation".to_string();
+                }),
+                separator(),
+                menu_item("About", |model: &mut AppModel| {
+                    model.menu_last_action = "Help > About".to_string();
+                }),
+            ),
         ),
     ))
     .gap(0.px())

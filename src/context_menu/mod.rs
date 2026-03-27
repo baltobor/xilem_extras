@@ -5,8 +5,12 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-mod expansion_state;
-mod tree_view;
+//! Context menu (right-click popup menu) support.
 
-pub use expansion_state::ExpansionState;
-pub use tree_view::{tree, tree_group, tree_group_styled, tree_group_with_context_menu, TreeAction, TreeStyle, flatten_tree};
+mod widget;
+mod view;
+mod dropdown;
+
+pub use widget::{ContextMenuWidget, ContextMenuAction};
+pub use view::{context_menu, ContextMenuView};
+pub use dropdown::ContextMenuDropdown;

@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-xilem_extras = { path = "../.." }
+xilem_extras = { path = "../..", features = ["rust-logos"] }
 xilem = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
 xilem_material_icons = { path = "../../../xilem_material_icons" }

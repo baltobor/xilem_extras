@@ -5,15 +5,15 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-//! List widget demo - simple selectable list.
+//! List widget demo - demonstrates the list view with multi-selection.
 
 use masonry::layout::AsUnit;
 use xilem::masonry::vello::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button, portal};
-use xilem::WidgetView;
+use xilem::{AnyWidgetView, WidgetView};
 
-use xilem_extras::{SelectionState, SelectionModifiers, row_button_with_modifiers};
+use xilem_extras::{list_styled, ListAction, ListStyle, SelectionState};
 use xilem_extras::components::icon::{MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
 use xilem_material_icons::icons;
 
@@ -26,21 +26,22 @@ const BG_HOVER: Color = Color::from_rgb8(55, 53, 50);
 const BG_SELECTED: Color = Color::from_rgb8(65, 62, 58);
 const ICON_COLOR: Color = Color::from_rgb8(100, 180, 100);
 
-fn contact_row(contact: &Contact, is_selected: bool) -> impl WidgetView<AppModel> + use<'_> {
+fn contact_row(contact: &Contact, is_selected: bool) -> Box<AnyWidgetView<AppModel, ()>> {
     let row_bg = if is_selected { BG_SELECTED } else { Color::TRANSPARENT };
-    let id = contact.id;
+    let name = contact.name.clone();
+    let email = contact.email.clone();
 
-    let row = flex_row((
+    flex_row((
         label(icons::PERSON.to_string())
             .font(MATERIAL_SYMBOLS_FAMILY)
             .text_size(ICON_SIZE_SM)
             .color(ICON_COLOR)
             .width(24.px()),
         flex_col((
-            label(contact.name.clone())
+            label(name)
                 .text_size(13.0)
                 .color(TEXT_COLOR),
-            label(contact.email.clone())
+            label(email)
                 .text_size(11.0)
                 .color(TEXT_SECONDARY),
         ))
@@ -49,26 +50,31 @@ fn contact_row(contact: &Contact, is_selected: bool) -> impl WidgetView<AppModel
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(8.px())
-    .padding(8.0);
-
-    row_button_with_modifiers(row, move |model: &mut AppModel, modifiers| {
-        let sel_mods = SelectionModifiers::from_modifiers(modifiers);
-        model.list_selection.select(id, sel_mods);
-    })
-    .hover_bg(BG_HOVER)
+    .padding(8.0)
     .background_color(row_bg)
+    .boxed()
 }
 
-pub fn list_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
+pub fn list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_> {
     // Update selection item order for shift+click range selection
     let contact_ids: Vec<u64> = model.contacts.iter().map(|c| c.id).collect();
     model.list_selection.set_items(contact_ids);
 
-    // Build all contact rows
-    let rows: Vec<_> = model.contacts.iter().map(|contact| {
-        let is_selected = model.list_selection.is_selected(&contact.id);
-        contact_row(contact, is_selected).boxed()
-    }).collect();
+    // Use the framework's list view
+    let list_view = list_styled(
+        &model.contacts,
+        &model.list_selection,
+        ListStyle::new().hover_bg(BG_HOVER),
+        |contact, is_selected| contact_row(contact, is_selected),
+        |state: &mut AppModel, action| {
+            match action {
+                ListAction::Select(id, mods) => state.list_selection.select(id, mods),
+                ListAction::Activate(_id) => {
+                    // Double-click action (e.g., open contact details)
+                }
+            }
+        },
+    );
 
     flex_col((
         label("Contacts")
@@ -80,11 +86,7 @@ pub fn list_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             .color(TEXT_SECONDARY),
 
         // Scrollable list
-        portal(
-            flex_col(rows)
-                .cross_axis_alignment(CrossAxisAlignment::Stretch)
-                .gap(0.px())
-        ),
+        portal(list_view),
 
         // Selection info
         flex_row((

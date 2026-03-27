@@ -14,27 +14,19 @@
 //! # Example
 //!
 //! ```ignore
-//! use xilem_extras::menu_button;
+//! use xilem_extras::{menu_button, menu_item, separator};
 //!
 //! menu_button(
 //!     label("File"),
-//!     vec!["New", "Open...", "---", "Save", "Save As...", "---", "Exit"],
-//!     |state: &mut AppState, index: usize| {
-//!         match index {
-//!             0 => state.new_file(),
-//!             1 => state.open_file(),
-//!             // index 2 is separator, skipped
-//!             3 => state.save_file(),
-//!             4 => state.save_as(),
-//!             // index 5 is separator, skipped
-//!             6 => state.exit(),
-//!             _ => {}
-//!         }
-//!     },
+//!     (
+//!         menu_item("New", |state: &mut AppState| state.new_file()),
+//!         menu_item("Open...", |state| state.open_file()),
+//!         separator(),
+//!         menu_item("Save", |state| state.save_file()),
+//!         menu_item("Exit", |state| state.exit()),
+//!     ),
 //! )
 //! ```
-//!
-//! Use `"---"` in the items list to insert a visual separator between groups.
 
 mod widget;
 mod dropdown;

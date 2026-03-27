@@ -5,10 +5,17 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-use std::marker::PhantomData;
+//! List view for flat collections with selection support.
 
-use crate::traits::{Identifiable, ListItem, SelectionModifiers, SelectionState};
-use crate::tree::ExpansionState;
+use masonry::layout::AsUnit;
+use xilem::masonry::vello::peniko::Color;
+use xilem::style::Style;
+use xilem::view::flex_col;
+use xilem::{AnyWidgetView, WidgetView};
+
+use crate::components::{row_button_with_press, RowButtonPress};
+use crate::traits::{Identifiable, SelectionModifiers, SelectionState};
+use xilem::masonry::core::PointerButton;
 
 /// Actions that can occur on list items.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,28 +26,39 @@ pub enum ListAction<Id> {
     Activate(Id),
 }
 
-/// A list view for flat collections with selection support.
-///
-/// # Type Parameters
-///
-/// - `State`: Application state type
-/// - `Action`: Action type returned by callbacks
-/// - `I`: List item type
-/// - `R`: Row view type
-/// - `Sel`: Selection state type
-/// - `F`: Row builder function type
-/// - `H`: Handler function type
-pub struct ListView<State, Action, I, R, Sel, F, H> {
-    _phantom: PhantomData<(State, Action, I, R, Sel, F, H)>,
-    row_builder: F,
-    handler: H,
-    row_height: f64,
+/// Style configuration for list rows.
+#[derive(Debug, Clone)]
+pub struct ListStyle {
+    /// Background color on hover.
+    pub hover_bg: Color,
+    /// Gap between rows in pixels.
+    pub gap: f64,
 }
 
-impl<State, Action, I, R, Sel, F, H> ListView<State, Action, I, R, Sel, F, H> {
-    /// Sets the row height.
-    pub fn row_height(mut self, height: f64) -> Self {
-        self.row_height = height;
+impl Default for ListStyle {
+    fn default() -> Self {
+        Self {
+            hover_bg: Color::TRANSPARENT,
+            gap: 0.0,
+        }
+    }
+}
+
+impl ListStyle {
+    /// Creates a new ListStyle with default values.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the hover background color.
+    pub fn hover_bg(mut self, color: Color) -> Self {
+        self.hover_bg = color;
+        self
+    }
+
+    /// Sets the gap between rows.
+    pub fn gap(mut self, gap: f64) -> Self {
+        self.gap = gap;
         self
     }
 }
@@ -63,121 +81,103 @@ impl<State, Action, I, R, Sel, F, H> ListView<State, Action, I, R, Sel, F, H> {
 ///     |contact, is_selected| {
 ///         flex_row((
 ///             label(&contact.name),
-///             label(&contact.email).color(text_secondary),
+///             label(&contact.email),
 ///         ))
-///         .background_color(if is_selected { bg_selected } else { bg_normal })
+///         .background_color(if is_selected { BG_SELECTED } else { Color::TRANSPARENT })
 ///     },
-///     |model, action| {
+///     |state, action| {
 ///         match action {
-///             ListAction::Select(id, mods) => model.selection.select(id, mods),
-///             ListAction::Activate(id) => model.open_contact(id),
+///             ListAction::Select(id, mods) => state.selection.select(id, mods),
+///             ListAction::Activate(id) => state.open_contact(&id),
 ///         }
 ///     },
 /// )
 /// ```
-pub fn list<'a, State, Action, I, R, Sel, F, H>(
+pub fn list<'a, State, I, R, Sel, F, H>(
     items: &'a [I],
     selection: &'a Sel,
     row_builder: F,
     handler: H,
-) -> ListView<State, Action, I, R, Sel, F, H>
+) -> impl WidgetView<State, ()> + use<'a, State, I, R, Sel, F, H>
 where
-    I: ListItem,
-    Sel: SelectionState<I::Id>,
-    F: Fn(&I, bool) -> R,
-    H: Fn(&mut State, ListAction<I::Id>) -> Action,
+    State: 'static,
+    I: Identifiable + 'a,
+    I::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&I, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, ListAction<I::Id>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<I::Id> + 'a,
 {
-    let _ = (items, selection); // Used in actual rendering
-
-    ListView {
-        _phantom: PhantomData,
-        row_builder,
-        handler,
-        row_height: 24.0,
-    }
+    list_styled(items, selection, ListStyle::default(), row_builder, handler)
 }
 
-/// A nested list view for hierarchical collections.
-pub struct NestedListView<State, Action, I, R, C, F, H> {
-    _phantom: PhantomData<(State, Action, I, R, C, F, H)>,
-    row_builder: F,
-    children_fn: C,
-    handler: H,
-    row_height: f64,
-    indent: f64,
-}
-
-impl<State, Action, I, R, C, F, H> NestedListView<State, Action, I, R, C, F, H> {
-    /// Sets the row height.
-    pub fn row_height(mut self, height: f64) -> Self {
-        self.row_height = height;
-        self
-    }
-
-    /// Sets the indentation per level.
-    pub fn indent(mut self, indent: f64) -> Self {
-        self.indent = indent;
-        self
-    }
-}
-
-/// Creates a nested list view with children.
+/// Creates a list view with custom styling.
 ///
-/// # Arguments
+/// Same as [`list`] but accepts a [`ListStyle`] for customization.
 ///
-/// * `items` - The top-level items
-/// * `children` - Function that returns children for each item
-/// * `expansion` - Tracks which items are expanded
-/// * `row_builder` - Function that builds a view for each item
-/// * `handler` - Function that handles list actions
-pub fn list_with_children<'a, State, Action, I, R, C, F, H>(
+/// # Example
+///
+/// ```ignore
+/// list_styled(
+///     &model.contacts,
+///     &model.selection,
+///     ListStyle::new().hover_bg(BG_HOVER).gap(2.0),
+///     |contact, is_selected| { ... },
+///     |state, action| { ... },
+/// )
+/// ```
+pub fn list_styled<'a, State, I, R, Sel, F, H>(
     items: &'a [I],
-    children: C,
-    expansion: &'a ExpansionState<I::Id>,
+    selection: &'a Sel,
+    style: ListStyle,
     row_builder: F,
     handler: H,
-) -> NestedListView<State, Action, I, R, C, F, H>
+) -> impl WidgetView<State, ()> + use<'a, State, I, R, Sel, F, H>
 where
-    I: Identifiable,
-    C: Fn(&I) -> &[I],
-    F: Fn(&I, usize, bool) -> R,
-    H: Fn(&mut State, ListAction<I::Id>) -> Action,
+    State: 'static,
+    I: Identifiable + 'a,
+    I::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&I, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, ListAction<I::Id>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<I::Id> + 'a,
 {
-    let _ = (items, expansion); // Used in actual rendering
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = items
+        .iter()
+        .map(|item| {
+            let is_selected = selection.is_selected(&item.id());
+            let row_view = row_builder(item, is_selected);
+            let item_id = item.id();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
 
-    NestedListView {
-        _phantom: PhantomData,
-        row_builder,
-        children_fn: children,
-        handler,
-        row_height: 24.0,
-        indent: 16.0,
-    }
+            let btn = row_button_with_press(row_view, move |state: &mut State, press: &RowButtonPress| {
+                // Only handle primary button clicks
+                match press.button {
+                    None | Some(PointerButton::Primary) => {
+                        let sel_mods = SelectionModifiers::from_modifiers(press.modifiers);
+                        let action = if press.click_count >= 2 {
+                            ListAction::Activate(item_id.clone())
+                        } else {
+                            ListAction::Select(item_id.clone(), sel_mods)
+                        };
+                        handler(state, action);
+                    }
+                    _ => {}
+                }
+            })
+            .hover_bg(hover_bg);
+
+            btn.boxed()
+        })
+        .collect();
+
+    flex_col(rows).gap(style.gap.px())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::selection::SingleSelection;
-
-    #[derive(Debug, Clone)]
-    struct TestItem {
-        id: u64,
-        name: String,
-    }
-
-    impl Identifiable for TestItem {
-        type Id = u64;
-        fn id(&self) -> Self::Id {
-            self.id
-        }
-    }
-
-    impl ListItem for TestItem {
-        fn label(&self) -> &str {
-            &self.name
-        }
-    }
 
     #[test]
     fn list_action_select() {
@@ -219,5 +219,22 @@ mod tests {
             assert!(mods.command);
             assert!(!mods.shift);
         }
+    }
+
+    #[test]
+    fn list_style_builder() {
+        let style = ListStyle::new()
+            .hover_bg(Color::from_rgb8(50, 50, 50))
+            .gap(4.0);
+
+        assert_eq!(style.hover_bg, Color::from_rgb8(50, 50, 50));
+        assert_eq!(style.gap, 4.0);
+    }
+
+    #[test]
+    fn list_style_default() {
+        let style = ListStyle::default();
+        assert_eq!(style.hover_bg, Color::TRANSPARENT);
+        assert_eq!(style.gap, 0.0);
     }
 }

@@ -35,6 +35,7 @@ pub struct RowButtonPress {
     pub button: Option<PointerButton>,
     pub click_count: u8,
     pub modifiers: Modifiers,
+    pub position: Point,
 }
 
 /// A button widget designed for list/tree rows.
@@ -49,6 +50,7 @@ pub struct RowButton {
     hover_bg: Color,
     click_count: u8,
     modifiers: Modifiers,
+    position: Point,
     size: Size,
 }
 
@@ -59,6 +61,7 @@ impl RowButton {
             hover_bg: Color::TRANSPARENT,
             click_count: 0,
             modifiers: Modifiers::default(),
+            position: Point::ZERO,
             size: Size::ZERO,
         }
     }
@@ -92,6 +95,8 @@ impl Widget for RowButton {
                 self.click_count = state.count as u8;
                 // Capture modifiers at click time (they may be released before Up)
                 self.modifiers = state.modifiers;
+                // Capture position in window coordinates
+                self.position = Point::new(state.position.x, state.position.y);
                 ctx.request_focus();
                 ctx.capture_pointer();
                 ctx.request_render();
@@ -102,6 +107,7 @@ impl Widget for RowButton {
                         button: *button,
                         click_count: self.click_count,
                         modifiers: self.modifiers,
+                        position: self.position,
                     });
                 }
                 ctx.request_render();
@@ -125,6 +131,7 @@ impl Widget for RowButton {
                         button: None,
                         click_count: 1,
                         modifiers: event.modifiers,
+                        position: Point::ZERO,
                     });
                 }
             }
@@ -143,6 +150,7 @@ impl Widget for RowButton {
                 button: None,
                 click_count: 1,
                 modifiers: Modifiers::default(),
+                position: Point::ZERO,
             });
         }
     }
@@ -240,7 +248,7 @@ impl Widget for RowButton {
     }
 
     fn propagates_pointer_interaction(&self) -> bool {
-        false
+        true
     }
 
     fn accepts_focus(&self) -> bool {
@@ -271,13 +279,13 @@ pub fn row_button<State: 'static, Action: 'static, V: WidgetView<State, Action>>
     child: V,
     callback: impl Fn(&mut State) -> Action + Send + Sync + 'static,
 ) -> RowButtonView<
-    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + 'static,
+    impl for<'a> Fn(&'a mut State, &RowButtonPress) -> MessageResult<Action> + Send + 'static,
     V,
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, button: Option<PointerButton>, _click_count: u8, _modifiers: Modifiers| {
-            match button {
+        callback: move |state: &mut State, press: &RowButtonPress| {
+            match press.button {
                 None | Some(PointerButton::Primary) => MessageResult::Action(callback(state)),
                 _ => MessageResult::Nop,
             }
@@ -292,15 +300,15 @@ pub fn row_button_with_clicks<State: 'static, Action: 'static, V: WidgetView<Sta
     child: V,
     callback: impl Fn(&mut State, u8) -> Action + Send + Sync + 'static,
 ) -> RowButtonView<
-    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + 'static,
+    impl for<'a> Fn(&'a mut State, &RowButtonPress) -> MessageResult<Action> + Send + 'static,
     V,
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, button: Option<PointerButton>, click_count: u8, _modifiers: Modifiers| {
-            match button {
+        callback: move |state: &mut State, press: &RowButtonPress| {
+            match press.button {
                 None | Some(PointerButton::Primary) => {
-                    MessageResult::Action(callback(state, click_count))
+                    MessageResult::Action(callback(state, press.click_count))
                 }
                 _ => MessageResult::Nop,
             }
@@ -320,18 +328,39 @@ pub fn row_button_with_modifiers<State: 'static, Action: 'static, V: WidgetView<
     child: V,
     callback: impl Fn(&mut State, Modifiers) -> Action + Send + Sync + 'static,
 ) -> RowButtonView<
-    impl for<'a> Fn(&'a mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + 'static,
+    impl for<'a> Fn(&'a mut State, &RowButtonPress) -> MessageResult<Action> + Send + 'static,
     V,
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, button: Option<PointerButton>, _click_count: u8, modifiers: Modifiers| {
-            match button {
+        callback: move |state: &mut State, press: &RowButtonPress| {
+            match press.button {
                 None | Some(PointerButton::Primary) => {
-                    MessageResult::Action(callback(state, modifiers))
+                    MessageResult::Action(callback(state, press.modifiers))
                 }
                 _ => MessageResult::Nop,
             }
+        },
+        hover_bg: Color::TRANSPARENT,
+        disabled: false,
+    }
+}
+
+/// Create a row button that receives full press information.
+///
+/// This is useful for handling different mouse buttons (right-click for context menu)
+/// and getting the click position for menu placement.
+pub fn row_button_with_press<State: 'static, Action: 'static, V: WidgetView<State, Action>>(
+    child: V,
+    callback: impl Fn(&mut State, &RowButtonPress) -> Action + Send + Sync + 'static,
+) -> RowButtonView<
+    impl for<'a> Fn(&'a mut State, &RowButtonPress) -> MessageResult<Action> + Send + 'static,
+    V,
+> {
+    RowButtonView {
+        child,
+        callback: move |state: &mut State, press: &RowButtonPress| {
+            MessageResult::Action(callback(state, press))
         },
         hover_bg: Color::TRANSPARENT,
         disabled: false,
@@ -357,7 +386,7 @@ impl<F, V> ViewMarker for RowButtonView<F, V> {}
 impl<F, V, State, Action> View<State, Action, ViewCtx> for RowButtonView<F, V>
 where
     V: WidgetView<State, Action>,
-    F: Fn(&mut State, Option<PointerButton>, u8, Modifiers) -> MessageResult<Action> + Send + Sync + 'static,
+    F: Fn(&mut State, &RowButtonPress) -> MessageResult<Action> + Send + Sync + 'static,
     State: 'static,
     Action: 'static,
 {
@@ -436,7 +465,7 @@ where
                 app_state,
             ),
             None => match message.take_message::<RowButtonPress>() {
-                Some(press) => (self.callback)(app_state, press.button, press.click_count, press.modifiers),
+                Some(press) => (self.callback)(app_state, &press),
                 None => MessageResult::Stale,
             },
             _ => MessageResult::Stale,

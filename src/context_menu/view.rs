@@ -5,7 +5,7 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-//! Xilem view for the pulldown menu button.
+//! Xilem view for the context menu widget.
 
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -13,96 +13,96 @@ use std::sync::Arc;
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::{Pod, ViewCtx, WidgetView};
 
-use super::widget::{MenuButton, MenuButtonPress};
+use super::widget::{ContextMenuAction, ContextMenuWidget};
 use crate::menu_items::{BoxedMenuEntry, MenuItems};
 
-/// Randomly generated view ID for the child label.
-const LABEL_VIEW_ID: ViewId = ViewId::new(0xa7f3_b0d1);
+/// Randomly generated view ID for the child content.
+const CHILD_VIEW_ID: ViewId = ViewId::new(0xc0_7e_47_01);
 
-/// Xilem view that wraps a [`MenuButton`] widget.
+/// Xilem view that wraps content and shows a context menu on right-click.
 ///
-/// Created via the [`menu_button`] function. Each menu item carries its own
+/// Created via the [`context_menu`] function. Each menu item carries its own
 /// action callback, eliminating index matching errors.
 ///
 /// # Example
 ///
 /// ```ignore
-/// use xilem_extras::{menu_button, menu_item, separator};
+/// use xilem_extras::{context_menu, menu_item, separator};
 ///
-/// menu_button(
-///     label("File"),
+/// context_menu(
+///     label("Right-click me"),
 ///     (
-///         menu_item("New", |state: &mut AppState| state.new_file()),
-///         menu_item("Open", |state| state.open_file()),
+///         menu_item("Cut", |state: &mut AppState| state.cut()),
+///         menu_item("Copy", |state| state.copy()),
 ///         separator(),
-///         menu_item("Exit", |state| state.exit()),
+///         menu_item("Paste", |state| state.paste()),
 ///     ),
 /// )
 /// ```
 #[must_use = "View values do nothing unless provided to Xilem."]
-pub struct MenuButtonView<State, Action, V, I> {
-    label: V,
+pub struct ContextMenuView<State, Action, V, I> {
+    child: V,
     items: I,
     phantom: PhantomData<fn(&mut State) -> Action>,
 }
 
-/// Creates a menu button view.
+/// Creates a context menu view that wraps content.
 ///
 /// Each menu item carries its own action callback, eliminating index matching errors.
 ///
-/// - `label`: the always-visible label view (e.g. `label("File")`).
+/// - `child`: the content view to wrap (e.g. a label, button, or any widget).
 /// - `items`: tuple of menu items created with [`menu_item`](crate::menu_item) and [`separator`](crate::separator).
 ///
 /// # Example
 ///
 /// ```ignore
 /// use xilem::view::label;
-/// use xilem_extras::{menu_button, menu_item, separator};
+/// use xilem_extras::{context_menu, menu_item, separator};
 ///
-/// menu_button(
-///     label("File"),
+/// context_menu(
+///     label("Right-click me"),
 ///     (
-///         menu_item("New", |state: &mut AppState| state.new_file()),
-///         menu_item("Open", |state| state.open_file()),
+///         menu_item("Open", |state: &mut AppState| state.open()),
+///         menu_item("Delete", |state| state.delete()),
 ///         separator(),
-///         menu_item("Exit", |state| state.exit()),
+///         menu_item("Rename", |state| state.rename()),
 ///     ),
 /// )
 /// ```
-pub fn menu_button<State, Action, V, I>(
-    label: V,
+pub fn context_menu<State, Action, V, I>(
+    child: V,
     items: I,
-) -> MenuButtonView<State, Action, V, I>
+) -> ContextMenuView<State, Action, V, I>
 where
     State: 'static,
     Action: 'static,
     V: WidgetView<State, Action>,
     I: MenuItems<State, Action>,
 {
-    MenuButtonView {
-        label,
+    ContextMenuView {
+        child,
         items,
         phantom: PhantomData,
     }
 }
 
-/// View state for MenuButtonView, storing the collected menu entries.
-pub struct MenuButtonViewState<State: 'static, Action: 'static, V: WidgetView<State, Action>> {
-    label_state: V::ViewState,
+/// View state for ContextMenuView, storing the collected menu entries.
+pub struct ContextMenuViewState<State: 'static, Action: 'static, V: WidgetView<State, Action>> {
+    child_state: V::ViewState,
     entries: Arc<Vec<BoxedMenuEntry<State, Action>>>,
 }
 
-impl<State, Action, V, I> ViewMarker for MenuButtonView<State, Action, V, I> {}
+impl<State, Action, V, I> ViewMarker for ContextMenuView<State, Action, V, I> {}
 
-impl<State, Action, V, I> View<State, Action, ViewCtx> for MenuButtonView<State, Action, V, I>
+impl<State, Action, V, I> View<State, Action, ViewCtx> for ContextMenuView<State, Action, V, I>
 where
     State: 'static,
     Action: 'static,
     V: WidgetView<State, Action>,
     I: MenuItems<State, Action> + Clone,
 {
-    type Element = Pod<MenuButton>;
-    type ViewState = MenuButtonViewState<State, Action, V>;
+    type Element = Pod<ContextMenuWidget>;
+    type ViewState = ContextMenuViewState<State, Action, V>;
 
     fn build(
         &self,
@@ -117,16 +117,16 @@ where
             .map(|e| e.label().unwrap_or("---").to_string())
             .collect();
 
-        let (child, label_state) = ctx.with_id(LABEL_VIEW_ID, |ctx| {
-            self.label.build(ctx, app_state)
+        let (child, child_state) = ctx.with_id(CHILD_VIEW_ID, |ctx| {
+            self.child.build(ctx, app_state)
         });
 
         let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(MenuButton::new(child.new_widget, labels))
+            ctx.create_pod(ContextMenuWidget::new(child.new_widget, labels))
         });
 
-        let view_state = MenuButtonViewState {
-            label_state,
+        let view_state = ContextMenuViewState {
+            child_state,
             entries: Arc::new(entries),
         };
 
@@ -154,16 +154,16 @@ where
             .collect();
 
         if prev_labels != labels {
-            MenuButton::set_items(&mut element, labels);
+            ContextMenuWidget::set_items(&mut element, labels);
         }
         view_state.entries = Arc::new(entries);
 
-        ctx.with_id(LABEL_VIEW_ID, |ctx| {
-            self.label.rebuild(
-                &prev.label,
-                &mut view_state.label_state,
+        ctx.with_id(CHILD_VIEW_ID, |ctx| {
+            self.child.rebuild(
+                &prev.child,
+                &mut view_state.child_state,
                 ctx,
-                MenuButton::child_mut(&mut element).downcast(),
+                ContextMenuWidget::child_mut(&mut element).downcast(),
                 app_state,
             );
         });
@@ -175,11 +175,11 @@ where
         ctx: &mut ViewCtx,
         mut element: Mut<'_, Self::Element>,
     ) {
-        ctx.with_id(LABEL_VIEW_ID, |ctx| {
-            self.label.teardown(
-                &mut view_state.label_state,
+        ctx.with_id(CHILD_VIEW_ID, |ctx| {
+            self.child.teardown(
+                &mut view_state.child_state,
                 ctx,
-                MenuButton::child_mut(&mut element).downcast(),
+                ContextMenuWidget::child_mut(&mut element).downcast(),
             );
         });
         ctx.teardown_action_source(element);
@@ -193,22 +193,24 @@ where
         app_state: &mut State,
     ) -> MessageResult<Action> {
         match message.take_first() {
-            Some(LABEL_VIEW_ID) => self.label.message(
-                &mut view_state.label_state,
+            Some(CHILD_VIEW_ID) => self.child.message(
+                &mut view_state.child_state,
                 message,
-                MenuButton::child_mut(&mut element).downcast(),
+                ContextMenuWidget::child_mut(&mut element).downcast(),
                 app_state,
             ),
-            None => match message.take_message::<MenuButtonPress>() {
-                Some(press) => {
-                    // Execute the action from the stored entry
-                    if let Some(entry) = view_state.entries.get(press.index) {
-                        if let Some(action) = entry.execute(app_state) {
-                            return MessageResult::Action(action);
+            None => match message.take_message::<ContextMenuAction>() {
+                Some(boxed) => match *boxed {
+                    ContextMenuAction::ItemSelected(index) => {
+                        // Execute the action from the stored entry
+                        if let Some(entry) = view_state.entries.get(index) {
+                            if let Some(action) = entry.execute(app_state) {
+                                return MessageResult::Action(action);
+                            }
                         }
+                        MessageResult::Nop
                     }
-                    MessageResult::Nop
-                }
+                },
                 None => MessageResult::Stale,
             },
             _ => MessageResult::Stale,

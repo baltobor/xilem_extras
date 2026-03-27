@@ -24,11 +24,19 @@ This library extends Xilem with common UI patterns for building desktop applicat
 just run
 ```
 
-Or directly:
+This runs the gallery with all features enabled. [Just](https://github.com/casey/just) is a command runner. Install it with:
 
 ```bash
-cargo run --example gallery
+cargo install just
 ```
+
+Or directly without just:
+
+```bash
+cargo run --example gallery --features rust-logos
+```
+
+The `rust-logos` feature is required for the gallery to display Rust file icons.
 
 <img width="654" height="496" alt="xilem_extras_gallery" src="https://github.com/user-attachments/assets/70053df6-ca28-4d39-9a97-93f77bd3f15d" />
 
@@ -135,28 +143,33 @@ fn contact_row(contact: &Contact, selected: bool) -> impl WidgetView<AppModel> {
 ### Menu Button
 
 ```rust
-use xilem_extras::menu_button;
+use xilem_extras::{menu_button, menu_item, separator};
 
-// Use "---" for separators
 menu_button(
     label("File"),
-    vec![
-        "New".to_string(),
-        "Open...".to_string(),
-        "---".to_string(),
-        "Save".to_string(),
-        "Exit".to_string(),
-    ],
-    |model: &mut AppModel, index: usize| {
-        match index {
-            0 => model.new_file(),
-            1 => model.open_file(),
-            // index 2 is separator
-            3 => model.save_file(),
-            4 => model.exit(),
-            _ => {}
-        }
-    },
+    (
+        menu_item("New", |model: &mut AppModel| model.new_file()),
+        menu_item("Open...", |model| model.open_file()),
+        separator(),
+        menu_item("Save", |model| model.save_file()),
+        menu_item("Exit", |model| model.exit()),
+    ),
+)
+```
+
+### Context Menu
+
+```rust
+use xilem_extras::{context_menu, menu_item, separator};
+
+context_menu(
+    label("Right-click me"),
+    (
+        menu_item("Cut", |model: &mut AppModel| model.cut()),
+        menu_item("Copy", |model| model.copy()),
+        separator(),
+        menu_item("Paste", |model| model.paste()),
+    ),
 )
 ```
 
@@ -186,5 +199,19 @@ Built on [Xilem](https://github.com/linebender/xilem) by the Linebender team.
 ## Licence
 
 This crate is licensed under the Apache License 2.0.
+
+### Rust Logo (Optional Feature)
+
+Rust logo SVG icons are available via the `rust-logos` feature:
+
+```toml
+[dependencies]
+xilem_extras = { version = "0.0.2", features = ["rust-logos"] }
+```
+
+This provides `rust_logo()`, `rust_gear()`, `rust_logo_complete()`, and `ferris()`.
+The Rust logo and Ferris mascot are from [rust-lang/rust-artwork](https://github.com/rust-lang/rust-artwork) 
+and are licensed under [CC-BY (Creative Commons Attribution)](https://creativecommons.org/licenses/by/4.0/). 
+If you enable this feature, you must comply with CC-BY requirements.
 
 This software is provided as-is, without warranty. Use at your own risk.

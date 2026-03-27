@@ -56,6 +56,8 @@ pub mod menu_button;
 pub mod dropdown_select;
 pub mod tabs;
 pub mod theme;
+pub mod context_menu;
+pub mod menu_items;
 
 pub use traits::{
     Identifiable,
@@ -81,15 +83,31 @@ pub use components::{
     row_button,
     row_button_with_clicks,
     row_button_with_modifiers,
+    row_button_with_press,
     RowButtonView,
+    RowButtonPress,
     disclosure,
     Disclosure,
+    SvgIcon,
+    SvgIconView,
+    SvgIconWidget,
+    svg_icon,
+    ScaleMode,
+};
+
+#[cfg(feature = "rust-logos")]
+pub use components::{
+    rust_logo,
+    rust_gear,
+    rust_logo_complete,
+    ferris,
 };
 
 pub use tree::{
     tree,
     tree_group,
     tree_group_styled,
+    tree_group_with_context_menu,
     TreeAction,
     TreeStyle,
     ExpansionState,
@@ -98,14 +116,9 @@ pub use tree::{
 
 pub use list::{
     list,
-    ListView,
+    list_styled,
     ListAction,
-    list_with_children,
-    NestedListView,
-    section,
-    Section,
-    disclosure_group,
-    DisclosureGroup,
+    ListStyle,
 };
 
 pub use table::{
@@ -141,7 +154,6 @@ pub use menu_button::{
     MenuButtonPress,
     MenuDropdown,
     PulldownMenuItem,
-    MenuSeparator,
 };
 
 pub use dropdown_select::{
@@ -151,6 +163,23 @@ pub use dropdown_select::{
     DropdownSelectAction,
     SelectDropdown,
     SelectOptionItem,
+};
+
+pub use context_menu::{
+    context_menu,
+    ContextMenuView,
+    ContextMenuWidget,
+    ContextMenuAction,
+    ContextMenuDropdown,
+};
+
+pub use menu_items::{
+    MenuEntry,
+    BoxedMenuEntry,
+    MenuItem,
+    menu_item,
+    MenuItems,
+    separator,
 };
 
 pub use xilem;

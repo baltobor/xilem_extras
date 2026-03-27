@@ -14,7 +14,10 @@ use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
 use xilem::{WidgetView, AnyWidgetView};
 
-use xilem_extras::{tree_group_styled, TreeAction, TreeStyle};
+use xilem_extras::{
+    tree_group_with_context_menu, TreeAction, TreeStyle, svg_icon, rust_gear, ferris,
+    menu_item, separator,
+};
 use xilem_extras::components::icon::{icons, MATERIAL_SYMBOLS_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
@@ -22,6 +25,7 @@ use crate::mock_data::FileNode;
 
 const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
 const FOLDER_COLOR: Color = Color::from_rgb8(220, 180, 80);
+const RUST_COLOR: Color = Color::from_rgb8(247, 76, 0);
 const BG_SELECTED: Color = Color::from_rgb8(65, 62, 58);
 
 fn build_tree_row(
@@ -57,7 +61,7 @@ fn build_tree_row(
                 .text_size(ICON_SIZE_SM)
                 .color(FOLDER_COLOR),
             label(node.name.clone())
-                .text_size(13.0)
+                .text_size(15.0)
                 .color(TEXT_COLOR),
         ))
         .gap(4.px())
@@ -65,33 +69,84 @@ fn build_tree_row(
         .background_color(row_bg)
         .boxed()
     } else {
-        // File row with document icon (extra indent for no chevron)
+        // File row (extra indent for no chevron)
         let file_indent = indent + 20.0;
 
-        flex_row((
-            label(icons::DESCRIPTION.to_string())
-                .font(MATERIAL_SYMBOLS_FAMILY)
-                .text_size(ICON_SIZE_SM)
-                .color(TEXT_COLOR),
-            label(node.name.clone())
-                .text_size(13.0)
-                .color(TEXT_COLOR),
-        ))
-        .gap(4.px())
-        .padding(Padding::left(file_indent))
-        .background_color(row_bg)
-        .boxed()
+        if node.name.ends_with(".rs") {
+            // Rust file with gear icon (13px to match text size)
+            flex_row((
+                svg_icon(rust_gear().size(13.0).color(RUST_COLOR)),
+                label(node.name.clone())
+                    .text_size(15.0)
+                    .color(TEXT_COLOR),
+            ))
+            .gap(4.px())
+            .padding(Padding::left(file_indent))
+            .background_color(row_bg)
+            .boxed()
+        } else if node.name == "Cargo.toml" {
+            // Cargo.toml with Ferris crab (13px to match text size)
+            flex_row((
+                svg_icon(ferris().size(13.0).color(RUST_COLOR)),
+                label(node.name.clone())
+                    .text_size(15.0)
+                    .color(TEXT_COLOR),
+            ))
+            .gap(4.px())
+            .padding(Padding::left(file_indent))
+            .background_color(row_bg)
+            .boxed()
+        } else {
+            // Other files with document icon
+            flex_row((
+                label(icons::DESCRIPTION.to_string())
+                    .font(MATERIAL_SYMBOLS_FAMILY)
+                    .text_size(ICON_SIZE_SM)
+                    .color(TEXT_COLOR),
+                label(node.name.clone())
+                    .text_size(15.0)
+                    .color(TEXT_COLOR),
+            ))
+            .gap(4.px())
+            .padding(Padding::left(file_indent))
+            .background_color(row_bg)
+            .boxed()
+        }
     }
 }
 
 const BG_HOVER: Color = Color::from_rgb8(55, 53, 50);
 
 pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_> {
-    let tree_view = tree_group_styled(
+    // Using the new type-safe context menu API
+    // Each menu item carries its own action - no index matching needed!
+    let tree_view = tree_group_with_context_menu(
         &model.file_tree,
         &model.tree_expansion,
         Some(&model.tree_selection),
         TreeStyle::new().hover_bg(BG_HOVER),
+        |node_id: &String| {
+            // Clone the node_id for use in closures
+            let id = node_id.clone();
+            let id2 = node_id.clone();
+            let id3 = node_id.clone();
+            let id4 = node_id.clone();
+            (
+                menu_item("Open", move |state: &mut AppModel| {
+                    state.menu_last_action = format!("Open: {}", id);
+                }),
+                menu_item("Delete", move |state: &mut AppModel| {
+                    state.menu_last_action = format!("Delete: {}", id2);
+                }),
+                separator(),
+                menu_item("Rename", move |state: &mut AppModel| {
+                    state.menu_last_action = format!("Rename: {}", id3);
+                }),
+                menu_item("Properties", move |state: &mut AppModel| {
+                    state.menu_last_action = format!("Properties: {}", id4);
+                }),
+            )
+        },
         |node: &FileNode, depth, is_expanded, is_selected| {
             build_tree_row(node, depth, is_expanded, is_selected)
         },
@@ -100,11 +155,10 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
                 TreeAction::Toggle => state.toggle_tree_node(node_id),
                 TreeAction::Select => state.select_tree_node(node_id.clone()),
                 TreeAction::DoubleClick => {
-                    // Could open file here
                     state.select_tree_node(node_id.clone());
                 }
-                TreeAction::ContextMenu => {
-                    // Could show context menu here
+                TreeAction::ContextMenu(_) => {
+                    // Not used with tree_group_with_context_menu
                 }
             }
         },
@@ -112,10 +166,13 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
 
     flex_col((
         label("Tree Demo")
-            .text_size(16.0)
+            .text_size(15.0)
             .weight(xilem::FontWeight::BOLD)
             .color(TEXT_COLOR),
-        label("Click folders to expand/collapse, files to select")
+        label("Right-click items for context menu")
+            .text_size(12.0)
+            .color(Color::from_rgb8(160, 156, 150)),
+        label(format!("Last action: {}", model.menu_last_action))
             .text_size(12.0)
             .color(Color::from_rgb8(160, 156, 150)),
         portal(

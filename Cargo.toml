@@ -5,6 +5,17 @@ edition = "2024"
 license = "Apache-2.0"
 description = "High-level widget library for xilem: Tree, List, Table, and Popup widgets with SwiftUI-inspired APIs"
 
+[features]
+default = []
+# Enables Rust logo SVG icons (rust_logo, rust_gear, rust_logo_complete).
+# Note: The Rust logo is licensed under CC-BY, not Apache-2.0.
+rust-logos = []
+
+[[example]]
+name = "gallery"
+path = "examples/gallery/src/main.rs"
+required-features = ["rust-logos"]
+
 [dependencies]
 xilem = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
@@ -14,6 +25,3 @@ smallvec = "1"
 [dev-dependencies]
 xilem_material_icons = { git = "https://github.com/baltobor/xilem_material_icons", branch = "main" }
 
-[[example]]
-name = "gallery"
-path = "examples/gallery/src/main.rs"
