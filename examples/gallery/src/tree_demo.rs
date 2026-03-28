@@ -160,6 +160,9 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
                 TreeAction::ContextMenu(_) => {
                     // Not used with tree_group_with_context_menu
                 }
+                TreeAction::Edit => {
+                    // Inline editing not implemented in this demo
+                }
             }
         },
     );
