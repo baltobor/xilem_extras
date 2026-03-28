@@ -7,6 +7,7 @@
 
 mod row_button;
 mod disclosure;
+mod click_interceptor;
 pub mod svg_icon;
 
 #[cfg(feature = "rust-logos")]
@@ -14,6 +15,7 @@ pub mod rust_logos;
 
 pub use row_button::{row_button, row_button_with_clicks, row_button_with_modifiers, row_button_with_press, RowButtonView, RowButtonPress};
 pub use disclosure::{disclosure, Disclosure};
+pub use click_interceptor::{click_interceptor, ClickInterceptorView, ClickInterceptorWidget};
 pub use svg_icon::{SvgIcon, SvgIconView, SvgIconWidget, svg_icon, ScaleMode};
 
 #[cfg(feature = "rust-logos")]

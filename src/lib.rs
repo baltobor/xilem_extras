@@ -88,6 +88,9 @@ pub use components::{
     SvgIconWidget,
     svg_icon,
     ScaleMode,
+    click_interceptor,
+    ClickInterceptorView,
+    ClickInterceptorWidget,
 };
 
 #[cfg(feature = "rust-logos")]
@@ -103,6 +106,7 @@ pub use tree::{
     tree_group,
     tree_group_styled,
     tree_group_with_context_menu,
+    tree_group_with_context_menu_editable,
     tree_forest,
     tree_forest_styled,
     tree_forest_with_context_menu,

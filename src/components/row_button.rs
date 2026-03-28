@@ -92,12 +92,13 @@ impl Widget for RowButton {
     ) {
         match event {
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
+                // Check if event was already handled by a child widget
+                if ctx.is_handled() {
+                    return;
+                }
                 self.click_count = state.count as u8;
-                // Capture modifiers at click time (they may be released before Up)
                 self.modifiers = state.modifiers;
-                // Capture position in window coordinates
                 self.position = Point::new(state.position.x, state.position.y);
-                ctx.request_focus();
                 ctx.capture_pointer();
                 ctx.request_render();
             }

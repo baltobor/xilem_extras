@@ -31,6 +31,10 @@ pub enum TreeAction {
     DoubleClick,
     /// Right click context menu at the given position
     ContextMenu(Point),
+    /// Start inline editing (triggered by editable menu item like "Rename").
+    /// The handler receives the node_id and should set editing state so the
+    /// row_builder can render a text_input instead of a label.
+    Edit,
 }
 
 /// Style configuration for tree rows.
@@ -307,6 +311,126 @@ where
 
             // Wrap row in row_button for click handling
             let btn = row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                let action = if click_count >= 2 {
+                    TreeAction::DoubleClick
+                } else if is_expandable {
+                    TreeAction::Toggle
+                } else {
+                    TreeAction::Select
+                };
+                handler(state, &node_id, action);
+            })
+            .hover_bg(hover_bg);
+
+            // Wrap in context menu
+            let with_menu = context_menu(btn, menu_items);
+
+            with_menu.boxed()
+        })
+        .collect();
+
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
+}
+
+/// Creates a tree group with context menu and inline editing support.
+///
+/// Like [`tree_group_with_context_menu`], but adds support for inline editing:
+/// - Pass `editing_id` to indicate which node is being edited
+/// - Row builder receives `is_editing: bool` as 5th parameter
+/// - Select/DoubleClick/Toggle actions are ignored while any node is being edited
+///
+/// Use this when implementing rename or other inline edit functionality.
+///
+/// # Arguments
+///
+/// * `root` - The root node of the tree
+/// * `expansion` - Tracks which nodes are expanded
+/// * `selection` - Optional selection state
+/// * `editing_id` - Currently editing node (or None)
+/// * `style` - Tree styling options
+/// * `context_menu_items_fn` - Function that returns menu items for a node
+/// * `row_builder` - `(node, depth, is_expanded, is_selected, is_editing) -> View`
+/// * `handler` - Handles tree actions. Edit action indicates rename was requested.
+///
+/// # Example
+///
+/// ```ignore
+/// tree_group_with_context_menu_editable(
+///     &model.file_tree,
+///     &model.expansion,
+///     Some(&model.selection),
+///     model.editing_id.as_ref(),  // Option<&String>
+///     TreeStyle::new(),
+///     |node_id| (
+///         menu_item("Rename", move |state| {
+///             state.editing_id = Some(node_id.clone());
+///         }).is_editable(true),
+///     ),
+///     |node, depth, is_expanded, is_selected, is_editing| {
+///         if is_editing {
+///             // render text_input
+///         } else {
+///             // render label
+///         }
+///     },
+///     |state, node_id, action| {
+///         if let TreeAction::Edit = action {
+///             state.editing_id = Some(node_id.clone());
+///         }
+///         // ... handle other actions
+///     },
+/// )
+/// ```
+pub fn tree_group_with_context_menu_editable<'a, State, N, R, F, H, I, MI, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    editing_id: Option<&'a N::Id>,
+    style: TreeStyle,
+    context_menu_items_fn: MI,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, I, MI, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + PartialEq + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool, bool) -> R + Clone + Send + Sync + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    I: MenuItems<State, ()> + Clone,
+    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    let is_any_editing = editing_id.is_some();
+    let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
+    flatten_tree(root, expansion, 0, &mut flat_nodes);
+
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = flat_nodes
+        .into_iter()
+        .map(|(node, depth, is_expanded)| {
+            let is_selected = selection
+                .map(|sel| sel.is_selected(&node.id()))
+                .unwrap_or(false);
+            let is_editing = editing_id.map(|id| id == &node.id()).unwrap_or(false);
+
+            let row_view = row_builder(node, depth, is_expanded, is_selected, is_editing);
+            let node_id = node.id();
+            let is_expandable = node.is_expandable();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
+            let menu_items = context_menu_items_fn(&node_id);
+
+            // Wrap row in row_button for click handling
+            let btn = row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                // Skip all click actions while editing
+                if is_any_editing {
+                    return;
+                }
                 let action = if click_count >= 2 {
                     TreeAction::DoubleClick
                 } else if is_expandable {
@@ -690,6 +814,8 @@ mod tests {
         assert_ne!(TreeAction::Toggle, TreeAction::Select);
         assert_ne!(TreeAction::Select, TreeAction::DoubleClick);
         assert_ne!(TreeAction::DoubleClick, TreeAction::ContextMenu(Point::ZERO));
+        assert_eq!(TreeAction::Edit, TreeAction::Edit);
+        assert_ne!(TreeAction::Edit, TreeAction::Select);
     }
 
     #[test]

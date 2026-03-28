@@ -23,6 +23,12 @@ pub trait MenuEntry<State, Action>: Send + Sync + 'static {
     /// Returns `true` if this entry is actionable (not a separator).
     fn is_actionable(&self) -> bool;
 
+    /// Returns `true` if this entry triggers inline editing mode.
+    /// Default is `false`.
+    fn is_editable(&self) -> bool {
+        false
+    }
+
     /// Builds the widget representation of this menu entry.
     fn build_widget(&self) -> NewWidget<dyn Widget>;
 

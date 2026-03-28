@@ -22,9 +22,22 @@ use crate::menu_button::PulldownMenuItem;
 ///
 /// The action is stored in an `Arc` to enable cloning, which is required
 /// for the menu system to work with xilem's view diffing.
+///
+/// # Editable Items
+///
+/// Use `.is_editable(true)` for items that trigger inline editing (like Rename).
+/// When selected, the action is called which should set appropriate state to
+/// enable edit mode in the tree row builder.
+///
+/// ```ignore
+/// menu_item("Rename", move |state: &mut AppState| {
+///     state.editing_node = Some(node_id.clone());
+/// }).is_editable(true)
+/// ```
 pub struct MenuItem<State, Action> {
     label: String,
     action: Arc<dyn Fn(&mut State) -> Action + Send + Sync>,
+    editable: bool,
     _phantom: PhantomData<fn(&mut State) -> Action>,
 }
 
@@ -33,6 +46,7 @@ impl<State, Action> Clone for MenuItem<State, Action> {
         Self {
             label: self.label.clone(),
             action: Arc::clone(&self.action),
+            editable: self.editable,
             _phantom: PhantomData,
         }
     }
@@ -47,8 +61,32 @@ impl<State, Action> MenuItem<State, Action> {
         Self {
             label: label.into(),
             action: Arc::new(action),
+            editable: false,
             _phantom: PhantomData,
         }
+    }
+
+    /// Sets whether this menu item triggers inline editing mode.
+    ///
+    /// When `true`, selecting this item should enable edit mode for the
+    /// associated tree row (e.g., for rename operations). The action callback
+    /// should set appropriate state to enable editing.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// menu_item("Rename", move |state: &mut AppState| {
+    ///     state.editing_node = Some(node_id.clone());
+    /// }).is_editable(true)
+    /// ```
+    pub fn is_editable(mut self, editable: bool) -> Self {
+        self.editable = editable;
+        self
+    }
+
+    /// Returns whether this menu item is editable.
+    pub fn editable(&self) -> bool {
+        self.editable
     }
 }
 
@@ -63,6 +101,10 @@ where
 
     fn is_actionable(&self) -> bool {
         true
+    }
+
+    fn is_editable(&self) -> bool {
+        self.editable
     }
 
     fn build_widget(&self) -> NewWidget<dyn Widget> {
