@@ -12,8 +12,8 @@ use std::any::TypeId;
 use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
 use xilem::core::MessageResult;
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::vello::kurbo::{Point, Rect, Size};
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::kurbo::{Point, Rect, Size};
+use xilem::masonry::peniko::Color;
 use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
@@ -23,7 +23,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::layout::{LenReq, LayoutSize};
 use xilem::masonry::properties::Background;
-use xilem::masonry::vello::kurbo::Axis;
+use xilem::masonry::kurbo::Axis;
 use xilem::{Pod, ViewCtx, WidgetView};
 use xilem::masonry::accesskit::{Node, Role};
 
@@ -291,10 +291,12 @@ impl Widget for ResizableHeader {
         }
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
 
-        if let Some(bg) = props.get_defined::<Background>() {
+        {
+            let cache = ctx.property_cache();
+            let bg = props.get::<Background>(cache);
             let brush = bg.get_peniko_brush_for_rect(rect);
             painter.fill(rect, &brush).draw();
         }

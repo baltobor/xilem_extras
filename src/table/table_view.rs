@@ -9,7 +9,7 @@
 
 use masonry::layout::AsUnit;
 use xilem::masonry::core::PointerButton;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, flex_row, label};
 use xilem::{AnyWidgetView, WidgetView};

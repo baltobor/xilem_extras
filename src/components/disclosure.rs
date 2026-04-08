@@ -5,7 +5,7 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::peniko::Color;
 use xilem::AnyWidgetView;
 use xilem_material_icons::{icon, icons, ICON_SIZE_SM};
 

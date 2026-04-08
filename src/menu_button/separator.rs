@@ -12,8 +12,8 @@ use std::any::TypeId;
 use xilem::masonry::accesskit::{Node, Role};
 use tracing::{Span, trace_span};
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::vello::kurbo::Rect;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::kurbo::Rect;
+use xilem::masonry::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,

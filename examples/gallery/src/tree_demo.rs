@@ -9,7 +9,7 @@
 
 use masonry::layout::AsUnit;
 use xilem::masonry::properties::Padding;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
 use xilem::{WidgetView, AnyWidgetView};

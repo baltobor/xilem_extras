@@ -8,7 +8,7 @@
 //! Menu button demo showing pulldown menus.
 
 use masonry::layout::AsUnit;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::peniko::Color;
 use xilem::style::{Style, Padding};
 use xilem::view::{flex_col, flex_row, label};
 use xilem::WidgetView;

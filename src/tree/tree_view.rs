@@ -6,8 +6,8 @@
 //! (compatible with the Xilem licence).
 
 use masonry::layout::AsUnit;
-use xilem::masonry::vello::kurbo::Point;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::kurbo::Point;
+use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::flex_col;
 use xilem::{WidgetView, AnyWidgetView};

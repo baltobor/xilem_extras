@@ -30,9 +30,9 @@ use xilem::masonry::core::{
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::layout::LenReq;
-use xilem::masonry::vello::kurbo::{Affine, BezPath, Size, Stroke};
-use xilem::masonry::vello::peniko::Color;
-use xilem::masonry::vello::kurbo::Axis;
+use xilem::masonry::kurbo::{Affine, BezPath, Size, Stroke};
+use xilem::masonry::peniko::Color;
+use xilem::masonry::kurbo::Axis;
 use xilem::{Pod, ViewCtx};
 use tracing::{Span, trace_span};
 

@@ -7,7 +7,7 @@
 
 //! Application model for the gallery example.
 
-use xilem::masonry::vello::kurbo::Point;
+use xilem::masonry::kurbo::Point;
 use xilem_extras::{
     ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths,
 };

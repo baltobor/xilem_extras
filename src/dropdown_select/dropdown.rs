@@ -10,8 +10,8 @@
 use xilem::masonry::accesskit::{Node, Role};
 use tracing::{Span, trace_span};
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::vello::kurbo::{Rect, RoundedRect, Stroke};
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::kurbo::{Rect, RoundedRect, Stroke};
+use xilem::masonry::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, HasProperty, Layer, LayoutCtx,
@@ -162,7 +162,7 @@ impl Widget for SelectDropdown {
         cross_length: Option<f64>,
     ) -> f64 {
         let scale = 1.0;
-        let gap = props.get::<Gap>();
+        let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
         let (len_req, min_result) = match len_req {
@@ -193,7 +193,7 @@ impl Widget for SelectDropdown {
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, props: &PropertiesRef<'_>, size: Size) {
         let scale = 1.0;
-        let gap = props.get::<Gap>();
+        let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
         let width_def = LenDef::FitContent(size.width);

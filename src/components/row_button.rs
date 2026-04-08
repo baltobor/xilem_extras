@@ -13,8 +13,8 @@ use xilem::masonry::core::keyboard::{Key, NamedKey};
 use xilem::masonry::core::PointerButton;
 use xilem::masonry::accesskit::{self, Node, Role};
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::vello::kurbo::{Point, Rect, Size};
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::kurbo::{Point, Rect, Size};
+use xilem::masonry::peniko::Color;
 use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
@@ -24,7 +24,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::layout::{LenReq, LayoutSize, SizeDef};
 use xilem::masonry::properties::Background;
-use xilem::masonry::vello::kurbo::Axis;
+use xilem::masonry::kurbo::Axis;
 use xilem::{Pod, ViewCtx, WidgetView};
 
 const CHILD_VIEW_ID: ViewId = ViewId::new(0);
@@ -225,7 +225,9 @@ impl Widget for RowButton {
             if self.hover_bg != Color::TRANSPARENT {
                 painter.fill(rect, self.hover_bg).draw();
             }
-        } else if let Some(bg) = props.get_defined::<Background>() {
+        } else {
+            let cache = ctx.property_cache();
+            let bg = props.get::<Background>(cache);
             let brush = bg.get_peniko_brush_for_rect(rect);
             painter.fill(rect, &brush).draw();
         }

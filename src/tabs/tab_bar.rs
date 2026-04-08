@@ -10,7 +10,7 @@
 use std::marker::PhantomData;
 
 use xilem::masonry::layout::AsUnit;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::peniko::Color;
 use xilem::style::{Padding, Style};
 use xilem::view::{button, flex_row, label, portal, FlexExt};
 use xilem::{AnyWidgetView, WidgetView};

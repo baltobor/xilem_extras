@@ -16,7 +16,7 @@ mod tabs_demo;
 mod menu_demo;
 
 use masonry::layout::AsUnit;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, split, flex_col, label};
 use xilem::{EventLoop, WidgetView, WindowOptions, Xilem};

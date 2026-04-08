@@ -8,7 +8,7 @@
 //! List view for flat collections with selection support.
 
 use masonry::layout::AsUnit;
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::flex_col;
 use xilem::{AnyWidgetView, WidgetView};

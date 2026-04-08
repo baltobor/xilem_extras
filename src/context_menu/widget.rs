@@ -105,8 +105,11 @@ impl Widget for ContextMenuWidget {
                 state,
                 ..
             }) => {
-                // Show context menu immediately on right-click down
-                let position = Point::new(state.position.x, state.position.y);
+                // Show context menu at cursor position.
+                // state.position is in physical pixels; create_layer expects logical pixels,
+                // so divide by scale factor (fixes Retina/HiDPI offset).
+                let scale = ctx.get_scale_factor();
+                let position = Point::new(state.position.x / scale, state.position.y / scale);
                 self.show_context_menu(ctx, position);
             }
             _ => {}

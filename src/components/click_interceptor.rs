@@ -18,7 +18,7 @@ use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
 use xilem::core::MessageResult;
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::vello::kurbo::{Point, Size};
+use xilem::masonry::kurbo::{Point, Size};
 use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
@@ -27,7 +27,7 @@ use xilem::masonry::core::{
     TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::layout::{LenReq, LayoutSize, SizeDef};
-use xilem::masonry::vello::kurbo::Axis;
+use xilem::masonry::kurbo::Axis;
 use xilem::{Pod, ViewCtx, WidgetView};
 
 const CHILD_VIEW_ID: ViewId = ViewId::new(0);
