@@ -38,7 +38,6 @@ const BORDER_COLOR: Color = Color::from_rgba8(0x58, 0x56, 0x54, 0xFF);
 const TEXT_SIZE: f32 = 13.0;
 const PADDING_H: f64 = 10.0;
 const PADDING_V: f64 = 6.0;
-const DROPDOWN_ARROW: &str = "\u{e5cf}"; // Material Symbols: expand_more
 
 /// Action emitted when a dropdown selection changes.
 #[derive(PartialEq, Debug, Clone)]
@@ -54,8 +53,6 @@ pub struct DropdownSelectAction {
 pub struct DropdownSelect {
     /// Label showing the current selection.
     label: WidgetPod<Label>,
-    /// Dropdown arrow indicator.
-    arrow: WidgetPod<Label>,
     /// Available options.
     options: Vec<String>,
     /// Currently selected index.
@@ -84,12 +81,9 @@ impl DropdownSelect {
 
         let label = Label::new(selected_text)
             .with_style(StyleProperty::FontSize(TEXT_SIZE));
-        let arrow = Label::new(DROPDOWN_ARROW)
-            .with_style(StyleProperty::FontSize(TEXT_SIZE));
 
         Self {
             label: WidgetPod::new(label),
-            arrow: WidgetPod::new(arrow),
             options,
             selected_index,
             dropdown_layer_id: None,
@@ -116,10 +110,23 @@ impl DropdownSelect {
                 .with_option_label(label.clone());
         }
 
+        // Estimate dropdown height: ~28px per option + padding
+        let estimated_dropdown_h = self.options.len() as f64 * 28.0 + 8.0;
+        let widget_origin = ctx.window_origin();
+        let widget_h = ctx.border_box_size().height;
+
+        // Open upward if the widget is in the lower portion of the screen
+        // (where the dropdown would likely go off-screen)
+        let y_offset = if widget_origin.y > 300.0 && estimated_dropdown_h > 100.0 {
+            -estimated_dropdown_h
+        } else {
+            widget_h
+        };
+
         ctx.create_layer(
             LayerType::Other,
             NewWidget::new(dropdown),
-            ctx.window_origin() + Vec2::new(0., ctx.border_box_size().height),
+            widget_origin + Vec2::new(0., y_offset),
         );
     }
 }
@@ -213,7 +220,6 @@ impl Widget for DropdownSelect {
 
     fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
         ctx.register_child(&mut self.label);
-        ctx.register_child(&mut self.arrow);
     }
 
     fn property_changed(&mut self, _ctx: &mut UpdateCtx<'_>, _property_type: TypeId) {}
@@ -230,11 +236,10 @@ impl Widget for DropdownSelect {
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
 
         let label_len = ctx.compute_length(&mut self.label, auto_length, context_size, axis, cross_length);
-        let arrow_len = ctx.compute_length(&mut self.arrow, auto_length, context_size, axis, cross_length);
 
         match axis {
-            Axis::Horizontal => label_len + arrow_len + 3.0 * PADDING_H,
-            Axis::Vertical => label_len.max(arrow_len) + 2.0 * PADDING_V,
+            Axis::Horizontal => label_len + 2.0 * PADDING_H,
+            Axis::Vertical => label_len + 2.0 * PADDING_V,
         }
     }
 
@@ -242,14 +247,7 @@ impl Widget for DropdownSelect {
         self.size = size;
 
         let inner_height = size.height - 2.0 * PADDING_V;
-        let arrow_size = ctx.compute_size(
-            &mut self.arrow,
-            SizeDef::fit(Size::new(size.width, inner_height)),
-            size.into(),
-        );
-        ctx.run_layout(&mut self.arrow, arrow_size);
-
-        let label_width = size.width - arrow_size.width - 3.0 * PADDING_H;
+        let label_width = size.width - 2.0 * PADDING_H;
         let label_size = ctx.compute_size(
             &mut self.label,
             SizeDef::fit(Size::new(label_width.max(0.0), inner_height)),
@@ -257,14 +255,8 @@ impl Widget for DropdownSelect {
         );
         ctx.run_layout(&mut self.label, label_size);
 
-        // Position label on the left
         let label_y = ((size.height - label_size.height) * 0.5).max(0.0);
         ctx.place_child(&mut self.label, Point::new(PADDING_H, label_y));
-
-        // Position arrow on the right
-        let arrow_x = size.width - arrow_size.width - PADDING_H;
-        let arrow_y = ((size.height - arrow_size.height) * 0.5).max(0.0);
-        ctx.place_child(&mut self.arrow, Point::new(arrow_x, arrow_y));
 
         ctx.derive_baselines(&self.label);
     }
@@ -298,7 +290,7 @@ impl Widget for DropdownSelect {
     }
 
     fn children_ids(&self) -> ChildrenIds {
-        ChildrenIds::from_slice(&[self.label.id(), self.arrow.id()])
+        ChildrenIds::from_slice(&[self.label.id()])
     }
 
     fn accepts_focus(&self) -> bool {
