@@ -476,7 +476,7 @@ impl Widget for SubmenuDropdown {
         cross_length: Option<f64>,
     ) -> f64 {
         let scale = 1.0;
-        let gap = props.get::<Gap>();
+        let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
         let (len_req, min_result) = match len_req {
@@ -507,7 +507,7 @@ impl Widget for SubmenuDropdown {
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, props: &PropertiesRef<'_>, size: Size) {
         let scale = 1.0;
-        let gap = props.get::<Gap>();
+        let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
         let width_def = LenDef::FitContent(size.width);

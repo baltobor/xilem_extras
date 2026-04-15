@@ -15,8 +15,8 @@ use std::sync::Arc;
 use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::vello::kurbo::{BezPath, Rect, RoundedRect, Stroke};
-use xilem::masonry::vello::peniko::Color;
+use xilem::masonry::kurbo::{BezPath, Rect, RoundedRect, Stroke};
+use xilem::masonry::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,

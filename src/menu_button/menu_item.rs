@@ -183,7 +183,7 @@ impl Widget for PulldownMenuItem {
 
         // Draw checkmark if checked
         if let Some(true) = self.checked {
-            use xilem::masonry::vello::kurbo::{BezPath, Stroke};
+            use xilem::masonry::kurbo::{BezPath, Stroke};
 
             let check_x = ITEM_PADDING_H + 2.0;
             let check_y = self.size.height / 2.0;
