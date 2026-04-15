@@ -13,7 +13,7 @@ use xilem::style::{Style, Padding};
 use xilem::view::{flex_col, flex_row, label};
 use xilem::WidgetView;
 
-use xilem_extras::{menu_button, menu_item, separator, dropdown_select};
+use xilem_extras::{menu_button, menu_item, separator, submenu, dropdown_select};
 use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
 
 use crate::app_model::AppModel;
@@ -84,6 +84,19 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 menu_item("Paste", |model: &mut AppModel| {
                     model.menu_last_action = "Edit > Paste".to_string();
                 }),
+                separator(),
+                // Submenu example (visual placeholder - click shows ">" indicator)
+                submenu("Transform", (
+                    menu_item("Uppercase", |model: &mut AppModel| {
+                        model.menu_last_action = "Edit > Transform > Uppercase".to_string();
+                    }),
+                    menu_item("Lowercase", |model: &mut AppModel| {
+                        model.menu_last_action = "Edit > Transform > Lowercase".to_string();
+                    }),
+                    menu_item("Title Case", |model: &mut AppModel| {
+                        model.menu_last_action = "Edit > Transform > Title Case".to_string();
+                    }),
+                )),
             ),
         ),
         menu_button(
@@ -98,6 +111,17 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 menu_item("Reset Zoom", |model: &mut AppModel| {
                     model.menu_last_action = "View > Reset Zoom".to_string();
                 }),
+                separator(),
+                // Checkmark items
+                menu_item("Dark Mode", |model: &mut AppModel| {
+                    model.dark_mode = !model.dark_mode;
+                    model.menu_last_action = format!("View > Dark Mode: {}", model.dark_mode);
+                }).checked(model.dark_mode),
+                menu_item("Show Toolbar", |model: &mut AppModel| {
+                    model.show_toolbar = !model.show_toolbar;
+                    model.menu_last_action = format!("View > Show Toolbar: {}", model.show_toolbar);
+                }).checked(model.show_toolbar),
+                separator(),
                 menu_item("Full Screen", |model: &mut AppModel| {
                     model.menu_last_action = "View > Full Screen".to_string();
                 }),

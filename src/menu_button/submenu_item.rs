@@ -5,7 +5,9 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-//! A single item inside a pulldown menu dropdown.
+//! A submenu item inside a pulldown menu dropdown.
+//!
+//! Displays a label with a ">" arrow indicator to show it opens a submenu.
 
 use std::any::TypeId;
 use std::sync::Arc;
@@ -13,8 +15,8 @@ use std::sync::Arc;
 use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::kurbo::{Rect, RoundedRect};
-use xilem::masonry::peniko::Color;
+use xilem::masonry::vello::kurbo::{BezPath, Rect, RoundedRect, Stroke};
+use xilem::masonry::vello::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
@@ -26,11 +28,10 @@ use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
 use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
+use super::menu_item::DEFAULT_ITEM_HEIGHT;
+
 /// Default hover background color.
 const BG_HOVER: Color = Color::from_rgba8(0x50, 0x50, 0x60, 0xFF);
-
-/// Default menu item height (matches macOS standard).
-pub const DEFAULT_ITEM_HEIGHT: f64 = 30.0;
 
 /// Font size derived from item height.
 const TEXT_SIZE: f32 = (DEFAULT_ITEM_HEIGHT * 0.43) as f32;
@@ -38,30 +39,28 @@ const TEXT_SIZE: f32 = (DEFAULT_ITEM_HEIGHT * 0.43) as f32;
 /// Horizontal padding.
 const ITEM_PADDING_H: f64 = 12.0;
 
-/// Checkmark width for items with checked state.
-const CHECKMARK_WIDTH: f64 = 20.0;
+/// Arrow width for submenu indicator.
+const ARROW_WIDTH: f64 = 16.0;
 
-/// A single item inside a [`MenuDropdown`](super::MenuDropdown).
+/// A submenu item inside a [`MenuDropdown`](super::MenuDropdown).
 ///
-/// Renders a styled label with hover highlight. The parent dropdown
-/// handles the actual click-to-select logic via `ctx.target()`.
-pub struct PulldownMenuItem {
+/// Renders a styled label with hover highlight and a ">" arrow indicator.
+/// Currently a visual placeholder - full submenu functionality requires
+/// additional dropdown handling.
+pub struct PulldownSubmenuItem {
     child: WidgetPod<Label>,
     size: Size,
     hover_bg: Color,
-    /// Checked state: None = no checkmark area, Some(true) = checkmark, Some(false) = empty space
-    checked: Option<bool>,
 }
 
-impl PulldownMenuItem {
-    /// Creates a new menu item with the given label text.
+impl PulldownSubmenuItem {
+    /// Creates a new submenu item with the given label text.
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         let label = Label::new(text).with_style(StyleProperty::FontSize(TEXT_SIZE));
         Self {
             child: WidgetPod::new(label),
             size: Size::ZERO,
             hover_bg: BG_HOVER,
-            checked: None,
         }
     }
 
@@ -70,19 +69,9 @@ impl PulldownMenuItem {
         self.hover_bg = color;
         self
     }
-
-    /// Sets the checked state for this menu item.
-    ///
-    /// - `None`: No checkmark area (default)
-    /// - `Some(true)`: Shows a checkmark
-    /// - `Some(false)`: Shows empty space (for alignment)
-    pub fn with_checked(mut self, checked: Option<bool>) -> Self {
-        self.checked = checked;
-        self
-    }
 }
 
-impl PulldownMenuItem {
+impl PulldownSubmenuItem {
     /// Returns a mutable reference to the inner label.
     pub fn label_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, Label> {
         this.ctx.get_mut(&mut this.widget.child)
@@ -95,7 +84,7 @@ impl PulldownMenuItem {
     }
 }
 
-impl Widget for PulldownMenuItem {
+impl Widget for PulldownSubmenuItem {
     type Action = ();
 
     fn on_pointer_event(
@@ -150,8 +139,7 @@ impl Widget for PulldownMenuItem {
                 let context_size = LayoutSize::maybe(axis.cross(), cross_length);
                 let child_length =
                     ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
-                let checkmark_space = if self.checked.is_some() { CHECKMARK_WIDTH } else { 0.0 };
-                child_length + 2.0 * ITEM_PADDING_H + checkmark_space
+                child_length + 2.0 * ITEM_PADDING_H + ARROW_WIDTH
             }
             Axis::Vertical => DEFAULT_ITEM_HEIGHT,
         }
@@ -159,16 +147,15 @@ impl Widget for PulldownMenuItem {
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         self.size = size;
-        let checkmark_space = if self.checked.is_some() { CHECKMARK_WIDTH } else { 0.0 };
         let inner = Size::new(
-            (size.width - 2.0 * ITEM_PADDING_H - checkmark_space).max(0.0),
+            (size.width - 2.0 * ITEM_PADDING_H - ARROW_WIDTH).max(0.0),
             size.height,
         );
         let child_size = ctx.compute_size(&mut self.child, SizeDef::fit(inner), inner.into());
         ctx.run_layout(&mut self.child, child_size);
 
-        // Left-align (after checkmark space), vertically center.
-        let x = ITEM_PADDING_H + checkmark_space;
+        // Left-align, vertically center.
+        let x = ITEM_PADDING_H;
         let y = ((size.height - child_size.height) * 0.5).max(0.0);
         ctx.place_child(&mut self.child, (x, y).into());
         ctx.derive_baselines(&self.child);
@@ -181,22 +168,17 @@ impl Widget for PulldownMenuItem {
             painter.fill(rounded, self.hover_bg).draw();
         }
 
-        // Draw checkmark if checked
-        if let Some(true) = self.checked {
-            use xilem::masonry::vello::kurbo::{BezPath, Stroke};
+        // Draw ">" arrow on the right
+        let arrow_x = self.size.width - ITEM_PADDING_H - 6.0;
+        let arrow_y = self.size.height / 2.0;
 
-            let check_x = ITEM_PADDING_H + 2.0;
-            let check_y = self.size.height / 2.0;
+        let mut path = BezPath::new();
+        path.move_to((arrow_x, arrow_y - 4.0));
+        path.line_to((arrow_x + 5.0, arrow_y));
+        path.line_to((arrow_x, arrow_y + 4.0));
 
-            // Simple checkmark path
-            let mut path = BezPath::new();
-            path.move_to((check_x, check_y));
-            path.line_to((check_x + 4.0, check_y + 4.0));
-            path.line_to((check_x + 12.0, check_y - 4.0));
-
-            let stroke_color = Color::from_rgba8(0xE0, 0xE0, 0xE0, 0xFF);
-            painter.stroke(&path, &Stroke::new(2.0), stroke_color).draw();
-        }
+        let arrow_color = Color::from_rgba8(0xA0, 0xA0, 0xA0, 0xFF);
+        painter.stroke(&path, &Stroke::new(1.5), arrow_color).draw();
     }
 
     fn accessibility_role(&self) -> Role {
@@ -221,6 +203,6 @@ impl Widget for PulldownMenuItem {
     }
 
     fn make_trace_span(&self, id: WidgetId) -> Span {
-        trace_span!("PulldownMenuItem", id = id.trace())
+        trace_span!("PulldownSubmenuItem", id = id.trace())
     }
 }

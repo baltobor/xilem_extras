@@ -34,10 +34,21 @@ use crate::menu_button::PulldownMenuItem;
 ///     state.editing_node = Some(node_id.clone());
 /// }).is_editable(true)
 /// ```
+///
+/// # Checkmark Items
+///
+/// Use `.checked(true)` to display a checkmark prefix for toggleable items.
+///
+/// ```ignore
+/// menu_item("Dark Mode", move |state: &mut AppState| {
+///     state.dark_mode = !state.dark_mode;
+/// }).checked(state.dark_mode)
+/// ```
 pub struct MenuItem<State, Action> {
     label: String,
     action: Arc<dyn Fn(&mut State) -> Action + Send + Sync>,
     editable: bool,
+    checked: Option<bool>,
     _phantom: PhantomData<fn(&mut State) -> Action>,
 }
 
@@ -47,6 +58,7 @@ impl<State, Action> Clone for MenuItem<State, Action> {
             label: self.label.clone(),
             action: Arc::clone(&self.action),
             editable: self.editable,
+            checked: self.checked,
             _phantom: PhantomData,
         }
     }
@@ -62,6 +74,7 @@ impl<State, Action> MenuItem<State, Action> {
             label: label.into(),
             action: Arc::new(action),
             editable: false,
+            checked: None,
             _phantom: PhantomData,
         }
     }
@@ -88,6 +101,29 @@ impl<State, Action> MenuItem<State, Action> {
     pub fn editable(&self) -> bool {
         self.editable
     }
+
+    /// Sets whether this menu item displays a checkmark.
+    ///
+    /// When `Some(true)`, displays a checkmark prefix.
+    /// When `Some(false)`, displays empty space (for alignment with checked items).
+    /// When `None`, no checkmark area is shown (default).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// menu_item("Dark Mode", move |state: &mut AppState| {
+    ///     state.dark_mode = !state.dark_mode;
+    /// }).checked(state.dark_mode)
+    /// ```
+    pub fn checked(mut self, is_checked: bool) -> Self {
+        self.checked = Some(is_checked);
+        self
+    }
+
+    /// Returns the checked state of this menu item.
+    pub fn is_checked(&self) -> Option<bool> {
+        self.checked
+    }
 }
 
 impl<State, Action> MenuEntry<State, Action> for MenuItem<State, Action>
@@ -107,8 +143,16 @@ where
         self.editable
     }
 
+    fn checked(&self) -> Option<bool> {
+        self.checked
+    }
+
     fn build_widget(&self) -> NewWidget<dyn Widget> {
-        NewWidget::new(PulldownMenuItem::new(self.label.clone())).erased()
+        let mut item = PulldownMenuItem::new(self.label.clone());
+        if let Some(checked) = self.checked {
+            item = item.with_checked(Some(checked));
+        }
+        NewWidget::new(item).erased()
     }
 
     fn execute(&self, state: &mut State) -> Option<Action> {

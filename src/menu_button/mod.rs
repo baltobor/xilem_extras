@@ -31,11 +31,13 @@
 mod widget;
 mod dropdown;
 mod menu_item;
+mod submenu_item;
 mod separator;
 mod view;
 
-pub use widget::{MenuButton, MenuButtonPress};
-pub use dropdown::MenuDropdown;
+pub use widget::{MenuButton, MenuButtonPress, MenuItemData};
+pub use dropdown::{MenuDropdown, SubmenuDropdown};
 pub use menu_item::{PulldownMenuItem, DEFAULT_ITEM_HEIGHT};
+pub use submenu_item::PulldownSubmenuItem;
 pub use separator::MenuSeparator;
 pub use view::{menu_button, MenuButtonView};

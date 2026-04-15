@@ -13,7 +13,7 @@ use std::sync::Arc;
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::{Pod, ViewCtx, WidgetView};
 
-use super::widget::{MenuButton, MenuButtonPress};
+use super::widget::{MenuButton, MenuButtonPress, MenuItemData};
 use crate::menu_items::{BoxedMenuEntry, MenuItems};
 
 /// Randomly generated view ID for the child label.
@@ -111,18 +111,15 @@ where
     ) -> (Self::Element, Self::ViewState) {
         let entries: Vec<BoxedMenuEntry<State, Action>> = self.items.clone().collect_entries();
 
-        // Build labels for the widget
-        let labels: Vec<String> = entries
-            .iter()
-            .map(|e| e.label().unwrap_or("---").to_string())
-            .collect();
+        // Convert entries to MenuItemData for the widget
+        let item_data = Self::entries_to_item_data(&entries);
 
         let (child, label_state) = ctx.with_id(LABEL_VIEW_ID, |ctx| {
             self.label.build(ctx, app_state)
         });
 
         let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(MenuButton::new(child.new_widget, labels))
+            ctx.create_pod(MenuButton::new_with_data(child.new_widget, item_data))
         });
 
         let view_state = MenuButtonViewState {
@@ -143,19 +140,10 @@ where
     ) {
         // Rebuild entries
         let entries: Vec<BoxedMenuEntry<State, Action>> = self.items.clone().collect_entries();
-        let labels: Vec<String> = entries
-            .iter()
-            .map(|e| e.label().unwrap_or("---").to_string())
-            .collect();
 
-        let prev_labels: Vec<String> = view_state.entries
-            .iter()
-            .map(|e| e.label().unwrap_or("---").to_string())
-            .collect();
-
-        if prev_labels != labels {
-            MenuButton::set_items(&mut element, labels);
-        }
+        // Always update item data - checkmarks may have changed
+        let item_data = Self::entries_to_item_data(&entries);
+        MenuButton::set_items_data(&mut element, item_data);
         view_state.entries = Arc::new(entries);
 
         ctx.with_id(LABEL_VIEW_ID, |ctx| {
@@ -213,5 +201,41 @@ where
             },
             _ => MessageResult::Stale,
         }
+    }
+}
+
+// Helper functions for MenuButtonView
+impl<State, Action, V, I> MenuButtonView<State, Action, V, I>
+where
+    State: 'static,
+    Action: 'static,
+{
+    /// Convert MenuEntry items to MenuItemData for the widget.
+    fn entries_to_item_data(entries: &[BoxedMenuEntry<State, Action>]) -> Vec<MenuItemData> {
+        entries.iter().map(|entry| {
+            if entry.is_submenu() {
+                // Get submenu children
+                let children = entry.submenu_items()
+                    .map(|items| Self::entries_to_item_data(&items))
+                    .unwrap_or_default();
+                MenuItemData::Submenu {
+                    label: entry.label().unwrap_or("").to_string(),
+                    children,
+                }
+            } else if entry.is_actionable() {
+                // Regular menu item
+                if let Some(label) = entry.label() {
+                    MenuItemData::Action {
+                        label: label.to_string(),
+                        checked: entry.checked(),
+                    }
+                } else {
+                    MenuItemData::Separator
+                }
+            } else {
+                // Separator
+                MenuItemData::Separator
+            }
+        }).collect()
     }
 }

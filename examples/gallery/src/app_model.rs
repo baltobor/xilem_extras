@@ -56,6 +56,8 @@ pub struct AppModel {
     // Menu demo state
     pub menu_last_action: String,
     pub dropdown_selected_index: usize,
+    pub dark_mode: bool,
+    pub show_toolbar: bool,
 }
 
 impl AppModel {
@@ -95,6 +97,8 @@ impl AppModel {
             // Menu
             menu_last_action: "(none)".to_string(),
             dropdown_selected_index: 0,
+            dark_mode: true,
+            show_toolbar: true,
         }
     }
 

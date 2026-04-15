@@ -27,8 +27,10 @@ mod entry;
 mod item;
 mod separator;
 mod sequence;
+mod submenu;
 
 pub use entry::{MenuEntry, BoxedMenuEntry};
 pub use item::{MenuItem, menu_item};
 pub use separator::{SeparatorEntry, separator};
 pub use sequence::MenuItems;
+pub use submenu::{Submenu, submenu};

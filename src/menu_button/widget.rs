@@ -31,6 +31,53 @@ pub struct MenuButtonPress {
     pub index: usize,
 }
 
+/// Data for a menu item, including support for submenus.
+#[derive(Clone, Debug)]
+pub enum MenuItemData {
+    /// A clickable action item with a label.
+    Action { label: String, checked: Option<bool> },
+    /// A visual separator.
+    Separator,
+    /// A submenu with nested items.
+    Submenu { label: String, children: Vec<MenuItemData> },
+}
+
+impl MenuItemData {
+    /// Creates an action item.
+    pub fn action(label: impl Into<String>) -> Self {
+        Self::Action { label: label.into(), checked: None }
+    }
+
+    /// Creates an action item with checked state.
+    pub fn action_checked(label: impl Into<String>, checked: bool) -> Self {
+        Self::Action { label: label.into(), checked: Some(checked) }
+    }
+
+    /// Creates a separator.
+    pub fn separator() -> Self {
+        Self::Separator
+    }
+
+    /// Creates a submenu.
+    pub fn submenu(label: impl Into<String>, children: Vec<MenuItemData>) -> Self {
+        Self::Submenu { label: label.into(), children }
+    }
+
+    /// Returns the display label, or None for separators.
+    pub fn label(&self) -> Option<&str> {
+        match self {
+            Self::Action { label, .. } => Some(label),
+            Self::Submenu { label, .. } => Some(label),
+            Self::Separator => None,
+        }
+    }
+
+    /// Returns true if this is a submenu.
+    pub fn is_submenu(&self) -> bool {
+        matches!(self, Self::Submenu { .. })
+    }
+}
+
 /// A button widget that opens a dropdown menu layer when clicked.
 ///
 /// This follows the same pattern as masonry's `Selector` widget: on click it
@@ -40,8 +87,8 @@ pub struct MenuButtonPress {
 pub struct MenuButton {
     /// The label shown on the button (e.g. "File", "View").
     child: WidgetPod<dyn Widget>,
-    /// Labels for each dropdown menu item.
-    items: Vec<String>,
+    /// Menu item data including submenus.
+    items: Vec<MenuItemData>,
     /// Tracked layer id so we can toggle/remove it.
     pub(crate) menu_layer_id: Option<WidgetId>,
 }
@@ -52,6 +99,24 @@ impl MenuButton {
     /// - `child`: the always-visible label widget (e.g. a `Label`).
     /// - `items`: the list of dropdown menu item labels.
     pub fn new(child: NewWidget<impl Widget + ?Sized>, items: Vec<String>) -> Self {
+        // Convert legacy string-based items to MenuItemData
+        let items = items.into_iter().map(|label| {
+            if label == "---" {
+                MenuItemData::Separator
+            } else {
+                MenuItemData::Action { label, checked: None }
+            }
+        }).collect();
+
+        Self {
+            child: child.erased().to_pod(),
+            items,
+            menu_layer_id: None,
+        }
+    }
+
+    /// Creates a new menu button with full menu item data (including submenus).
+    pub fn new_with_data(child: NewWidget<impl Widget + ?Sized>, items: Vec<MenuItemData>) -> Self {
         Self {
             child: child.erased().to_pod(),
             items,
@@ -66,20 +131,40 @@ impl MenuButton {
             return;
         }
 
-        let mut menu = MenuDropdown::new(ctx.widget_id());
-        for label in &self.items {
-            if label == "---" {
-                menu = menu.with_item(NewWidget::new(super::MenuSeparator::new()));
-            } else {
-                menu = menu.with_item(NewWidget::new(super::PulldownMenuItem::new(label.clone())));
-            }
-        }
+        let menu = Self::build_dropdown(ctx.widget_id(), &self.items);
 
         ctx.create_layer(
             LayerType::Other,
             NewWidget::new(menu),
             ctx.window_origin() + Vec2::new(0., ctx.border_box_size().height),
         );
+    }
+
+    /// Builds a MenuDropdown from item data.
+    fn build_dropdown(creator: WidgetId, items: &[MenuItemData]) -> MenuDropdown {
+        let mut menu = MenuDropdown::new(creator);
+        for item in items {
+            match item {
+                MenuItemData::Separator => {
+                    menu = menu.with_item(NewWidget::new(super::MenuSeparator::new()));
+                }
+                MenuItemData::Action { label, checked } => {
+                    let mut item_widget = super::PulldownMenuItem::new(label.clone());
+                    if let Some(is_checked) = checked {
+                        item_widget = item_widget.with_checked(Some(*is_checked));
+                    }
+                    menu = menu.with_item(NewWidget::new(item_widget));
+                }
+                MenuItemData::Submenu { label, children } => {
+                    let submenu_widget = super::PulldownSubmenuItem::new(label.clone());
+                    menu = menu.with_submenu_item(
+                        NewWidget::new(submenu_widget),
+                        children.clone(),
+                    );
+                }
+            }
+        }
+        menu
     }
 }
 
@@ -89,8 +174,19 @@ impl MenuButton {
         this.ctx.get_mut(&mut this.widget.child)
     }
 
-    /// Replaces the dropdown item labels.
+    /// Replaces the dropdown item labels (legacy API).
     pub fn set_items(this: &mut WidgetMut<'_, Self>, items: Vec<String>) {
+        this.widget.items = items.into_iter().map(|label| {
+            if label == "---" {
+                MenuItemData::Separator
+            } else {
+                MenuItemData::Action { label, checked: None }
+            }
+        }).collect();
+    }
+
+    /// Replaces the dropdown items with full menu data.
+    pub fn set_items_data(this: &mut WidgetMut<'_, Self>, items: Vec<MenuItemData>) {
         this.widget.items = items;
     }
 }

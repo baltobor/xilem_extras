@@ -158,6 +158,7 @@ pub use menu_button::{
     MenuButtonPress,
     MenuDropdown,
     PulldownMenuItem,
+    PulldownSubmenuItem,
 };
 
 pub use dropdown_select::{
@@ -184,6 +185,8 @@ pub use menu_items::{
     menu_item,
     MenuItems,
     separator,
+    Submenu,
+    submenu,
 };
 
 pub use xilem;
