@@ -58,6 +58,7 @@ pub mod tabs;
 pub mod theme;
 pub mod context_menu;
 pub mod menu_items;
+pub mod app_menu;
 
 pub use traits::{
     Identifiable,
@@ -187,6 +188,24 @@ pub use menu_items::{
     separator,
     Submenu,
     submenu,
+};
+
+pub use app_menu::{
+    app_menu_bar,
+    with_app_menu,
+    menu_bar_label,
+    AppMenuBarView,
+    MenuBarBuilder,
+    MenuBuilder,
+    MenuItemBuilder,
+    MenuItemChain,
+    Key,
+    Modifiers,
+    Shortcut,
+    CMD,
+    SHIFT,
+    ALT,
+    CTRL,
 };
 
 pub use xilem;

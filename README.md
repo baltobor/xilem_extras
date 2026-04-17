@@ -33,10 +33,10 @@ cargo install just
 Or directly without just:
 
 ```bash
-cargo run --example gallery --features rust-logos
+cargo run --example gallery --features "rust-logos app-menu"
 ```
 
-The `rust-logos` feature is required for the gallery to display Rust file icons.
+The `rust-logos` feature provides Rust file icons, and `app-menu` enables native menu bar support (muda on macOS/Windows).
 
 <img width="1012" height="744" alt="xilem_extras_gallery" src="https://github.com/user-attachments/assets/4eab7538-43f5-4cbd-a527-8182c0e78ddb" />
 
@@ -172,6 +172,90 @@ context_menu(
         menu_item("Paste", |model| model.paste()),
     ),
 )
+```
+
+### App Menu Bar (xilem_muda)
+
+The `app_menu` module provides a unified API for application menu bars:
+- **macOS/Windows**: Native menus via the muda crate (requires `app-menu` feature)
+- **Linux**: Fallback using `menu_button` widgets
+
+**Builder API** (for defining menu structure):
+
+```rust
+use xilem_extras::{MenuBarBuilder, Key, CMD, SHIFT};
+
+// Define menu structure with the fluent builder API
+let menu_def = MenuBarBuilder::new()
+    .menu("File", |m| m
+        .item("New", |s: &mut AppState| s.new_file())
+            .shortcut(CMD + Key::N)
+        .item("Open...", |s| s.open_file())
+            .shortcut(CMD + Key::O)
+        .separator()
+        .submenu("Recent", |m| m
+            .item("project1.rs", |s| s.open_recent(0))
+            .item("project2.rs", |s| s.open_recent(1))
+        )
+        .separator()
+        .item("Quit", |s| s.quit())
+            .shortcut(CMD + Key::Q)
+    )
+    .menu("Edit", |m| m
+        .item("Undo", |s| s.undo())
+            .shortcut(CMD + Key::Z)
+            .enabled(|s| s.can_undo())
+        .item("Redo", |s| s.redo())
+            .shortcut(CMD + SHIFT + Key::Z)
+            .enabled(|s| s.can_redo())
+    );
+```
+
+**Xilem Widget Rendering** (for Linux and cross-platform fallback):
+
+```rust
+use xilem_extras::{menu_button, menu_item, separator, submenu};
+use xilem::view::{flex_row, label};
+
+// Build application menu bar with menu_button widgets
+fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> {
+    flex_row((
+        menu_button(
+            label("File"),
+            (
+                menu_item("New", |m: &mut AppModel| m.new_file()),
+                menu_item("Open...", |m| m.open_file()),
+                separator(),
+                submenu("Recent", (
+                    menu_item("project1.rs", |m| m.open_recent(0)),
+                    menu_item("project2.rs", |m| m.open_recent(1)),
+                )),
+                separator(),
+                menu_item("Quit", |m| m.quit()),
+            ),
+        ),
+        menu_button(
+            label("Edit"),
+            (
+                menu_item("Undo", |m: &mut AppModel| m.undo()),
+                menu_item("Redo", |m| m.redo()),
+            ),
+        ),
+    ))
+    .background_color(MENU_BAR_BG)
+}
+```
+
+**Shortcut DSL**:
+
+```rust
+use xilem_extras::{Key, CMD, SHIFT, ALT, CTRL};
+
+// Platform-aware shortcuts
+CMD + Key::S           // Cmd+S on macOS, Ctrl+S on Windows/Linux
+CMD + SHIFT + Key::Z   // Cmd+Shift+Z / Ctrl+Shift+Z
+ALT + Key::F4          // Alt+F4 (always Alt)
+CTRL + Key::C          // Ctrl+C (always Ctrl, even on macOS)
 ```
 
 ### List

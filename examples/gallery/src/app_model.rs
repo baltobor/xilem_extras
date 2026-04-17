@@ -7,6 +7,7 @@
 
 //! Application model for the gallery example.
 
+use std::sync::atomic::AtomicBool;
 use xilem::masonry::kurbo::Point;
 use xilem_extras::{
     ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths,
@@ -14,6 +15,29 @@ use xilem_extras::{
 
 use crate::mock_data::{FileNode, Contact, Cyclist};
 use crate::tabs_demo::{DemoTab, create_demo_tabs};
+
+// Channel for menu commands (macOS/Windows only)
+#[cfg(not(target_os = "linux"))]
+use std::sync::{mpsc, Arc, Mutex};
+
+/// Menu commands sent from the native menu bar to the application model.
+#[cfg(not(target_os = "linux"))]
+#[derive(Debug, Clone)]
+pub enum MenuCommand {
+    GotoPage(Page),
+    Undo,
+    Redo,
+    Cut,
+    Copy,
+    Paste,
+    ToggleDarkMode,
+    ToggleToolbar,
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
+    Documentation,
+    About,
+}
 
 /// Current demo page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -24,6 +48,7 @@ pub enum Page {
     Table,
     Tabs,
     Menu,
+    AppMenu,
 }
 
 /// Application state.
@@ -58,6 +83,19 @@ pub struct AppModel {
     pub dropdown_selected_index: usize,
     pub dark_mode: bool,
     pub show_toolbar: bool,
+
+    // Menu command channel (macOS/Windows only)
+    #[cfg(not(target_os = "linux"))]
+    pub menu_command_rx: Option<Arc<Mutex<mpsc::Receiver<MenuCommand>>>>,
+
+    // Window ID for xilem window management
+    pub main_window_id: masonry_winit::app::WindowId,
+
+    // App lifecycle
+    pub app_running: bool,
+
+    /// Background activity flag - when true, the ticker task triggers re-renders.
+    pub bg_active: Arc<AtomicBool>,
 }
 
 impl AppModel {
@@ -99,6 +137,17 @@ impl AppModel {
             dropdown_selected_index: 0,
             dark_mode: true,
             show_toolbar: true,
+
+            // Menu command channel (set by main)
+            #[cfg(not(target_os = "linux"))]
+            menu_command_rx: None,
+
+            // Window ID
+            main_window_id: masonry_winit::app::WindowId::next(),
+
+            // App lifecycle
+            app_running: true,
+            bg_active: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -121,10 +170,53 @@ impl AppModel {
         }
     }
 
+    /// Poll and process menu commands from the native menu bar (macOS/Windows).
+    #[cfg(not(target_os = "linux"))]
+    pub fn poll_menu_commands(&mut self) {
+        let commands: Vec<MenuCommand> = {
+            let Some(rx_arc) = &self.menu_command_rx else {
+                return;
+            };
+            let Ok(rx) = rx_arc.lock() else {
+                return;
+            };
+            rx.try_iter().collect()
+        };
+
+        for cmd in commands {
+            match cmd {
+                MenuCommand::GotoPage(page) => self.page = page,
+                MenuCommand::Undo => self.menu_last_action = "Edit > Undo".to_string(),
+                MenuCommand::Redo => self.menu_last_action = "Edit > Redo".to_string(),
+                MenuCommand::Cut => self.menu_last_action = "Edit > Cut".to_string(),
+                MenuCommand::Copy => self.menu_last_action = "Edit > Copy".to_string(),
+                MenuCommand::Paste => self.menu_last_action = "Edit > Paste".to_string(),
+                MenuCommand::ToggleDarkMode => {
+                    self.dark_mode = !self.dark_mode;
+                    self.menu_last_action = format!("Dark Mode: {}", self.dark_mode);
+                }
+                MenuCommand::ToggleToolbar => {
+                    self.show_toolbar = !self.show_toolbar;
+                    self.menu_last_action = format!("Show Toolbar: {}", self.show_toolbar);
+                }
+                MenuCommand::ZoomIn => self.menu_last_action = "View > Zoom In".to_string(),
+                MenuCommand::ZoomOut => self.menu_last_action = "View > Zoom Out".to_string(),
+                MenuCommand::ZoomReset => self.menu_last_action = "View > Reset Zoom".to_string(),
+                MenuCommand::Documentation => self.menu_last_action = "Help > Documentation".to_string(),
+                MenuCommand::About => self.menu_last_action = "Help > About".to_string(),
+            }
+        }
+    }
 }
 
 impl Default for AppModel {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl xilem::AppState for AppModel {
+    fn keep_running(&self) -> bool {
+        self.app_running
     }
 }

@@ -9,3 +9,7 @@ xilem_extras = { path = "../..", features = ["rust-logos"] }
 xilem = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
 xilem_material_icons = { path = "../../../xilem_material_icons" }
+
+# Native menu bar (macOS and Windows only)
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+muda = "0.17"

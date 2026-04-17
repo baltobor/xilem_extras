@@ -7,6 +7,8 @@ description = "High-level widget library for xilem: Tree, List, Table, and Popup
 
 [features]
 default = []
+# Enables the unified app menu bar (uses muda on macOS/Windows, fallback on Linux).
+app-menu = ["dep:muda"]
 # Enables Rust logo SVG icons (rust_logo, rust_gear, rust_logo_complete).
 # Note: The Rust logo is licensed under CC-BY, not Apache-2.0.
 rust-logos = []
@@ -14,12 +16,20 @@ rust-logos = []
 [[example]]
 name = "gallery"
 path = "examples/gallery/src/main.rs"
-required-features = ["rust-logos"]
+required-features = ["rust-logos", "app-menu"]
 
 [dependencies]
 xilem = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
+masonry_winit = { git = "https://github.com/linebender/xilem", branch = "main" }
 xilem_material_icons = { git = "https://github.com/baltobor/xilem_material_icons", branch = "main" }
 tracing = "0.1"
 smallvec = "1"
+
+# Native menu bar (macOS and Windows only; Linux uses fallback widgets)
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+muda = { version = "0.17", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "time"] }
 

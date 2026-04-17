@@ -6,7 +6,7 @@ build:
 
 # Run the widget gallery example
 run:
-    cargo run --example gallery --features rust-logos
+    cargo run --example gallery --features "rust-logos,app-menu"
 
 # Generate documentation
 doc:
