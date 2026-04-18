@@ -13,7 +13,7 @@ use xilem::style::{Style, Padding};
 use xilem::view::{flex_col, flex_row, label};
 use xilem::WidgetView;
 
-use xilem_extras::{menu_button, menu_item, separator, submenu, dropdown_select};
+use xilem_extras::{menu_button, menu_item, separator, submenu, group, dropdown_select};
 use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
 
 use crate::app_model::AppModel;
@@ -125,6 +125,32 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 menu_item("Full Screen", |model: &mut AppModel| {
                     model.menu_last_action = "View > Full Screen".to_string();
                 }),
+            ),
+        ),
+        // Long menu demonstrating Group for >12 items without visual nesting
+        menu_button(
+            menu_bar_button("Refactor"),
+            (
+                group((
+                    menu_item("Rename Symbol", |m: &mut AppModel| { m.menu_last_action = "Refactor > Rename Symbol".into(); }),
+                    menu_item("Extract Function", |m: &mut AppModel| { m.menu_last_action = "Refactor > Extract Function".into(); }),
+                    menu_item("Extract Variable", |m: &mut AppModel| { m.menu_last_action = "Refactor > Extract Variable".into(); }),
+                    menu_item("Extract Constant", |m: &mut AppModel| { m.menu_last_action = "Refactor > Extract Constant".into(); }),
+                    menu_item("Inline Variable", |m: &mut AppModel| { m.menu_last_action = "Refactor > Inline Variable".into(); }),
+                    menu_item("Inline Function", |m: &mut AppModel| { m.menu_last_action = "Refactor > Inline Function".into(); }),
+                    separator(),
+                    menu_item("Move to Module", |m: &mut AppModel| { m.menu_last_action = "Refactor > Move to Module".into(); }),
+                    menu_item("Move to File", |m: &mut AppModel| { m.menu_last_action = "Refactor > Move to File".into(); }),
+                    menu_item("Change Visibility", |m: &mut AppModel| { m.menu_last_action = "Refactor > Change Visibility".into(); }),
+                )),
+                group((
+                    separator(),
+                    menu_item("Convert to Struct", |m: &mut AppModel| { m.menu_last_action = "Refactor > Convert to Struct".into(); }),
+                    menu_item("Convert to Enum", |m: &mut AppModel| { m.menu_last_action = "Refactor > Convert to Enum".into(); }),
+                    menu_item("Convert fn to Method", |m: &mut AppModel| { m.menu_last_action = "Refactor > Convert fn to Method".into(); }),
+                    menu_item("Split Function", |m: &mut AppModel| { m.menu_last_action = "Refactor > Split Function".into(); }),
+                    menu_item("Remove Dead Code", |m: &mut AppModel| { m.menu_last_action = "Refactor > Remove Dead Code".into(); }),
+                )),
             ),
         ),
         menu_button(

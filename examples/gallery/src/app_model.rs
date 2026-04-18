@@ -7,6 +7,7 @@
 
 //! Application model for the gallery example.
 
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use xilem::masonry::kurbo::Point;
 use xilem_extras::{

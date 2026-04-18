@@ -158,6 +158,10 @@ where
     fn execute(&self, state: &mut State) -> Option<Action> {
         Some((self.action)(state))
     }
+
+    fn clone_boxed(&self) -> super::BoxedMenuEntry<State, Action> {
+        Box::new(self.clone())
+    }
 }
 
 /// Creates a menu item with a label and action callback.

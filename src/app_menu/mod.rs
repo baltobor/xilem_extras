@@ -54,7 +54,7 @@ pub use shortcut::{Key, Modifiers, Shortcut, CMD, SHIFT, ALT, CTRL};
 pub use builder::{MenuBarBuilder, MenuBuilder, MenuItemBuilder, MenuItemChain};
 pub use view::{app_menu_bar, AppMenuBarView, with_app_menu, menu_bar_label};
 pub use action_trait::{MenuActionTrait, MenuActionHandler};
-pub use render::render_menu_bar;
+pub use render::{pulldown_menu_bar, PulldownMenuBarStyle};
 
 // Re-export muda and build_muda_menu for native menus (macOS/Windows only)
 #[cfg(all(feature = "app-menu", not(target_os = "linux")))]

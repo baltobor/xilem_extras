@@ -97,6 +97,10 @@ where
     fn execute(&self, _state: &mut State) -> Option<Action> {
         None // Submenus don't execute actions directly
     }
+
+    fn clone_boxed(&self) -> super::BoxedMenuEntry<State, Action> {
+        Box::new(self.clone())
+    }
 }
 
 /// Creates a submenu with nested menu items.

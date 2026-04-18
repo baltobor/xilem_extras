@@ -41,7 +41,9 @@ pub struct MenuDropdown {
     /// Submenu data for children that are submenus (indexed by child position).
     submenu_data: Vec<Option<Vec<MenuItemData>>>,
     /// Index of the currently hovered submenu item.
-    hovered_submenu_index: Option<usize>,
+    pub(crate) hovered_submenu_index: Option<usize>,
+    /// Widget ID of the currently open submenu layer.
+    pub(crate) submenu_layer_id: Option<WidgetId>,
     /// Stored child sizes/positions for submenu placement.
     child_rects: Vec<(Point, Size)>,
     bg_color: Color,
@@ -56,6 +58,7 @@ impl MenuDropdown {
             children: Vec::new(),
             submenu_data: Vec::new(),
             hovered_submenu_index: None,
+            submenu_layer_id: None,
             child_rects: Vec::new(),
             bg_color: BG_COLOR,
             border_color: BORDER_COLOR,
@@ -147,6 +150,7 @@ impl Widget for MenuDropdown {
                         return;
                     }
 
+                    *super::widget::ACTIVE_MENU.lock().unwrap() = None;
                     ctx.mutate_later(self.creator, move |mut menu_btn| {
                         let mut menu_btn = menu_btn.downcast::<MenuButton>();
                         menu_btn
@@ -161,18 +165,30 @@ impl Widget for MenuDropdown {
                 // Check which child is hovered for submenu handling
                 let local_pos = ctx.local_position(state.current.position);
                 let mut new_hovered: Option<usize> = None;
+                let mut hovering_any_child = false;
 
                 for (i, (origin, size)) in self.child_rects.iter().enumerate() {
                     let rect = Rect::from_origin_size(*origin, *size);
-                    if rect.contains(local_pos) && self.is_submenu(i) {
-                        new_hovered = Some(i);
+                    if rect.contains(local_pos) {
+                        hovering_any_child = true;
+                        if self.is_submenu(i) {
+                            new_hovered = Some(i);
+                        }
                         break;
                     }
                 }
 
                 if new_hovered != self.hovered_submenu_index {
-                    // Open new submenu if hovering over submenu item
-                    // Note: Previous submenus auto-close when new ones open (layer stacking)
+                    // Only close the old submenu if we're hovering a different item
+                    // (not when pointer moves into empty space — user may be
+                    // moving toward the submenu popup).
+                    if hovering_any_child {
+                        if let Some(old_layer_id) = self.submenu_layer_id.take() {
+                            ctx.remove_layer(old_layer_id);
+                        }
+                    }
+
+                    // Open new submenu if hovering over a submenu item
                     if let Some(idx) = new_hovered {
                         if let Some(Some(children)) = self.submenu_data.get(idx) {
                             if let Some((origin, _size)) = self.child_rects.get(idx) {
@@ -185,12 +201,13 @@ impl Widget for MenuDropdown {
                                     NewWidget::new(submenu),
                                     submenu_pos,
                                 );
-                                // Note: We can't get the layer ID back from create_layer
-                                // The submenu will self-dismiss when focus changes
                             }
                         }
                     }
-                    self.hovered_submenu_index = new_hovered;
+
+                    if hovering_any_child {
+                        self.hovered_submenu_index = new_hovered;
+                    }
                 }
             }
             _ => {}
@@ -204,7 +221,7 @@ impl Widget for MenuDropdown {
         event: &TextEvent,
     ) {
         if let TextEvent::WindowFocusChange(false) = event {
-            ctx.remove_layer(ctx.widget_id());
+            self.dismiss(ctx);
         }
     }
 
@@ -218,10 +235,14 @@ impl Widget for MenuDropdown {
 
     fn update(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, event: &Update) {
         if let Update::WidgetAdded = event {
+            // Register this dropdown's ID with the parent MenuButton and global tracking
             let id = ctx.widget_id();
+            let creator = self.creator;
             ctx.mutate_later(self.creator, move |mut menu_btn| {
                 let menu_btn = menu_btn.downcast::<MenuButton>();
                 menu_btn.widget.menu_layer_id = Some(id);
+                // Update global tracking
+                *super::widget::ACTIVE_MENU.lock().unwrap() = Some((creator, id));
             });
         }
     }
@@ -369,12 +390,23 @@ impl Layer for MenuDropdown {
         };
 
         if dismiss {
-            ctx.remove_layer(ctx.widget_id());
-            ctx.mutate_later(self.creator, move |mut menu_btn| {
-                let menu_btn = menu_btn.downcast::<MenuButton>();
-                menu_btn.widget.menu_layer_id = None;
-            });
+            self.dismiss(ctx);
         }
+    }
+}
+
+impl MenuDropdown {
+    /// Dismiss this dropdown and any open submenu, and clear global tracking.
+    fn dismiss(&mut self, ctx: &mut EventCtx<'_>) {
+        if let Some(submenu_id) = self.submenu_layer_id.take() {
+            ctx.remove_layer(submenu_id);
+        }
+        ctx.remove_layer(ctx.widget_id());
+        *super::widget::ACTIVE_MENU.lock().unwrap() = None;
+        ctx.mutate_later(self.creator, move |mut menu_btn| {
+            let menu_btn = menu_btn.downcast::<MenuButton>();
+            menu_btn.widget.menu_layer_id = None;
+        });
     }
 }
 
@@ -458,7 +490,15 @@ impl Widget for SubmenuDropdown {
     ) {
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, _event: &Update) {
+    fn update(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, event: &Update) {
+        if let Update::WidgetAdded = event {
+            // Register this submenu's ID with the parent MenuDropdown so it can close us
+            let id = ctx.widget_id();
+            ctx.mutate_later(self.creator, move |mut parent| {
+                let parent = parent.downcast::<MenuDropdown>();
+                parent.widget.submenu_layer_id = Some(id);
+            });
+        }
     }
 
     fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
@@ -589,9 +629,24 @@ impl Layer for SubmenuDropdown {
         _props: &mut PropertiesMut<'_>,
         event: &PointerEvent,
     ) {
-        // Don't dismiss on click-outside - let parent MenuDropdown handle that
-        if let PointerEvent::Cancel(..) = event {
-            ctx.remove_layer(ctx.widget_id());
+        match event {
+            PointerEvent::Cancel(..) => {
+                ctx.remove_layer(ctx.widget_id());
+            }
+            PointerEvent::Down(PointerButtonEvent { state, .. }) => {
+                // Dismiss if clicking outside the submenu area
+                let local_pos = ctx.local_position(state.position);
+                if !ctx.border_box_size().to_rect().contains(local_pos) {
+                    ctx.remove_layer(ctx.widget_id());
+                    // Clear submenu tracking in parent
+                    ctx.mutate_later(self.creator, move |mut parent| {
+                        let parent = parent.downcast::<MenuDropdown>();
+                        parent.widget.submenu_layer_id = None;
+                        parent.widget.hovered_submenu_index = None;
+                    });
+                }
+            }
+            _ => {}
         }
     }
 }

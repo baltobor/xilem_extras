@@ -25,7 +25,7 @@ use masonry::theme::default_property_set;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::core::fork;
-use xilem::view::{CrossAxisAlignment, split, flex_col, label, task_raw};
+use xilem::view::{CrossAxisAlignment, split, flex_col, flex_row, label, task_raw};
 use xilem::{window, EventLoop, WidgetView, WindowView, Xilem};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -251,9 +251,10 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     // On macOS/Windows: native menu bar is used, no in-window menu needed
     #[cfg(target_os = "linux")]
     {
+        use xilem::view::FlexExt as _;
         flex_col((
             build_menu_bar(model),
-            main_content,
+            main_content.flex(1.0),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
     }

@@ -24,12 +24,14 @@
 //! ```
 
 mod entry;
+mod group;
 mod item;
 mod separator;
 mod sequence;
 mod submenu;
 
 pub use entry::{MenuEntry, BoxedMenuEntry};
+pub use group::{Group, group, IntoMenuEntries};
 pub use item::{MenuItem, menu_item};
 pub use separator::{SeparatorEntry, separator};
 pub use sequence::MenuItems;

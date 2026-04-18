@@ -394,7 +394,7 @@ mod tests {
     #[test]
     fn test_enabled_check() {
         let menu: MenuBuilder<TestState, TestAction> = MenuBuilder::new("Edit")
-            .item("Undo", |_state| {})
+            .item("Undo", |_state: &mut TestState| {})
             .enabled(|state| state.can_undo)
             .into();
 

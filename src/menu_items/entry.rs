@@ -55,4 +55,13 @@ pub trait MenuEntry<State, Action>: Send + Sync + 'static {
     /// Executes the action for this entry, if it has one.
     /// Returns the action result or `None` if not actionable.
     fn execute(&self, state: &mut State) -> Option<Action>;
+
+    /// Clone this entry into a new boxed entry.
+    fn clone_boxed(&self) -> BoxedMenuEntry<State, Action>;
+}
+
+impl<State: 'static, Action: 'static> Clone for Box<dyn MenuEntry<State, Action>> {
+    fn clone(&self) -> Self {
+        self.clone_boxed()
+    }
 }

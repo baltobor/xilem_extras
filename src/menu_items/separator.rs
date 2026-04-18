@@ -58,6 +58,10 @@ where
     fn execute(&self, _state: &mut State) -> Option<Action> {
         None
     }
+
+    fn clone_boxed(&self) -> super::BoxedMenuEntry<State, Action> {
+        Box::new(*self)
+    }
 }
 
 /// Creates a visual separator line for menus.

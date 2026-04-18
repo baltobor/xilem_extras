@@ -8,6 +8,7 @@
 //! Menu button widget that opens a dropdown menu layer when clicked.
 
 use std::any::TypeId;
+use std::sync::Mutex;
 
 use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
@@ -23,6 +24,10 @@ use xilem::masonry::kurbo::{Axis, Size, Vec2};
 use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
 
 use super::MenuDropdown;
+
+/// Tracks the (MenuButton WidgetId, MenuDropdown layer WidgetId) of the
+/// currently open menu. When a new menu opens, the old one is closed first.
+pub(crate) static ACTIVE_MENU: Mutex<Option<(WidgetId, WidgetId)>> = Mutex::new(None);
 
 /// Action emitted when a menu item inside a [`MenuButton`]'s dropdown is clicked.
 #[derive(PartialEq, Debug)]
@@ -128,7 +133,30 @@ impl MenuButton {
         if let Some(id) = self.menu_layer_id {
             ctx.remove_layer(id);
             self.menu_layer_id = None;
+            *ACTIVE_MENU.lock().unwrap() = None;
             return;
+        }
+
+        self.open_layer(ctx);
+    }
+
+    fn open_layer(&mut self, ctx: &mut EventCtx<'_>) {
+        if self.menu_layer_id.is_some() {
+            return;
+        }
+
+        // Close any other open menu first — use mutate_later so the owning
+        // button can safely check if its layer is still alive.
+        {
+            let mut active = ACTIVE_MENU.lock().unwrap();
+            if let Some((btn_id, _layer_id)) = active.take() {
+                ctx.mutate_later(btn_id, |mut menu_btn| {
+                    let mut menu_btn = menu_btn.downcast::<MenuButton>();
+                    if let Some(layer_id) = menu_btn.widget.menu_layer_id.take() {
+                        menu_btn.ctx.remove_layer(layer_id);
+                    }
+                });
+            }
         }
 
         let menu = Self::build_dropdown(ctx.widget_id(), &self.items);
