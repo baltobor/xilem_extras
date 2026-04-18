@@ -19,7 +19,7 @@ use crate::tabs_demo::{DemoTab, create_demo_tabs};
 
 // Channel for menu commands (macOS/Windows only)
 #[cfg(not(target_os = "linux"))]
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc, Mutex};
 
 /// Menu commands sent from the native menu bar to the application model.
 #[cfg(not(target_os = "linux"))]
