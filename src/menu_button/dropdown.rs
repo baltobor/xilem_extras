@@ -150,7 +150,7 @@ impl Widget for MenuDropdown {
                         return;
                     }
 
-                    *super::widget::ACTIVE_MENU.lock().unwrap() = None;
+                    *super::widget::ACTIVE_MENU_BUTTON.lock().unwrap() = None;
                     ctx.mutate_later(self.creator, move |mut menu_btn| {
                         let mut menu_btn = menu_btn.downcast::<MenuButton>();
                         menu_btn
@@ -235,14 +235,11 @@ impl Widget for MenuDropdown {
 
     fn update(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, event: &Update) {
         if let Update::WidgetAdded = event {
-            // Register this dropdown's ID with the parent MenuButton and global tracking
+            // Register this dropdown's layer ID with the parent MenuButton
             let id = ctx.widget_id();
-            let creator = self.creator;
             ctx.mutate_later(self.creator, move |mut menu_btn| {
                 let menu_btn = menu_btn.downcast::<MenuButton>();
                 menu_btn.widget.menu_layer_id = Some(id);
-                // Update global tracking
-                *super::widget::ACTIVE_MENU.lock().unwrap() = Some((creator, id));
             });
         }
     }
@@ -402,7 +399,7 @@ impl MenuDropdown {
             ctx.remove_layer(submenu_id);
         }
         ctx.remove_layer(ctx.widget_id());
-        *super::widget::ACTIVE_MENU.lock().unwrap() = None;
+        *super::widget::ACTIVE_MENU_BUTTON.lock().unwrap() = None;
         ctx.mutate_later(self.creator, move |mut menu_btn| {
             let menu_btn = menu_btn.downcast::<MenuButton>();
             menu_btn.widget.menu_layer_id = None;

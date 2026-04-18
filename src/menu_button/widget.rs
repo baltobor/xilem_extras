@@ -25,9 +25,9 @@ use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
 
 use super::MenuDropdown;
 
-/// Tracks the (MenuButton WidgetId, MenuDropdown layer WidgetId) of the
-/// currently open menu. When a new menu opens, the old one is closed first.
-pub(crate) static ACTIVE_MENU: Mutex<Option<(WidgetId, WidgetId)>> = Mutex::new(None);
+/// Tracks the MenuButton WidgetId that currently has an open dropdown.
+/// Used so that `dismiss()` can clear global state.
+pub(crate) static ACTIVE_MENU_BUTTON: Mutex<Option<WidgetId>> = Mutex::new(None);
 
 /// Action emitted when a menu item inside a [`MenuButton`]'s dropdown is clicked.
 #[derive(PartialEq, Debug)]
@@ -133,7 +133,7 @@ impl MenuButton {
         if let Some(id) = self.menu_layer_id {
             ctx.remove_layer(id);
             self.menu_layer_id = None;
-            *ACTIVE_MENU.lock().unwrap() = None;
+            *ACTIVE_MENU_BUTTON.lock().unwrap() = None;
             return;
         }
 
@@ -145,19 +145,10 @@ impl MenuButton {
             return;
         }
 
-        // Close any other open menu first — use mutate_later so the owning
-        // button can safely check if its layer is still alive.
-        {
-            let mut active = ACTIVE_MENU.lock().unwrap();
-            if let Some((btn_id, _layer_id)) = active.take() {
-                ctx.mutate_later(btn_id, |mut menu_btn| {
-                    let mut menu_btn = menu_btn.downcast::<MenuButton>();
-                    if let Some(layer_id) = menu_btn.widget.menu_layer_id.take() {
-                        menu_btn.ctx.remove_layer(layer_id);
-                    }
-                });
-            }
-        }
+        // Note: We don't need to explicitly close other menus here.
+        // When the user clicks this button, the click event first goes through
+        // any open dropdown's Layer::capture_pointer_event, which sees the
+        // click is outside and calls dismiss(). Then our click handler runs.
 
         let menu = Self::build_dropdown(ctx.widget_id(), &self.items);
 
@@ -166,6 +157,8 @@ impl MenuButton {
             NewWidget::new(menu),
             ctx.window_origin() + Vec2::new(0., ctx.border_box_size().height),
         );
+
+        *ACTIVE_MENU_BUTTON.lock().unwrap() = Some(ctx.widget_id());
     }
 
     /// Builds a MenuDropdown from item data.
