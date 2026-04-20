@@ -120,6 +120,8 @@ impl MenuDropdown {
     }
 }
 
+impl UsesProperty<Gap> for MenuDropdown {}
+
 impl Widget for MenuDropdown {
     type Action = NoAction;
 
