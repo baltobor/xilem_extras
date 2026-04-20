@@ -92,6 +92,13 @@ pub use components::{
     click_interceptor,
     ClickInterceptorView,
     ClickInterceptorWidget,
+    styled_text_input,
+    styled_text_input_with_placeholder,
+    styled_text_input_colored,
+    TextInputColors,
+    styled_checkbox,
+    styled_checkbox_colored,
+    CheckboxColors,
 };
 
 #[cfg(feature = "rust-logos")]
