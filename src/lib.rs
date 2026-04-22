@@ -59,6 +59,7 @@ pub mod theme;
 pub mod context_menu;
 pub mod menu_items;
 pub mod app_menu;
+pub mod virtual_list;
 
 pub use traits::{
     Identifiable,
@@ -220,6 +221,13 @@ pub use app_menu::{
     SHIFT,
     ALT,
     CTRL,
+};
+
+pub use virtual_list::{
+    virtual_list,
+    virtual_list_styled,
+    VirtualListStyle,
+    VirtualListState,
 };
 
 pub use xilem;
