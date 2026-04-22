@@ -157,6 +157,8 @@ pub use tabs::{
     SimpleTab,
     TabBar,
     TabBarColors,
+    NavTabBar,
+    NavButtonMode,
 };
 
 pub use menu_button::{

@@ -14,6 +14,8 @@ use xilem_extras::{
     ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths,
 };
 
+use xilem_extras::SimpleTab;
+
 use crate::mock_data::{FileNode, Contact, Cyclist};
 use crate::tabs_demo::{DemoTab, create_demo_tabs};
 
@@ -79,6 +81,11 @@ pub struct AppModel {
     pub demo_active_tab: usize,
     pub demo_show_tab_nav: bool,
 
+    // NavTabBar demo state
+    pub nav_tabs: Vec<SimpleTab>,
+    pub nav_active_tab: usize,
+    pub nav_show_arrows: bool,
+
     // Menu demo state
     pub menu_last_action: String,
     pub dropdown_selected_index: usize,
@@ -132,6 +139,16 @@ impl AppModel {
             demo_tabs: create_demo_tabs(),
             demo_active_tab: 0,
             demo_show_tab_nav: true,
+
+            // NavTabBar
+            nav_tabs: vec![
+                SimpleTab::new("Overview"),
+                SimpleTab::new("Details"),
+                SimpleTab::new("Settings"),
+                SimpleTab::new("History"),
+            ],
+            nav_active_tab: 0,
+            nav_show_arrows: false,
 
             // Menu
             menu_last_action: "(none)".to_string(),

@@ -13,7 +13,7 @@ use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, portal};
 use xilem::WidgetView;
 
-use xilem_extras::{TabBar, TabBarColors, TabItem};
+use xilem_extras::{TabBar, TabBarColors, TabItem, NavTabBar};
 
 use crate::app_model::AppModel;
 
@@ -115,6 +115,14 @@ It is pure, unadulterated freedom.
     ]
 }
 
+/// Content descriptions for each nav tab.
+const NAV_TAB_CONTENT: [&str; 4] = [
+    "Overview: General information and summary statistics.",
+    "Details: In-depth data and configuration options.",
+    "Settings: Customize behavior and preferences.",
+    "History: View past actions and changes.",
+];
+
 pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     let active_idx = model.demo_active_tab;
 
@@ -130,7 +138,7 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     // Build the tab bar using the library component
     let show_nav = model.demo_show_tab_nav;
     let tab_bar = TabBar::new(&model.demo_tabs, active_idx)
-        .colors(colors)
+        .colors(colors.clone())
         .show_nav_buttons(show_nav)
         .on_select(|model: &mut AppModel, idx| {
             model.demo_active_tab = idx;
@@ -153,8 +161,43 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             .boxed()
     };
 
+    // NavTabBar demo section
+    let nav_active = model.nav_active_tab;
+    let use_auto = model.nav_show_arrows;
+
+    let nav_tab_bar = if use_auto {
+        // Auto mode: arrows appear when tabs overflow 250px
+        NavTabBar::new(&model.nav_tabs, nav_active)
+            .colors(colors)
+            .auto_nav_buttons(250.0)
+            .corner_radius(6.0)
+            .text_size(12.0)
+            .on_select(|model: &mut AppModel, idx| {
+                model.nav_active_tab = idx;
+            })
+            .build()
+            .boxed()
+    } else {
+        // Manual mode: no arrows
+        NavTabBar::new(&model.nav_tabs, nav_active)
+            .colors(colors)
+            .corner_radius(6.0)
+            .text_size(12.0)
+            .on_select(|model: &mut AppModel, idx| {
+                model.nav_active_tab = idx;
+            })
+            .build()
+            .boxed()
+    };
+
+    let nav_content = NAV_TAB_CONTENT
+        .get(nav_active)
+        .copied()
+        .unwrap_or("Select a tab");
+
     flex_col((
-        label("Tabs Demo")
+        // Document Tabs (TabBar)
+        label("TabBar - Document Tabs")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
             .color(TEXT_COLOR),
@@ -163,7 +206,6 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             .color(TEXT_SECONDARY),
         tab_bar,
         portal(flex_col((content,)).padding(16.0)),
-        // Actions
         flex_row((
             button(label("Mark Dirty"), move |model: &mut AppModel| {
                 if let Some(tab) = model.demo_tabs.get_mut(model.demo_active_tab) {
@@ -180,6 +222,38 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             }),
             button(label("Toggle Nav Buttons"), |model: &mut AppModel| {
                 model.demo_show_tab_nav = !model.demo_show_tab_nav;
+            }),
+        ))
+        .gap(8.px()),
+        // Separator
+        flex_row(()).padding(8.0),
+        // Navigation Tabs (NavTabBar)
+        label("NavTabBar - Navigation Tabs")
+            .text_size(16.0)
+            .weight(xilem::FontWeight::BOLD)
+            .color(TEXT_COLOR),
+        label("Fixed tabs for view switching. Auto arrows when tabs overflow.")
+            .text_size(12.0)
+            .color(TEXT_SECONDARY),
+        nav_tab_bar,
+        label(nav_content)
+            .text_size(14.0)
+            .color(TEXT_COLOR),
+        flex_row((
+            button(label("Add Nav Tab"), |model: &mut AppModel| {
+                let n = model.nav_tabs.len() + 1;
+                model.nav_tabs.push(xilem_extras::SimpleTab::new(format!("Tab {}", n)));
+            }),
+            button(label("Remove Nav Tab"), |model: &mut AppModel| {
+                if model.nav_tabs.len() > 1 {
+                    model.nav_tabs.pop();
+                    if model.nav_active_tab >= model.nav_tabs.len() {
+                        model.nav_active_tab = model.nav_tabs.len() - 1;
+                    }
+                }
+            }),
+            button(label("Toggle Auto Arrows"), |model: &mut AppModel| {
+                model.nav_show_arrows = !model.nav_show_arrows;
             }),
         ))
         .gap(8.px()),
