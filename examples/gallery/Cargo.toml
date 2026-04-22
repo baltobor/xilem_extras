@@ -5,10 +5,13 @@ edition = "2024"
 publish = false
 
 [dependencies]
-xilem_extras = { path = "../..", features = ["rust-logos"] }
+xilem_extras = { path = "../..", features = ["rust-logos", "app-menu"] }
+dark-light = "2.0"
 xilem = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
+masonry_winit = { git = "https://github.com/linebender/xilem", branch = "main" }
 xilem_material_icons = { path = "../../../xilem_material_icons" }
+tokio = { version = "1", features = ["time", "rt"] }
 
 # Native menu bar (macOS and Windows only)
 [target.'cfg(not(target_os = "linux"))'.dependencies]

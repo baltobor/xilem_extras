@@ -17,7 +17,7 @@ use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, Layer, LayerType,
     LayoutCtx, MeasureCtx, NewWidget, NoAction, PaintCtx, PointerButton, PointerButtonEvent,
     PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
-    UsesProperty, Widget, WidgetId, WidgetPod,
+    Widget, WidgetId, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenDef, LenReq, SizeDef};
@@ -120,7 +120,6 @@ impl MenuDropdown {
     }
 }
 
-impl UsesProperty<Gap> for MenuDropdown {}
 
 impl Widget for MenuDropdown {
     type Action = NoAction;
@@ -436,7 +435,6 @@ impl SubmenuDropdown {
     }
 }
 
-impl UsesProperty<Gap> for SubmenuDropdown {}
 
 impl Widget for SubmenuDropdown {
     type Action = NoAction;

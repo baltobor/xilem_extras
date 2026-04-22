@@ -16,7 +16,7 @@ use xilem::masonry::peniko::Color;
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, Layer, LayoutCtx,
     MeasureCtx, NewWidget, NoAction, PaintCtx, PointerButton, PointerButtonEvent, PointerEvent,
-    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, UsesProperty,
+    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
     Widget, WidgetId, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
@@ -80,7 +80,6 @@ impl SelectDropdown {
     }
 }
 
-impl UsesProperty<Gap> for SelectDropdown {}
 
 impl Widget for SelectDropdown {
     type Action = NoAction;

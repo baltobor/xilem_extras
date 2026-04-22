@@ -59,6 +59,8 @@ pub struct ResizableHeader {
     dragging_index: Option<usize>,
     drag_start_x: f64,
     drag_start_width: f64,
+    /// Width of the adjacent (right) column at drag start for Apple-style resize
+    drag_start_adjacent_width: f64,
     divider_color: Color,
     divider_hover_color: Color,
     hovered_divider: Option<usize>,
@@ -81,6 +83,7 @@ impl ResizableHeader {
             dragging_index: None,
             drag_start_x: 0.0,
             drag_start_width: 0.0,
+            drag_start_adjacent_width: 0.0,
             divider_color: Color::from_rgb8(120, 118, 115),
             divider_hover_color: Color::from_rgb8(100, 150, 255),
             hovered_divider: None,
@@ -161,6 +164,11 @@ impl Widget for ResizableHeader {
                     self.dragging_index = Some(divider_idx);
                     self.drag_start_x = pos.x;
                     self.drag_start_width = self.columns[divider_idx].width;
+                    // Store adjacent column width for Apple-style resize
+                    self.drag_start_adjacent_width = self.columns
+                        .get(divider_idx + 1)
+                        .map(|c| c.width)
+                        .unwrap_or(0.0);
                     ctx.request_render();
                 }
             }
@@ -170,14 +178,42 @@ impl Widget for ResizableHeader {
                 if ctx.is_active() {
                     if let Some(divider_idx) = self.dragging_index {
                         let delta = pos.x - self.drag_start_x;
-                        let new_width = (self.drag_start_width + delta).max(MIN_COLUMN_WIDTH);
 
+                        // Apple-style: redistribute space between adjacent columns
+                        // Left column gets +delta, right column gets -delta
+                        let new_left_width = (self.drag_start_width + delta).max(MIN_COLUMN_WIDTH);
+                        let new_right_width = (self.drag_start_adjacent_width - delta).max(MIN_COLUMN_WIDTH);
+
+                        // Clamp delta to respect both minimum widths
+                        let actual_left_delta = new_left_width - self.drag_start_width;
+                        let actual_right_delta = self.drag_start_adjacent_width - new_right_width;
+
+                        // Use the smaller of the two deltas to ensure both constraints are met
+                        let clamped_delta = if actual_left_delta.abs() < actual_right_delta.abs() {
+                            actual_left_delta
+                        } else {
+                            actual_right_delta
+                        };
+
+                        let final_left_width = self.drag_start_width + clamped_delta;
+                        let final_right_width = self.drag_start_adjacent_width - clamped_delta;
+
+                        // Update left column
                         if let Some(col) = self.columns.get_mut(divider_idx) {
-                            col.width = new_width;
+                            col.width = final_left_width;
                         }
                         if let Some(w) = self.column_widths.get_mut(divider_idx) {
-                            *w = new_width;
+                            *w = final_left_width;
                         }
+
+                        // Update right (adjacent) column
+                        if let Some(col) = self.columns.get_mut(divider_idx + 1) {
+                            col.width = final_right_width;
+                        }
+                        if let Some(w) = self.column_widths.get_mut(divider_idx + 1) {
+                            *w = final_right_width;
+                        }
+
                         ctx.request_layout();
                     }
                 } else {
@@ -190,7 +226,15 @@ impl Widget for ResizableHeader {
             }
             PointerEvent::Up(..) | PointerEvent::Cancel(..) => {
                 if let Some(divider_idx) = self.dragging_index.take() {
+                    // Submit resize action for left column
                     if let Some(col) = self.columns.get(divider_idx) {
+                        ctx.submit_action::<Self::Action>(ColumnResizeAction {
+                            column_key: col.key.clone(),
+                            new_width: col.width,
+                        });
+                    }
+                    // Submit resize action for right (adjacent) column
+                    if let Some(col) = self.columns.get(divider_idx + 1) {
                         ctx.submit_action::<Self::Action>(ColumnResizeAction {
                             column_key: col.key.clone(),
                             new_width: col.width,
@@ -280,8 +324,40 @@ impl Widget for ResizableHeader {
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         self.size = size;
-        self.update_column_layout();
 
+        // Calculate total current width and divider space
+        let divider_count = self.column_widths.len().saturating_sub(1);
+        let divider_space = divider_count as f64 * DIVIDER_WIDTH;
+        let current_total: f64 = self.column_widths.iter().sum();
+        let available_width = size.width - divider_space;
+
+        // Scale columns to fill available width
+        let scale = if current_total > 0.0 {
+            available_width / current_total
+        } else {
+            1.0
+        };
+
+        // Update column layout with scaled widths
+        self.columns.clear();
+        let mut x = 0.0;
+        for (i, key) in self.column_keys.iter().enumerate() {
+            let base_width = self.column_widths.get(i).copied().unwrap_or(100.0);
+            let scaled_width = (base_width * scale).max(MIN_COLUMN_WIDTH);
+            self.columns.push(ColumnInfo {
+                key: key.clone(),
+                width: scaled_width,
+                x_offset: x,
+            });
+            // Add divider gap after each column except the last
+            if i < self.column_keys.len() - 1 {
+                x += scaled_width + DIVIDER_WIDTH;
+            } else {
+                x += scaled_width;
+            }
+        }
+
+        // Layout children with scaled widths
         for (i, child) in self.children.iter_mut().enumerate() {
             if let Some(col) = self.columns.get(i) {
                 let child_size = Size::new(col.width, size.height);

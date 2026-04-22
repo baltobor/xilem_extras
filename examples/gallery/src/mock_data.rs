@@ -246,6 +246,56 @@ pub fn mock_cyclists() -> Vec<Cyclist> {
     ]
 }
 
+/// First names for generating cyclists.
+const FIRST_NAMES: &[&str] = &[
+    "Luna", "Felix", "Maya", "River", "Sage", "Willow", "Jack", "Emma", "Liam", "Olivia",
+    "Noah", "Ava", "Ethan", "Sophia", "Mason", "Isabella", "Logan", "Mia", "Lucas", "Charlotte",
+    "Alexander", "Amelia", "Benjamin", "Harper", "Elijah", "Evelyn", "James", "Abigail", "William", "Emily",
+];
+
+/// Last names for generating cyclists.
+const LAST_NAMES: &[&str] = &[
+    "Park", "Walker", "Sunshine", "Stone", "Meadow", "Creek", "Pearse", "Smith", "Johnson", "Brown",
+    "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris",
+    "Martin", "Thompson", "Garcia", "Martinez", "Robinson", "Clark", "Rodriguez", "Lewis", "Lee", "Hall",
+];
+
+/// Routes for generating cyclists.
+const ROUTES: &[&str] = &[
+    "Riverside Trail", "Mountain Loop", "Beach Path", "Forest Circuit", "City Greenway",
+    "Lakeside Route", "Vennbahnweg", "Alpine Pass", "Coastal Highway", "Valley Road",
+    "Sunset Boulevard", "Harbor Bridge", "Canal Path", "Vineyard Tour", "Historic Route",
+    "Meadow Lane", "Hilltop Circuit", "River Crossing", "Woodland Trail", "Seaside Promenade",
+];
+
+/// Creates a large dataset of cyclists for performance testing.
+///
+/// Generates `count` cyclists with pseudo-random but deterministic data.
+pub fn mock_cyclists_large(count: usize) -> Vec<Cyclist> {
+    (0..count)
+        .map(|i| {
+            let id = i as u64 + 1;
+            // Simple deterministic "randomization" based on index
+            let first_idx = (i * 7 + 3) % FIRST_NAMES.len();
+            let last_idx = (i * 11 + 5) % LAST_NAMES.len();
+            let route_idx = (i * 13 + 7) % ROUTES.len();
+
+            let name = format!("{} {}", FIRST_NAMES[first_idx], LAST_NAMES[last_idx]);
+            let route = ROUTES[route_idx].to_string();
+            let distance_km = 10.0 + ((i * 17) % 200) as f64 + (i % 10) as f64 * 0.1;
+            let joy_level = ((i * 3) % 10 + 1) as i64;
+
+            Cyclist {
+                id,
+                name,
+                route,
+                distance_km,
+                joy_level,
+            }
+        })
+        .collect()
+}
+
 
 
 #[cfg(test)]

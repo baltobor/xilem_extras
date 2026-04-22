@@ -16,6 +16,7 @@ mod mock_data;
 mod tree_demo;
 mod list_demo;
 mod table_demo;
+mod virtual_table_demo;
 mod tabs_demo;
 mod menu_demo;
 mod app_menu_demo;
@@ -105,6 +106,9 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
                 }),
                 menu_item("Table View", |model: &mut AppModel| {
                     model.page = Page::Table;
+                }),
+                menu_item("Virtual Table (10k)", |model: &mut AppModel| {
+                    model.page = Page::VirtualTable;
                 }),
                 menu_item("Tabs", |model: &mut AppModel| {
                     model.page = Page::Tabs;
@@ -223,6 +227,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             nav_button("Tree", Page::Tree, current_page),
             nav_button("List", Page::List, current_page),
             nav_button("Table", Page::Table, current_page),
+            nav_button("Virtual Table", Page::VirtualTable, current_page),
             nav_button("Tabs", Page::Tabs, current_page),
             nav_button("Menu", Page::Menu, current_page),
             nav_button("App Menu", Page::AppMenu, current_page),
@@ -237,6 +242,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             Page::Tree => tree_demo::tree_demo(model).boxed(),
             Page::List => list_demo::list_demo(model).boxed(),
             Page::Table => table_demo::table_demo(model).boxed(),
+            Page::VirtualTable => virtual_table_demo::virtual_table_demo(model).boxed(),
             Page::Tabs => tabs_demo::tabs_demo(model).boxed(),
             Page::Menu => menu_demo::menu_demo(model).boxed(),
             Page::AppMenu => app_menu_demo::app_menu_demo(model).boxed(),
@@ -295,6 +301,7 @@ mod menu_ids {
     pub const TREE: &str = "tree";
     pub const LIST: &str = "list";
     pub const TABLE: &str = "table";
+    pub const VIRTUAL_TABLE: &str = "virtual_table";
     pub const TABS: &str = "tabs";
     pub const MENU: &str = "menu";
     pub const APP_MENU: &str = "app_menu";
@@ -343,6 +350,7 @@ fn build_native_menu() -> Menu {
     examples_menu.append(&MenuItem::with_id(TREE, "Tree View", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(LIST, "List View", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(TABLE, "Table View", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(VIRTUAL_TABLE, "Virtual Table (10k)", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(TABS, "Tabs", true, None::<Accelerator>)).ok();
     examples_menu.append(&PredefinedMenuItem::separator()).ok();
     examples_menu.append(&MenuItem::with_id(MENU, "Pulldown Menus", true, None::<Accelerator>)).ok();
@@ -415,6 +423,7 @@ impl ApplicationHandler<MasonryUserEvent> for GalleryApp {
                     TREE => Some(MenuCommand::GotoPage(Page::Tree)),
                     LIST => Some(MenuCommand::GotoPage(Page::List)),
                     TABLE => Some(MenuCommand::GotoPage(Page::Table)),
+                    VIRTUAL_TABLE => Some(MenuCommand::GotoPage(Page::VirtualTable)),
                     TABS => Some(MenuCommand::GotoPage(Page::Tabs)),
                     MENU => Some(MenuCommand::GotoPage(Page::Menu)),
                     APP_MENU => Some(MenuCommand::GotoPage(Page::AppMenu)),

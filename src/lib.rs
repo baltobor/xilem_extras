@@ -134,23 +134,40 @@ pub use list::{
 };
 
 pub use table::{
-    table,
-    table_styled,
-    TableAction,
-    TableStyle,
+    // Column definitions
     column,
     ColumnBuilder,
     ColumnDef,
     ColumnWidth,
     ColumnWidths,
+    Alignment,
+    // Sorting
+    SortOrder,
+    SortDirection,
+    SortDescriptor,
+    // Resizable header
     resizable_header,
     ResizableHeaderView,
     ResizableHeader,
     ColumnResizeAction,
-    SortOrder,
-    SortDirection,
-    SortDescriptor,
-    Alignment,
+    // Widget-level
+    TableScrollState,
+    TableWidget,
+    TableWidgetAction,
+    TableRangeAction,
+    TableRowClickAction,
+    TableHeaderClickAction,
+    // Main table API (virtualized, high-performance)
+    table,
+    table_styled,
+    TableAction,
+    TableView,
+    TableViewState,
+    // Legacy table API (non-virtualized)
+    legacy_table,
+    legacy_table_styled,
+    LegacyTableAction,
+    TableStyle,
 };
 
 pub use tabs::{

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use xilem::masonry::kurbo::Point;
 use xilem_extras::{
-    ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths,
+    ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths, ColumnDef, column,
 };
 
 use xilem_extras::SimpleTab;
@@ -49,6 +49,7 @@ pub enum Page {
     Tree,
     List,
     Table,
+    VirtualTable,
     Tabs,
     Menu,
     AppMenu,
@@ -75,6 +76,13 @@ pub struct AppModel {
     pub table_sort: SortOrder,
     pub table_column_widths: ColumnWidths,
     pub last_click_mods: String,
+
+    // Virtual Table demo state (10,000 rows)
+    pub virtual_cyclists: Vec<Cyclist>,
+    pub virtual_table_selection: MultiSelection<u64>,
+    pub virtual_table_sort: SortOrder,
+    pub virtual_table_columns: Vec<ColumnDef>,
+    pub virtual_table_column_widths: ColumnWidths,
 
     // Tabs demo state
     pub demo_tabs: Vec<DemoTab>,
@@ -134,6 +142,23 @@ impl AppModel {
                 ("joy_level", 60.0),
             ]),
             last_click_mods: "(click a row)".to_string(),
+
+            // Virtual Table (10,000 rows for performance testing)
+            virtual_cyclists: mock_data::mock_cyclists_large(10_000),
+            virtual_table_selection: MultiSelection::new(),
+            virtual_table_sort: SortOrder::single("name", SortDirection::Ascending),
+            virtual_table_columns: vec![
+                column("name", "Name").flex(2.0).build(),
+                column("route", "Route").flex(2.0).build(),
+                column("distance_km", "Distance").fixed(100.0).build(),
+                column("joy_level", "Joy").fixed(60.0).build(),
+            ],
+            virtual_table_column_widths: ColumnWidths::from_columns(&[
+                ("name", 200.0),
+                ("route", 200.0),
+                ("distance_km", 100.0),
+                ("joy_level", 60.0),
+            ]),
 
             // Tabs
             demo_tabs: create_demo_tabs(),

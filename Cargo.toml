@@ -1,6 +1,6 @@
 [package]
 name = "xilem_extras"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2024"
 license = "Apache-2.0"
 description = "High-level widget library for xilem: Tree, List, Table, and Popup widgets with SwiftUI-inspired APIs"
@@ -25,6 +25,7 @@ masonry_winit = { git = "https://github.com/linebender/xilem", branch = "main" }
 xilem_material_icons = { git = "https://github.com/baltobor/xilem_material_icons", branch = "main" }
 tracing = "0.1"
 smallvec = "1"
+dark-light = "2.0"
 
 # Native menu bar (macOS and Windows only; Linux uses fallback widgets)
 [target.'cfg(not(target_os = "linux"))'.dependencies]

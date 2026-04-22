@@ -84,7 +84,7 @@ impl SortDescriptor {
 /// Supports multi-column sorting with a list of sort descriptors.
 /// The first descriptor is the primary sort, subsequent descriptors
 /// are used as tiebreakers.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct SortOrder {
     /// Ordered list of sort descriptors.
     descriptors: Vec<SortDescriptor>,
