@@ -1,4 +1,3 @@
-<img width="1012" height="744" alt="xilem_extras_gallery" src="https://github.com/user-attachments/assets/fec05a79-2c09-4cba-99fe-f3615ba146b1" />
 # xilem_extras
 
 High-level widget library for [Xilem](https://github.com/linebender/xilem) providing Tree, List, Table, and Menu widgets with SwiftUI-inspired APIs.
