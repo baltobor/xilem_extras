@@ -10,6 +10,7 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use xilem::masonry::kurbo::Point;
+use chrono::NaiveDate;
 use xilem_extras::{
     ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths, ColumnDef, column,
 };
@@ -53,6 +54,8 @@ pub enum Page {
     Tabs,
     Menu,
     AppMenu,
+    Calendar,
+    Widgets,
 }
 
 /// Application state.
@@ -99,6 +102,18 @@ pub struct AppModel {
     pub dropdown_selected_index: usize,
     pub dark_mode: bool,
     pub show_toolbar: bool,
+
+    // Calendar demo state
+    pub calendar_selected_date: Option<NaiveDate>,
+    pub calendar_hour: u8,
+    pub calendar_minute: u8,
+
+    // Widgets demo state
+    pub widgets_text_light: String,
+    pub widgets_text_dark: String,
+    pub widgets_checkbox_1: bool,
+    pub widgets_checkbox_2: bool,
+    pub widgets_show_sheet: bool,
 
     // Menu command channel (macOS/Windows only)
     #[cfg(not(target_os = "linux"))]
@@ -180,6 +195,18 @@ impl AppModel {
             dropdown_selected_index: 0,
             dark_mode: true,
             show_toolbar: true,
+
+            // Calendar
+            calendar_selected_date: None,
+            calendar_hour: 12,
+            calendar_minute: 0,
+
+            // Widgets
+            widgets_text_light: String::new(),
+            widgets_text_dark: String::new(),
+            widgets_checkbox_1: false,
+            widgets_checkbox_2: true,
+            widgets_show_sheet: false,
 
             // Menu command channel (set by main)
             #[cfg(not(target_os = "linux"))]

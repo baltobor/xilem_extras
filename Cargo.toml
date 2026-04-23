@@ -23,6 +23,7 @@ xilem = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry_winit = { git = "https://github.com/linebender/xilem", branch = "main" }
 xilem_material_icons = { git = "https://github.com/baltobor/xilem_material_icons", branch = "main" }
+chrono = "0.4"
 tracing = "0.1"
 smallvec = "1"
 dark-light = "2.0"

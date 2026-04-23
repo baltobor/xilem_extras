@@ -60,6 +60,10 @@ pub mod context_menu;
 pub mod menu_items;
 pub mod app_menu;
 pub mod virtual_list;
+pub mod sheet;
+pub mod calendar_picker;
+pub mod time_picker;
+pub mod locale;
 
 pub use traits::{
     Identifiable,
@@ -246,5 +250,29 @@ pub use virtual_list::{
     VirtualListStyle,
     VirtualListState,
 };
+
+pub use sheet::{
+    sheet,
+    SheetView,
+    SheetWidget,
+    SheetLayer,
+    SheetAction,
+};
+
+pub use calendar_picker::{
+    calendar_picker,
+    CalendarPickerView,
+    CalendarPickerWidget,
+    CalendarAction,
+};
+
+pub use time_picker::{
+    time_picker,
+    TimePickerView,
+    TimePickerWidget,
+    TimeAction,
+};
+
+pub use locale::CalendarLocale;
 
 pub use xilem;
