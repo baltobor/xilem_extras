@@ -13,10 +13,9 @@ use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, CrossAxisAlignment, MainAxisAlignment};
 use xilem::{WidgetView};
-use xilem_extras::CalendarLocale;
+use xilem_extras::{calendar_picker, CalendarLocale};
 
 use crate::app_model::AppModel;
-use crate::calendar_grid::calendar_grid;
 
 // Demo page colors
 const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
@@ -83,8 +82,8 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
                 .main_axis_alignment(MainAxisAlignment::SpaceBetween)
                 .width(((CELL * 7.0) as i32).px()),
 
-                // Grid-based calendar
-                calendar_grid(
+                // Grid-based calendar (using xilem_extras reusable widget)
+                calendar_picker(
                     displayed_month,
                     model.calendar_selected_date,
                     |model: &mut AppModel, date| {

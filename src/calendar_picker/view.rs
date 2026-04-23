@@ -19,14 +19,15 @@ use super::widget::{CalendarAction, CalendarPickerWidget};
 ///
 /// Created via the [`calendar_picker`] function.
 ///
-/// Note: This widget-based view does not render text.
-/// For proper text rendering, build your calendar UI using
-/// xilem's label and flex views directly.
+/// This widget renders the weekday headers and day grid.
+/// Month navigation header and date/KW footer should be
+/// composed around this widget using xilem views.
 ///
 /// # Example
 ///
 /// ```ignore
 /// calendar_picker(
+///     displayed_month,
 ///     model.selected_date,
 ///     |state: &mut AppState, date: NaiveDate| {
 ///         state.selected_date = Some(date);
@@ -35,17 +36,24 @@ use super::widget::{CalendarAction, CalendarPickerWidget};
 /// ```
 #[must_use = "View values do nothing unless provided to Xilem."]
 pub struct CalendarPickerView<State, Action, F> {
+    displayed_month: NaiveDate,
     selected_date: Option<NaiveDate>,
     callback: F,
     phantom: PhantomData<fn(State) -> Action>,
 }
 
-/// Creates a calendar picker view (widget-based).
+/// Creates a calendar picker view.
 ///
-/// Note: This widget draws backgrounds and arrows but not text.
-/// For proper text rendering, build your calendar UI using
-/// xilem's label and flex views directly.
+/// This widget renders the weekday headers and day grid.
+/// Month navigation header and date/KW footer should be
+/// composed around this widget using xilem views.
+///
+/// # Arguments
+/// - `displayed_month`: The month to display (any date in the target month)
+/// - `selected_date`: The currently selected date (if any)
+/// - `callback`: Called when a date is clicked
 pub fn calendar_picker<State, Action, F>(
+    displayed_month: NaiveDate,
     selected_date: Option<NaiveDate>,
     callback: F,
 ) -> CalendarPickerView<State, Action, F>
@@ -55,10 +63,17 @@ where
     F: Fn(&mut State, NaiveDate) -> Action + Send + Sync + 'static,
 {
     CalendarPickerView {
+        displayed_month,
         selected_date,
         callback,
         phantom: PhantomData,
     }
+}
+
+#[derive(Clone)]
+pub struct CalendarPickerViewState {
+    displayed_month: NaiveDate,
+    selected: Option<NaiveDate>,
 }
 
 impl<State, Action, F> ViewMarker for CalendarPickerView<State, Action, F> {}
@@ -70,29 +85,39 @@ where
     F: Fn(&mut State, NaiveDate) -> Action + Send + Sync + 'static,
 {
     type Element = Pod<CalendarPickerWidget>;
-    type ViewState = ();
+    type ViewState = CalendarPickerViewState;
 
     fn build(
         &self,
         ctx: &mut ViewCtx,
         _app_state: &mut State,
     ) -> (Self::Element, Self::ViewState) {
+        let widget = CalendarPickerWidget::new(self.selected_date);
+        // Set displayed month explicitly
         let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(CalendarPickerWidget::new(self.selected_date))
+            ctx.create_pod(widget)
         });
-        (pod, ())
+        let state = CalendarPickerViewState {
+            displayed_month: self.displayed_month,
+            selected: self.selected_date,
+        };
+        (pod, state)
     }
 
     fn rebuild(
         &self,
-        prev: &Self,
-        _view_state: &mut Self::ViewState,
+        _prev: &Self,
+        view_state: &mut Self::ViewState,
         _ctx: &mut ViewCtx,
         mut element: Mut<'_, Self::Element>,
         _app_state: &mut State,
     ) {
-        if prev.selected_date != self.selected_date {
-            CalendarPickerWidget::set_selected_date(&mut element, self.selected_date);
+        if self.displayed_month != view_state.displayed_month
+            || self.selected_date != view_state.selected
+        {
+            CalendarPickerWidget::set_state(&mut element, self.displayed_month, self.selected_date);
+            view_state.displayed_month = self.displayed_month;
+            view_state.selected = self.selected_date;
         }
     }
 

@@ -101,6 +101,7 @@ pub use components::{
     styled_text_input_with_placeholder,
     styled_text_input_colored,
     TextInputColors,
+    StyledTextInput,
     styled_checkbox,
     styled_checkbox_colored,
     CheckboxColors,

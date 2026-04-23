@@ -9,7 +9,6 @@
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use xilem::masonry::kurbo::Point;
 use chrono::NaiveDate;
 use xilem_extras::{
     ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths, ColumnDef, column,
@@ -67,7 +66,6 @@ pub struct AppModel {
     pub file_tree: FileNode,
     pub tree_expansion: ExpansionState<String>,
     pub tree_selection: SingleSelection<String>,
-    pub context_menu_position: Option<Point>,
 
     // List demo state
     pub contacts: Vec<Contact>,
@@ -140,7 +138,6 @@ impl AppModel {
             file_tree: mock_data::mock_file_tree(),
             tree_expansion: ExpansionState::with_expanded(["src".to_string()]),
             tree_selection: SingleSelection::new(),
-            context_menu_position: None,
 
             // List
             contacts: mock_data::mock_contacts(),

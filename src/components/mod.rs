@@ -24,6 +24,7 @@ pub use styled_text_input::{
     styled_text_input_with_placeholder,
     styled_text_input_colored,
     TextInputColors,
+    StyledTextInput,
 };
 pub use styled_checkbox::{
     styled_checkbox,

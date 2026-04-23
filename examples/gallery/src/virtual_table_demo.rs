@@ -22,8 +22,6 @@ use crate::app_model::AppModel;
 
 const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
 const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
-const HEADER_BG: Color = Color::from_rgb8(45, 43, 40);
-const BG_HOVER: Color = Color::from_rgb8(55, 53, 50);
 const BG_SELECTED: Color = Color::from_rgb8(65, 62, 58);
 const BG_STRIPE: Color = Color::from_rgb8(38, 36, 34);
 

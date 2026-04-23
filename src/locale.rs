@@ -20,7 +20,8 @@ pub enum CalendarLocale {
 
 impl CalendarLocale {
     /// Returns 2-letter weekday abbreviations starting with Monday.
-    pub fn weekdays(&self) -> [&'static str; 7] {
+    /// Example: "Mo", "Di", "Mi" for German.
+    pub fn weekdays_short(&self) -> [&'static str; 7] {
         match self {
             CalendarLocale::English => ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
             CalendarLocale::German => ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
@@ -64,17 +65,6 @@ impl CalendarLocale {
             CalendarLocale::French => "Sem",
             CalendarLocale::Spanish => "Sem",
             CalendarLocale::Dutch => "Week",
-        }
-    }
-
-    /// Returns 3-letter weekday abbreviations starting with Monday.
-    pub fn weekdays_short(&self) -> [&'static str; 7] {
-        match self {
-            CalendarLocale::English => ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-            CalendarLocale::German => ["Mon", "Die", "Mit", "Don", "Fre", "Sam", "Son"],
-            CalendarLocale::French => ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
-            CalendarLocale::Spanish => ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
-            CalendarLocale::Dutch => ["Maa", "Din", "Woe", "Don", "Vri", "Zat", "Zon"],
         }
     }
 

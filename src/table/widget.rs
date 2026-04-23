@@ -55,7 +55,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Point, Rect, RoundedRect, Size};
-use xilem::masonry::layout::{LayoutSize, LenReq};
+use xilem::masonry::layout::LenReq;
 use xilem::masonry::peniko::Color;
 use xilem::masonry::properties::Background;
 

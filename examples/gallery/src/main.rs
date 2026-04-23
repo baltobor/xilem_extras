@@ -21,7 +21,6 @@ mod tabs_demo;
 mod menu_demo;
 mod app_menu_demo;
 mod calendar_demo;
-mod calendar_grid;
 mod widgets_demo;
 
 use masonry::layout::AsUnit;

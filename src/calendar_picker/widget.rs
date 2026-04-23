@@ -5,42 +5,43 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-//! Calendar picker masonry widget.
+//! Grid-based calendar widget - paints everything directly.
 //!
-//! A standalone calendar widget that can be used directly with masonry
-//! or wrapped by the xilem view layer.
-
-use std::any::TypeId;
+//! Uses masonry to render a pixel-exact calendar grid.
+//! No child widgets - all text is rendered in paint().
+//!
+//! This widget renders only the weekday headers and day cells.
+//! Month navigation and date/KW display should be composed
+//! around it using xilem views.
 
 use chrono::{Datelike, Duration, Local, NaiveDate};
-use tracing::{trace_span, Span};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent,
-    Update, UpdateCtx, Widget, WidgetId, WidgetMut,
+    AccessCtx, BrushIndex, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PointerButtonEvent, PropertiesMut, PropertiesRef, RegisterCtx, StyleProperty,
+    Update, UpdateCtx, Widget, WidgetMut, render_text, ChildrenIds,
 };
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::kurbo::{Axis, BezPath, Point, Rect, RoundedRect, Size, Stroke};
+use xilem::masonry::kurbo::{Affine, Axis, Point, Rect, RoundedRect, Size};
 use xilem::masonry::layout::LenReq;
-use xilem::masonry::peniko::Color;
+use xilem::masonry::parley::{Layout as ParleyLayout, StyleSet};
+use xilem::masonry::peniko::{Brush, Fill};
+use xilem::Color;
 
-// Layout constants
-const CELL_SIZE: f64 = 36.0;
-const HEADER_HEIGHT: f64 = 40.0;
-const WEEKDAY_HEIGHT: f64 = 24.0;
-const KW_HEIGHT: f64 = 28.0;
-const ARROW_SIZE: f64 = 24.0;
-const ARROW_MARGIN: f64 = 8.0;
-const GRID_COLS: usize = 7;
-const GRID_ROWS: usize = 6;
+use crate::CalendarLocale;
+
+// Grid dimensions
+pub const NUM_COLS: usize = 7;
+pub const NUM_DAY_ROWS: usize = 6;
+pub const CELL_SIZE: f64 = 28.0;
 
 // Colors
-const TODAY_BG: Color = Color::from_rgba8(0x00, 0x7A, 0xFF, 0xFF);
-const SELECTED_BORDER: Color = Color::from_rgba8(0x00, 0x7A, 0xFF, 0xFF);
-const HOVER_BG: Color = Color::from_rgba8(0xE8, 0xF4, 0xFF, 0xFF);
-const ARROW_COLOR: Color = Color::from_rgba8(0x00, 0x7A, 0xFF, 0xFF);
 const BG_COLOR: Color = Color::WHITE;
+const TEXT_COLOR: Color = Color::from_rgba8(0x33, 0x33, 0x33, 0xFF);
+const TEXT_DIM: Color = Color::from_rgba8(0xAA, 0xAA, 0xAA, 0xFF);
+const TEXT_WEEKEND: Color = Color::from_rgba8(0xCC, 0x55, 0x55, 0xFF);
+const TODAY_BG: Color = Color::from_rgba8(0x00, 0x7A, 0xFF, 0xFF);
+const SELECTED_BG: Color = Color::from_rgba8(0xE0, 0xEE, 0xFF, 0xFF);
 
 /// Action emitted by the calendar picker.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,393 +52,265 @@ pub enum CalendarAction {
     MonthChanged(NaiveDate),
 }
 
-/// Hit test result for pointer events.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum HitArea {
-    None,
-    PrevMonth,
-    NextMonth,
-    Day(u32, u32), // row, col
-}
-
-/// Simple calendar picker widget (no child labels - uses paint for text).
+/// Masonry widget that renders a complete calendar grid.
 ///
-/// This is a minimal implementation that draws everything in paint().
-/// For a richer version with proper label widgets, use the view-based API.
+/// Renders:
+/// - Weekday headers (Mo Tu We Th Fr Sa Su)
+/// - 6x7 day grid with today highlighting and selection
+///
+/// Month navigation header and date/KW footer should be composed
+/// around this widget using xilem views.
 pub struct CalendarPickerWidget {
-    /// First day of the currently displayed month.
     displayed_month: NaiveDate,
-    /// Currently selected date (if any).
-    selected_date: Option<NaiveDate>,
-    /// Today's date for highlighting.
+    selected: Option<NaiveDate>,
     today: NaiveDate,
-    /// Currently hovered day cell (row, col).
-    hovered_cell: Option<(u32, u32)>,
-    /// Widget size after layout.
-    size: Size,
+    cell_size: f64,
+    locale: CalendarLocale,
+    // Cached text layouts
+    weekday_layouts: Vec<ParleyLayout<BrushIndex>>,
+    day_layouts: Vec<ParleyLayout<BrushIndex>>,
+    cached_font_size: f32,
 }
 
 impl CalendarPickerWidget {
-    /// Creates a new calendar picker.
-    ///
-    /// - `selected_date`: Initially selected date (defaults to today if None).
-    pub fn new(selected_date: Option<NaiveDate>) -> Self {
+    pub fn new(selected: Option<NaiveDate>) -> Self {
         let today = Local::now().date_naive();
-        let displayed_month = selected_date
-            .unwrap_or(today)
-            .with_day(1)
-            .unwrap_or(today);
-
+        let displayed_month = selected.unwrap_or(today);
         Self {
             displayed_month,
-            selected_date,
+            selected,
             today,
-            hovered_cell: None,
-            size: Size::ZERO,
+            cell_size: CELL_SIZE,
+            locale: CalendarLocale::German,
+            weekday_layouts: Vec::new(),
+            day_layouts: Vec::new(),
+            cached_font_size: 0.0,
         }
     }
 
-    /// Returns the first day of the grid (may be from previous month).
-    fn grid_start(&self) -> NaiveDate {
-        let first_of_month = self.displayed_month;
-        let weekday = first_of_month.weekday();
-        let days_from_monday = weekday.num_days_from_monday() as i64;
-        first_of_month - Duration::days(days_from_monday)
+    pub fn with_locale(selected: Option<NaiveDate>, locale: CalendarLocale) -> Self {
+        let mut widget = Self::new(selected);
+        widget.locale = locale;
+        widget
     }
 
-    /// Returns the date at grid position (row, col).
-    fn date_at_cell(&self, row: u32, col: u32) -> NaiveDate {
-        let start = self.grid_start();
-        let offset = (row * GRID_COLS as u32 + col) as i64;
-        start + Duration::days(offset)
+    pub fn set_state(this: &mut WidgetMut<'_, Self>, displayed_month: NaiveDate, selected: Option<NaiveDate>) {
+        this.widget.displayed_month = displayed_month;
+        this.widget.selected = selected;
+        this.widget.today = Local::now().date_naive();
+        this.ctx.request_render();
     }
 
-    /// Hit test: determine which area was clicked.
-    fn hit_test(&self, pos: Point) -> HitArea {
-        // Check prev arrow
-        let prev_rect = Rect::new(
-            ARROW_MARGIN,
-            (HEADER_HEIGHT - ARROW_SIZE) / 2.0,
-            ARROW_MARGIN + ARROW_SIZE,
-            (HEADER_HEIGHT + ARROW_SIZE) / 2.0,
-        );
-        if prev_rect.contains(pos) {
-            return HitArea::PrevMonth;
-        }
-
-        // Check next arrow
-        let next_rect = Rect::new(
-            self.size.width - ARROW_MARGIN - ARROW_SIZE,
-            (HEADER_HEIGHT - ARROW_SIZE) / 2.0,
-            self.size.width - ARROW_MARGIN,
-            (HEADER_HEIGHT + ARROW_SIZE) / 2.0,
-        );
-        if next_rect.contains(pos) {
-            return HitArea::NextMonth;
-        }
-
-        // Check day grid
-        let grid_top = HEADER_HEIGHT + WEEKDAY_HEIGHT;
-        if pos.y >= grid_top && pos.y < grid_top + (GRID_ROWS as f64 * CELL_SIZE) {
-            let col = (pos.x / CELL_SIZE).floor() as u32;
-            let row = ((pos.y - grid_top) / CELL_SIZE).floor() as u32;
-            if col < GRID_COLS as u32 && row < GRID_ROWS as u32 {
-                return HitArea::Day(row, col);
-            }
-        }
-
-        HitArea::None
-    }
-
-    fn prev_month(&mut self) {
-        if let Some(prev) = self
-            .displayed_month
-            .checked_sub_signed(Duration::days(28))
-        {
-            self.displayed_month = prev.with_day(1).unwrap_or(prev);
-        }
-    }
-
-    fn next_month(&mut self) {
-        if let Some(next) = self.displayed_month.checked_add_signed(Duration::days(32)) {
-            self.displayed_month = next.with_day(1).unwrap_or(next);
-        }
-    }
-}
-
-impl CalendarPickerWidget {
-    /// Sets the selected date.
     pub fn set_selected_date(this: &mut WidgetMut<'_, Self>, date: Option<NaiveDate>) {
-        if this.widget.selected_date != date {
-            this.widget.selected_date = date;
+        if this.widget.selected != date {
+            this.widget.selected = date;
             if let Some(d) = date {
-                if let Some(first) = d.with_day(1) {
-                    this.widget.displayed_month = first;
-                }
+                this.widget.displayed_month = d;
             }
-            this.ctx.request_paint_only();
+            this.ctx.request_render();
         }
     }
 
-    /// Sets the displayed month.
     pub fn set_displayed_month(this: &mut WidgetMut<'_, Self>, month: NaiveDate) {
-        let first = month.with_day(1).unwrap_or(month);
-        if this.widget.displayed_month != first {
-            this.widget.displayed_month = first;
-            this.ctx.request_paint_only();
+        if this.widget.displayed_month != month {
+            this.widget.displayed_month = month;
+            this.ctx.request_render();
         }
+    }
+
+    fn grid_start(&self) -> NaiveDate {
+        let month_start = self.displayed_month.with_day(1).unwrap_or(self.displayed_month);
+        let wd = month_start.weekday().num_days_from_monday() as i64;
+        month_start - Duration::days(wd)
+    }
+
+    fn date_at(&self, col: usize, row: usize) -> NaiveDate {
+        let grid_start = self.grid_start();
+        grid_start + Duration::days((row * NUM_COLS + col) as i64)
+    }
+
+    fn hit_test(&self, pos: Point) -> Option<(usize, usize)> {
+        // Row 0 is header
+        if pos.y < self.cell_size {
+            return None;
+        }
+        let col = (pos.x / self.cell_size) as usize;
+        let row = ((pos.y - self.cell_size) / self.cell_size) as usize;
+        if col < NUM_COLS && row < NUM_DAY_ROWS {
+            Some((col, row))
+        } else {
+            None
+        }
+    }
+
+    fn rebuild_text_layouts(&mut self, ctx: &mut PaintCtx<'_>, font_size: f32) {
+        let (font_ctx, layout_ctx) = ctx.text_contexts();
+
+        // Weekday layouts
+        self.weekday_layouts.clear();
+        let weekdays = self.locale.weekdays_short();
+        for wd in weekdays {
+            let mut styles: StyleSet<BrushIndex> = StyleSet::new(font_size * 0.8);
+            styles.insert(StyleProperty::Brush(BrushIndex(0)));
+            let mut builder = layout_ctx.ranged_builder(font_ctx, wd, 1.0, true);
+            for prop in styles.inner().values() {
+                builder.push_default(prop.to_owned());
+            }
+            let mut layout: ParleyLayout<BrushIndex> = builder.build(wd);
+            layout.break_all_lines(None);
+            self.weekday_layouts.push(layout);
+        }
+
+        // Day number layouts (1-31)
+        self.day_layouts.clear();
+        for day in 1..=31 {
+            let text = day.to_string();
+            let mut styles: StyleSet<BrushIndex> = StyleSet::new(font_size);
+            styles.insert(StyleProperty::Brush(BrushIndex(0)));
+            let mut builder = layout_ctx.ranged_builder(font_ctx, &text, 1.0, true);
+            for prop in styles.inner().values() {
+                builder.push_default(prop.to_owned());
+            }
+            let mut layout: ParleyLayout<BrushIndex> = builder.build(&text);
+            layout.break_all_lines(None);
+            self.day_layouts.push(layout);
+        }
+
+        self.cached_font_size = font_size;
     }
 }
 
 impl Widget for CalendarPickerWidget {
     type Action = CalendarAction;
 
-    fn on_pointer_event(
-        &mut self,
-        ctx: &mut EventCtx<'_>,
-        _props: &mut PropertiesMut<'_>,
-        event: &PointerEvent,
-    ) {
+    fn on_pointer_event(&mut self, ctx: &mut EventCtx<'_>, _: &mut PropertiesMut<'_>, event: &PointerEvent) {
         match event {
-            PointerEvent::Move(e) => {
-                let pos = ctx.local_position(e.current.position);
-                let hit = self.hit_test(pos);
-                let new_hover = match hit {
-                    HitArea::Day(row, col) => Some((row, col)),
-                    _ => None,
-                };
-                if new_hover != self.hovered_cell {
-                    self.hovered_cell = new_hover;
-                    ctx.request_paint_only();
-                }
-            }
-            PointerEvent::Leave(_) => {
-                if self.hovered_cell.is_some() {
-                    self.hovered_cell = None;
-                    ctx.request_paint_only();
-                }
-            }
             PointerEvent::Down(_) => {
                 ctx.capture_pointer();
             }
             PointerEvent::Up(PointerButtonEvent { state, .. }) => {
-                if ctx.is_active() && ctx.is_hovered() {
-                    let pos = ctx.local_position(state.position);
-                    match self.hit_test(pos) {
-                        HitArea::PrevMonth => {
-                            self.prev_month();
-                            ctx.submit_action::<CalendarAction>(CalendarAction::MonthChanged(
-                                self.displayed_month,
-                            ));
-                            ctx.request_paint_only();
-                        }
-                        HitArea::NextMonth => {
-                            self.next_month();
-                            ctx.submit_action::<CalendarAction>(CalendarAction::MonthChanged(
-                                self.displayed_month,
-                            ));
-                            ctx.request_paint_only();
-                        }
-                        HitArea::Day(row, col) => {
-                            let date = self.date_at_cell(row, col);
-                            self.selected_date = Some(date);
-                            if let Some(first) = date.with_day(1) {
-                                if first != self.displayed_month {
-                                    self.displayed_month = first;
-                                }
-                            }
-                            ctx.submit_action::<CalendarAction>(CalendarAction::DateSelected(
-                                date,
-                            ));
-                            ctx.request_paint_only();
-                        }
-                        HitArea::None => {}
+                let pos = ctx.local_position(state.position);
+                if let Some((col, row)) = self.hit_test(pos) {
+                    let date = self.date_at(col, row);
+                    self.selected = Some(date);
+                    ctx.submit_action::<CalendarAction>(CalendarAction::DateSelected(date));
+                    ctx.request_render();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn accepts_pointer_interaction(&self) -> bool { true }
+    fn accepts_focus(&self) -> bool { false }
+
+    fn register_children(&mut self, _: &mut RegisterCtx<'_>) {}
+
+    fn update(&mut self, _: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, _: &Update) {}
+
+    fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<f64>) -> f64 {
+        match axis {
+            Axis::Horizontal => self.cell_size * NUM_COLS as f64,
+            Axis::Vertical => self.cell_size * (NUM_DAY_ROWS + 1) as f64,
+        }
+    }
+
+    fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, size: Size) {
+        let cell_w = size.width / NUM_COLS as f64;
+        let cell_h = size.height / (NUM_DAY_ROWS + 1) as f64;
+        self.cell_size = cell_w.min(cell_h);
+    }
+
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+        let size = ctx.content_box_size();
+        let font_size = (self.cell_size as f32 * 0.45).max(9.0).min(14.0);
+
+        // Rebuild text layouts if font size changed
+        if (font_size - self.cached_font_size).abs() > 0.5 || self.weekday_layouts.is_empty() {
+            self.rebuild_text_layouts(ctx, font_size);
+        }
+
+        // Background
+        let bg_rect = Rect::new(0.0, 0.0, size.width, size.height);
+        painter.fill(&bg_rect, BG_COLOR).fill_rule(Fill::NonZero).draw();
+
+        let displayed_month = self.displayed_month.month();
+        let displayed_year = self.displayed_month.year();
+
+        // Paint weekday headers (row 0)
+        for col in 0..NUM_COLS {
+            let x = col as f64 * self.cell_size;
+            let y = 0.0;
+
+            if let Some(layout) = self.weekday_layouts.get(col) {
+                let tw = layout.width() as f64;
+                let th = layout.height() as f64;
+                let tx = x + (self.cell_size - tw) / 2.0;
+                let ty = y + (self.cell_size - th) / 2.0;
+
+                let color = if col >= 5 { TEXT_WEEKEND } else { TEXT_DIM };
+                let brushes = [Brush::Solid(color.into())];
+                render_text(painter, Affine::translate((tx, ty)), layout, &brushes, true);
+            }
+        }
+
+        // Paint day cells (rows 1-6)
+        for row in 0..NUM_DAY_ROWS {
+            for col in 0..NUM_COLS {
+                let date = self.date_at(col, row);
+                let x = col as f64 * self.cell_size;
+                let y = (row + 1) as f64 * self.cell_size;
+
+                let in_month = date.month() == displayed_month && date.year() == displayed_year;
+                let is_today = date == self.today;
+                let is_selected = self.selected == Some(date);
+                let is_weekend = col >= 5;
+
+                // Background - squared with rounded corners (not circle)
+                let cell_rect = Rect::new(x + 2.0, y + 2.0, x + self.cell_size - 2.0, y + self.cell_size - 2.0);
+                let bg = if is_today {
+                    TODAY_BG
+                } else if is_selected {
+                    SELECTED_BG
+                } else {
+                    Color::TRANSPARENT
+                };
+
+                if bg != Color::TRANSPARENT {
+                    let rounded = RoundedRect::from_rect(cell_rect, 4.0);
+                    painter.fill(&rounded, bg).fill_rule(Fill::NonZero).draw();
+                }
+
+                // Day number text
+                let day = date.day() as usize;
+                if day >= 1 && day <= 31 {
+                    if let Some(layout) = self.day_layouts.get(day - 1) {
+                        let tw = layout.width() as f64;
+                        let th = layout.height() as f64;
+                        let tx = x + (self.cell_size - tw) / 2.0;
+                        let ty = y + (self.cell_size - th) / 2.0;
+
+                        let color = if is_today {
+                            Color::WHITE
+                        } else if !in_month {
+                            TEXT_DIM
+                        } else if is_weekend {
+                            TEXT_WEEKEND
+                        } else {
+                            TEXT_COLOR
+                        };
+                        let brushes = [Brush::Solid(color.into())];
+                        render_text(painter, Affine::translate((tx, ty)), layout, &brushes, true);
                     }
                 }
             }
-            _ => {}
         }
     }
 
-    fn on_text_event(
-        &mut self,
-        _ctx: &mut EventCtx<'_>,
-        _props: &mut PropertiesMut<'_>,
-        _event: &TextEvent,
-    ) {
-    }
-
-    fn on_access_event(
-        &mut self,
-        _ctx: &mut EventCtx<'_>,
-        _props: &mut PropertiesMut<'_>,
-        _event: &AccessEvent,
-    ) {
-    }
-
-    fn update(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, event: &Update) {
-        match event {
-            Update::HoveredChanged(_) | Update::ActiveChanged(_) | Update::FocusChanged(_) => {
-                ctx.request_paint_only();
-            }
-            _ => {}
-        }
-    }
-
-    fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {
-        // No children - all rendering in paint()
-    }
-
-    fn property_changed(&mut self, _ctx: &mut UpdateCtx<'_>, _property_type: TypeId) {}
-
-    fn measure(
-        &mut self,
-        _ctx: &mut MeasureCtx<'_>,
-        _props: &PropertiesRef<'_>,
-        axis: Axis,
-        _len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
-        match axis {
-            Axis::Horizontal => CELL_SIZE * GRID_COLS as f64,
-            Axis::Vertical => {
-                HEADER_HEIGHT + WEEKDAY_HEIGHT + CELL_SIZE * GRID_ROWS as f64 + KW_HEIGHT
-            }
-        }
-    }
-
-    fn layout(&mut self, _ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
-        self.size = size;
-    }
-
-    fn paint(
-        &mut self,
-        _ctx: &mut PaintCtx<'_>,
-        _props: &PropertiesRef<'_>,
-        painter: &mut Painter<'_>,
-    ) {
-        let width = self.size.width;
-
-        // Background
-        let bg_rect = Rect::from_origin_size(Point::ZERO, self.size);
-        painter
-            .fill(RoundedRect::from_rect(bg_rect, 8.0), BG_COLOR)
-            .draw();
-
-        // Draw navigation arrows
-        self.draw_arrow(
-            painter,
-            ARROW_MARGIN + ARROW_SIZE / 2.0,
-            HEADER_HEIGHT / 2.0,
-            true,
-        );
-        self.draw_arrow(
-            painter,
-            width - ARROW_MARGIN - ARROW_SIZE / 2.0,
-            HEADER_HEIGHT / 2.0,
-            false,
-        );
-
-        // Draw cell backgrounds (hover, today, selected)
-        let grid_top = HEADER_HEIGHT + WEEKDAY_HEIGHT;
-
-        for row in 0..GRID_ROWS as u32 {
-            for col in 0..GRID_COLS as u32 {
-                let date = self.date_at_cell(row, col);
-                let is_today = date == self.today;
-                let is_selected = self.selected_date == Some(date);
-                let is_hovered = self.hovered_cell == Some((row, col));
-
-                let cell_x = col as f64 * CELL_SIZE;
-                let cell_y = grid_top + row as f64 * CELL_SIZE;
-                let cell_center = Point::new(cell_x + CELL_SIZE / 2.0, cell_y + CELL_SIZE / 2.0);
-
-                if is_hovered && !is_today {
-                    let hover_rect = Rect::from_center_size(
-                        cell_center,
-                        Size::new(CELL_SIZE - 4.0, CELL_SIZE - 4.0),
-                    );
-                    painter
-                        .fill(RoundedRect::from_rect(hover_rect, 4.0), HOVER_BG)
-                        .draw();
-                }
-
-                if is_today {
-                    let circle_rect = Rect::from_center_size(
-                        cell_center,
-                        Size::new(CELL_SIZE - 6.0, CELL_SIZE - 6.0),
-                    );
-                    painter
-                        .fill(
-                            RoundedRect::from_rect(circle_rect, (CELL_SIZE - 6.0) / 2.0),
-                            TODAY_BG,
-                        )
-                        .draw();
-                }
-
-                if is_selected && !is_today {
-                    let select_rect = Rect::from_center_size(
-                        cell_center,
-                        Size::new(CELL_SIZE - 6.0, CELL_SIZE - 6.0),
-                    );
-                    painter
-                        .stroke(
-                            RoundedRect::from_rect(select_rect, (CELL_SIZE - 6.0) / 2.0),
-                            &Stroke::new(2.0),
-                            SELECTED_BORDER,
-                        )
-                        .draw();
-                }
-            }
-        }
-
-        // Note: Text rendering is not done here as masonry's Painter doesn't have
-        // a simple draw_text API. The view layer should handle text via label widgets.
-    }
-
-    fn accessibility_role(&self) -> Role {
-        Role::Grid
-    }
-
-    fn accessibility(
-        &mut self,
-        _ctx: &mut AccessCtx<'_>,
-        _props: &PropertiesRef<'_>,
-        _node: &mut Node,
-    ) {
-    }
+    fn accessibility_role(&self) -> Role { Role::Grid }
+    fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, _: &mut Node) {}
 
     fn children_ids(&self) -> ChildrenIds {
-        ChildrenIds::from_slice(&[])
-    }
-
-    fn accepts_focus(&self) -> bool {
-        true
-    }
-
-    fn accepts_text_input(&self) -> bool {
-        false
-    }
-
-    fn make_trace_span(&self, id: WidgetId) -> Span {
-        trace_span!("CalendarPickerWidget", id = id.trace())
-    }
-}
-
-impl CalendarPickerWidget {
-    fn draw_arrow(&self, painter: &mut Painter<'_>, cx: f64, cy: f64, is_left: bool) {
-        let half = 6.0;
-        let (x1, x2) = if is_left {
-            (cx + half / 2.0, cx - half / 2.0)
-        } else {
-            (cx - half / 2.0, cx + half / 2.0)
-        };
-
-        let mut path = BezPath::new();
-        path.move_to(Point::new(x1, cy - half));
-        path.line_to(Point::new(x2, cy));
-        path.line_to(Point::new(x1, cy + half));
-
-        painter.stroke(&path, &Stroke::new(2.0), ARROW_COLOR).draw();
+        ChildrenIds::from(vec![])
     }
 }
