@@ -10,9 +10,14 @@
 //! Provides a checkbox with explicit light mode styling that works
 //! regardless of system dark/light mode. Uses xilem's property system
 //! to override theme defaults per-widget.
+//!
+//! Note: masonry's checkbox widget doesn't expose a label text color property,
+//! so we use an empty internal label and wrap checkbox + label in a flex_row.
 
-use xilem::view::checkbox;
+use xilem::view::{checkbox, flex_row, label, CrossAxisAlignment};
+use xilem::style::Style;
 use xilem::WidgetView;
+use masonry::layout::AsUnit;
 use masonry::peniko::color::{AlphaColor, Srgb};
 use masonry::peniko::Color;
 use masonry::properties::{Background, BorderColor, CheckmarkColor};
@@ -76,9 +81,11 @@ impl CheckboxColors {
 /// Creates a styled checkbox with explicit colors that override system theme.
 ///
 /// This ensures the checkbox is visible regardless of system dark/light mode.
+/// The label color is properly applied (masonry checkbox doesn't expose this,
+/// so we use an empty internal label + separate label widget).
 ///
 /// # Arguments
-/// * `label` - Text label next to the checkbox
+/// * `label_text` - Text label next to the checkbox
 /// * `checked` - Current checked state
 /// * `on_toggle` - Callback when checkbox is toggled
 ///
@@ -93,7 +100,7 @@ impl CheckboxColors {
 /// )
 /// ```
 pub fn styled_checkbox<State, Action, F>(
-    label: impl Into<masonry::core::ArcStr>,
+    label_text: impl Into<masonry::core::ArcStr>,
     checked: bool,
     on_toggle: F,
 ) -> impl WidgetView<State, Action>
@@ -103,16 +110,26 @@ where
     F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
 {
     let colors = CheckboxColors::default();
-    checkbox(label, checked, on_toggle)
-        .prop(Background::Color(colors.background))
-        .prop(BorderColor { color: colors.border })
-        .prop(CheckmarkColor { color: colors.checkmark })
+    let label_text: masonry::core::ArcStr = label_text.into();
+
+    // Use empty internal label + separate label widget to control label color
+    flex_row((
+        checkbox("", checked, on_toggle)
+            .prop(Background::Color(colors.background))
+            .prop(BorderColor { color: colors.border })
+            .prop(CheckmarkColor { color: colors.checkmark }),
+        label(label_text).text_size(12.0).color(colors.label),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(6.0_f64.px())
 }
 
 /// Creates a styled checkbox with custom colors.
 ///
+/// The label color is properly applied from the colors parameter.
+///
 /// # Arguments
-/// * `label` - Text label next to the checkbox
+/// * `label_text` - Text label next to the checkbox
 /// * `checked` - Current checked state
 /// * `colors` - Custom color scheme
 /// * `on_toggle` - Callback when checkbox is toggled
@@ -129,7 +146,7 @@ where
 /// )
 /// ```
 pub fn styled_checkbox_colored<State, Action, F>(
-    label: impl Into<masonry::core::ArcStr>,
+    label_text: impl Into<masonry::core::ArcStr>,
     checked: bool,
     colors: CheckboxColors,
     on_toggle: F,
@@ -139,8 +156,17 @@ where
     Action: 'static,
     F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
 {
-    checkbox(label, checked, on_toggle)
-        .prop(Background::Color(colors.background))
-        .prop(BorderColor { color: colors.border })
-        .prop(CheckmarkColor { color: colors.checkmark })
+    let label_text: masonry::core::ArcStr = label_text.into();
+    let label_color = colors.label;
+
+    // Use empty internal label + separate label widget to control label color
+    flex_row((
+        checkbox("", checked, on_toggle)
+            .prop(Background::Color(colors.background))
+            .prop(BorderColor { color: colors.border })
+            .prop(CheckmarkColor { color: colors.checkmark }),
+        label(label_text).text_size(12.0).color(label_color),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(6.0_f64.px())
 }

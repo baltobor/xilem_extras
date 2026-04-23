@@ -11,7 +11,7 @@ use masonry::layout::AsUnit;
 use masonry::peniko::color::AlphaColor;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{button, flex_col, flex_row, label, CrossAxisAlignment};
+use xilem::view::{button, flex_col, label, CrossAxisAlignment};
 use xilem::WidgetView;
 use xilem_extras::{
     styled_text_input_with_placeholder, styled_text_input_colored,
@@ -65,38 +65,28 @@ pub fn widgets_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         flex_col((
             label("Checkbox").text_size(13.0).color(TEXT_COLOR),
             label("Light mode (black checkmark, black label)").text_size(10.0).color(TEXT_SECONDARY),
-            flex_row((
-                styled_checkbox_colored(
-                    "",
-                    model.widgets_checkbox_1,
-                    CheckboxColors::custom(
-                        AlphaColor::new([0.0, 0.0, 0.0, 0.0]),  // transparent background
-                        AlphaColor::new([0.3, 0.3, 0.3, 1.0]),  // dark gray border
-                        AlphaColor::new([0.0, 0.0, 0.0, 1.0]),  // black checkmark
-                        Color::BLACK,
-                    ),
-                    |model: &mut AppModel, checked: bool| {
-                        model.widgets_checkbox_1 = checked;
-                    },
+            styled_checkbox_colored(
+                "Enable feature",
+                model.widgets_checkbox_1,
+                CheckboxColors::custom(
+                    AlphaColor::new([0.0, 0.0, 0.0, 0.0]),  // transparent background
+                    AlphaColor::new([0.3, 0.3, 0.3, 1.0]),  // dark gray border
+                    AlphaColor::new([0.0, 0.0, 0.0, 1.0]),  // black checkmark
+                    Color::BLACK,
                 ),
-                label("Enable feature").text_size(12.0).color(Color::BLACK),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(6.0_f64.px()),
+                |model: &mut AppModel, checked: bool| {
+                    model.widgets_checkbox_1 = checked;
+                },
+            ),
             label("Dark mode (white checkmark, white label)").text_size(10.0).color(TEXT_SECONDARY),
-            flex_row((
-                styled_checkbox_colored(
-                    "",
-                    model.widgets_checkbox_2,
-                    CheckboxColors::dark(),
-                    |model: &mut AppModel, checked: bool| {
-                        model.widgets_checkbox_2 = checked;
-                    },
-                ),
-                label("Dark mode option").text_size(12.0).color(Color::WHITE),
-            ))
-            .cross_axis_alignment(CrossAxisAlignment::Center)
-            .gap(6.0_f64.px()),
+            styled_checkbox_colored(
+                "Dark mode option",
+                model.widgets_checkbox_2,
+                CheckboxColors::dark(),
+                |model: &mut AppModel, checked: bool| {
+                    model.widgets_checkbox_2 = checked;
+                },
+            ),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(6.0_f64.px())
