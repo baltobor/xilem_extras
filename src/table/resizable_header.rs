@@ -444,7 +444,10 @@ pub struct ResizableHeaderView<F, State, Action, V> {
     column_widths: Vec<f64>,
     children: Vec<V>,
     callback: F,
-    _phantom: std::marker::PhantomData<(State, Action)>,
+    // Use fn-pointer PhantomData so the view is unconditionally `Send + Sync`,
+    // regardless of whether `State: Sync`. Required so consumers whose State holds
+    // non-Sync members (e.g. `std::sync::mpsc::Receiver`) can still use this view.
+    _phantom: std::marker::PhantomData<fn(&mut State) -> Action>,
 }
 
 /// Creates a resizable header view.

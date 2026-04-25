@@ -82,7 +82,10 @@ pub struct TabBar<'a, State, Action, T, S, C> {
     show_nav_buttons: bool,
     on_select: Option<S>,
     on_close: Option<C>,
-    _phantom: PhantomData<(State, Action)>,
+    // Use fn-pointer PhantomData so `TabBar` is unconditionally `Send + Sync`,
+    // regardless of whether `State: Sync`. Required so consumers whose State holds
+    // non-Sync members (e.g. `std::sync::mpsc::Receiver`) can still use this view.
+    _phantom: PhantomData<fn(&mut State) -> Action>,
 }
 
 impl<'a, State, Action, T: TabItem> TabBar<'a, State, Action, T, (), ()> {
