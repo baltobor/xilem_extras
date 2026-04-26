@@ -14,6 +14,7 @@
 mod app_model;
 mod mock_data;
 mod tree_demo;
+mod tree_view_demo;
 mod list_demo;
 mod table_demo;
 mod virtual_table_demo;
@@ -102,8 +103,11 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         menu_button(
             menu_label("Examples"),
             (
-                menu_item("Tree View", |model: &mut AppModel| {
+                menu_item("Tree (low-level)", |model: &mut AppModel| {
                     model.page = Page::Tree;
+                }),
+                menu_item("Tree View (builder)", |model: &mut AppModel| {
+                    model.page = Page::TreeView;
                 }),
                 menu_item("List View", |model: &mut AppModel| {
                     model.page = Page::List;
@@ -262,6 +266,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
                 .text_size(12.0)
                 .color(TEXT_SECONDARY),
             nav_button("Tree", Page::Tree, current_page),
+            nav_button("Tree View", Page::TreeView, current_page),
             nav_button("List", Page::List, current_page),
             nav_button("Table", Page::Table, current_page),
             nav_button("Virtual Table", Page::VirtualTable, current_page),
@@ -279,6 +284,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         // Demo content
         match model.page {
             Page::Tree => tree_demo::tree_demo(model).boxed(),
+            Page::TreeView => tree_view_demo::tree_view_demo(model).boxed(),
             Page::List => list_demo::list_demo(model).boxed(),
             Page::Table => table_demo::table_demo(model).boxed(),
             Page::VirtualTable => virtual_table_demo::virtual_table_demo(model).boxed(),

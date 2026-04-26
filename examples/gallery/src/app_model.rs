@@ -47,6 +47,7 @@ pub enum MenuCommand {
 pub enum Page {
     #[default]
     Tree,
+    TreeView,
     List,
     Table,
     VirtualTable,

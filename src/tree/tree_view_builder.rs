@@ -272,31 +272,19 @@ where
     }
 }
 
-/// Concrete (post-configuration) build method. The `where` clause is
-/// where the real type machinery lives — the builder above is duck-typed
-/// across closure swaps, but `build()` requires the action handler and
-/// selection type to be concrete callables.
-impl<'a, N, State, Sel, IconFn, LabelFn, Handler>
-    TreeView<'a, N, State, Sel, IconFn, LabelFn, Handler>
+impl<'a, N, State, Sel> TreeView<'a, N, State, Sel>
 where
     N: TreeNode + 'a,
     N::Id: Clone + Send + Sync + 'static,
     State: 'static,
     Sel: SelectionState<N::Id> + 'a,
-    IconFn: Fn(&N) -> Option<Box<AnyWidgetView<State, ()>>> + Clone + 'a,
-    LabelFn: Fn(&N) -> String + Clone + 'a,
-    Handler: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
 {
-    /// Build the configured tree as a Xilem view. Requires that
-    /// `on_action` was set; otherwise no actions can fire and the tree is
-    /// inert (still valid, just not interactive).
-    pub fn build(self) -> impl WidgetView<State, ()> + use<'a, N, State, Sel, IconFn, LabelFn, Handler> {
-        // The closures captured by the row builder must be `Clone` because
-        // `tree_group_styled` invokes the builder once per visible row and
-        // requires `F: Clone`. Wrapping in Arc keeps each row builder call
-        // cheap regardless of how heavy the user's closures are.
-        let icon_for = self.icon_for.map(Arc::new);
-        let label_for = self.label_for.map(Arc::new);
+    /// Build the configured tree as a Xilem view. Without a prior
+    /// `on_action` call the tree is inert (still valid, just non-
+    /// interactive).
+    pub fn build(self) -> impl WidgetView<State, ()> + use<'a, N, State, Sel> {
+        let icon_for = self.icon_for;
+        let label_for = self.label_for;
         let style = self.style.clone();
         let indent_per_level = style.indent;
         let selected_bg = self.selected_bg;
@@ -356,9 +344,8 @@ where
                 },
             );
 
-            // Either is used so both branches return the same concrete
-            // type (background_color produces a styled view; we want one
-            // arm with the selected color and one transparent arm).
+            // Either lets both branches return the same concrete type
+            // even though their backgrounds differ.
             if is_selected {
                 Either::A(row.background_color(selected_bg))
             } else {
