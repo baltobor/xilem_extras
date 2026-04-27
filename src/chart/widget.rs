@@ -243,9 +243,11 @@ impl Widget for ChartWidget {
     fn update(&mut self, _: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, _: &Update) {}
 
     fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<f64>) -> f64 {
+        // Return minimum sizes - flex(1.0) will expand to fill available space
+        // paint() uses ctx.content_box_size() so it adapts to actual size
         match axis {
-            Axis::Horizontal => 200.0, // Minimum width
-            Axis::Vertical => 150.0,   // Minimum height
+            Axis::Horizontal => 100.0,
+            Axis::Vertical => 80.0,
         }
     }
 
