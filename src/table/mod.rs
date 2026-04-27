@@ -11,6 +11,7 @@ mod legacy_table;
 mod resizable_header;
 mod sort_state;
 mod state;
+mod table_cell;
 mod table_view;
 mod widget;
 
@@ -22,6 +23,7 @@ pub use state::TableScrollState;
 
 // Main table API (virtualized, high-performance)
 pub use table_view::{table, table_styled, TableAction, TableView, TableViewState};
+pub use table_cell::table_cell;
 
 // Legacy table API (non-virtualized, for backward compatibility)
 pub use legacy_table::{legacy_table, legacy_table_styled, LegacyTableAction, TableStyle};

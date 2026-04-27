@@ -288,7 +288,7 @@ list_styled(
 
 
 ```rust
-use xilem_extras::{table, column, TableAction, Alignment};
+use xilem_extras::{table, table_cell, column, TableAction, Alignment};
 
 table(
     &model.employees,
@@ -297,24 +297,26 @@ table(
         column("department", "Department").flex(1.5).build(),
         column("salary", "Salary").fixed(100.0).align(Alignment::End).build(),
     ],
+    &model.column_widths,
     &model.selection,
     &model.sort_order,
-    |employee, column_key| {
-        // Build cell view - clone data from employee
-        let text = match column_key {
-            "name" => employee.name.clone(),
-            "department" => employee.department.clone(),
-            "salary" => format!("${:.0}", employee.salary),
-            _ => String::new(),
-        };
-        label(text)
+    // Row builder receives column widths for proper cell sizing
+    |state, idx, is_selected, is_striped, widths| {
+        let employee = &state.employees[idx];
+        flex_row((
+            // table_cell clips content to prevent overflow when columns are resized
+            table_cell(label(employee.name.clone()).padding(4.0), widths[0]),
+            table_cell(label(employee.department.clone()).padding(4.0), widths[1]),
+            table_cell(label(format!("${:.0}", employee.salary)).padding(4.0), widths[2]),
+        ))
+        .background_color(if is_selected { BG_SELECTED } else { Color::TRANSPARENT })
     },
     |state, action| {
         match action {
-            TableAction::Sort(col, _) => state.sort_order.toggle_column(&col, false),
+            TableAction::Sort(col, dir) => state.sort_order = SortOrder::single(&col, dir),
             TableAction::Select(id, mods) => state.selection.select(id, mods),
             TableAction::Activate(id) => state.edit_employee(&id),
-            TableAction::ColumnResized(_, _) => {}
+            TableAction::ColumnResized(key, width) => state.column_widths.set(&key, width),
         }
     },
 )

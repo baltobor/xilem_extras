@@ -15,7 +15,7 @@ use xilem::WidgetView;
 
 use xilem_extras::{
     SelectionState, SortOrder, SortDirection,
-    table, TableAction,
+    table, table_cell, TableAction,
 };
 
 use crate::app_model::AppModel;
@@ -63,29 +63,12 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
             let w2 = widths.get(2).copied().unwrap_or(100.0);
             let w3 = widths.get(3).copied().unwrap_or(60.0);
 
-            // Use gap(2.px()) to match header divider width (DIVIDER_WIDTH = 2.0)
-            // Add padding inside each cell to match header cell padding
+            // Build row with clipped cells to prevent text overflow
             flex_row((
-                label(cyclist.name.clone())
-                    .text_size(13.0)
-                    .color(TEXT_COLOR)
-                    .padding(4.0)
-                    .width(w0.px()),
-                label(cyclist.route.clone())
-                    .text_size(13.0)
-                    .color(TEXT_COLOR)
-                    .padding(4.0)
-                    .width(w1.px()),
-                label(format!("{:.1} km", cyclist.distance_km))
-                    .text_size(13.0)
-                    .color(TEXT_COLOR)
-                    .padding(4.0)
-                    .width(w2.px()),
-                label(format!("{}/10", cyclist.joy_level))
-                    .text_size(13.0)
-                    .color(TEXT_COLOR)
-                    .padding(4.0)
-                    .width(w3.px()),
+                table_cell(label(cyclist.name.clone()).text_size(13.0).color(TEXT_COLOR).padding(4.0), w0),
+                table_cell(label(cyclist.route.clone()).text_size(13.0).color(TEXT_COLOR).padding(4.0), w1),
+                table_cell(label(format!("{:.1} km", cyclist.distance_km)).text_size(13.0).color(TEXT_COLOR).padding(4.0), w2),
+                table_cell(label(format!("{}/10", cyclist.joy_level)).text_size(13.0).color(TEXT_COLOR).padding(4.0), w3),
             ))
             .gap(2.px())
             .background_color(row_bg)

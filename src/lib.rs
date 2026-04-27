@@ -97,6 +97,9 @@ pub use components::{
     click_interceptor,
     ClickInterceptorView,
     ClickInterceptorWidget,
+    clipped,
+    ClippedView,
+    ClippedWidget,
     styled_text_input,
     styled_text_input_with_placeholder,
     styled_text_input_colored,
@@ -170,6 +173,7 @@ pub use table::{
     // Main table API (virtualized, high-performance)
     table,
     table_styled,
+    table_cell,
     TableAction,
     TableView,
     TableViewState,
