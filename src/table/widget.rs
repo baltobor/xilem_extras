@@ -52,6 +52,7 @@ use xilem::masonry::core::{
     PaintCtx, PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate,
     PropertiesMut, PropertiesRef, QueryCtx, RegisterCtx, ScrollDelta, TextEvent, Update,
     UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
+    keyboard::{Key, NamedKey},
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Point, Rect, RoundedRect, Size};
@@ -157,6 +158,8 @@ pub struct TableWidget {
     scrollbar_dragging: bool,
     scrollbar_drag_start_y: f64,
     scrollbar_drag_start_position: f64,
+    /// Currently focused row index for keyboard navigation.
+    focused_row_index: Option<usize>,
 }
 
 impl TableWidget {
@@ -194,6 +197,7 @@ impl TableWidget {
             scrollbar_dragging: false,
             scrollbar_drag_start_y: 0.0,
             scrollbar_drag_start_position: 0.0,
+            focused_row_index: None,
         }
     }
 
@@ -228,6 +232,28 @@ impl TableWidget {
             }
         }
         None
+    }
+
+    /// Navigates to a row via keyboard, updating focus and submitting action.
+    fn navigate_to_row(
+        &mut self,
+        ctx: &mut EventCtx<'_>,
+        row_index: usize,
+        modifiers: xilem::masonry::core::Modifiers,
+    ) {
+        if self.state.item_count == 0 {
+            return;
+        }
+        self.focused_row_index = Some(row_index);
+        self.state.scroll_to_row(row_index);
+        ctx.submit_action::<TableWidgetAction>(TableWidgetAction::RowClick(TableRowClickAction {
+            row_index,
+            click_count: 1,
+            shift: modifiers.shift(),
+            command: modifiers.meta() || modifiers.ctrl(),
+        }));
+        ctx.request_layout();
+        ctx.set_handled();
     }
 
     /// Sets the item count.
@@ -496,6 +522,10 @@ impl Widget for TableWidget {
                 let y = pos.y - self.header_height;
                 if y >= 0.0 {
                     if let Some(row_index) = self.state.row_at_y(y) {
+                        // Request focus for keyboard navigation
+                        ctx.request_focus();
+                        // Update focused row for keyboard navigation
+                        self.focused_row_index = Some(row_index);
                         // Determine click count (double-click detection)
                         let click_count = state.count as u32;
                         // Submit row click action
@@ -559,10 +589,33 @@ impl Widget for TableWidget {
 
     fn on_text_event(
         &mut self,
-        _ctx: &mut EventCtx<'_>,
+        ctx: &mut EventCtx<'_>,
         _props: &mut PropertiesMut<'_>,
-        _event: &TextEvent,
+        event: &TextEvent,
     ) {
+        match event {
+            TextEvent::Keyboard(key_event) if !key_event.state.is_up() => {
+                match &key_event.key {
+                    Key::Named(NamedKey::ArrowUp) => {
+                        let new_idx = self
+                            .focused_row_index
+                            .map(|i| i.saturating_sub(1))
+                            .unwrap_or(0);
+                        self.navigate_to_row(ctx, new_idx, key_event.modifiers);
+                    }
+                    Key::Named(NamedKey::ArrowDown) => {
+                        let max_idx = self.state.item_count.saturating_sub(1);
+                        let new_idx = self
+                            .focused_row_index
+                            .map(|i| (i + 1).min(max_idx))
+                            .unwrap_or(0);
+                        self.navigate_to_row(ctx, new_idx, key_event.modifiers);
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
     }
 
     fn on_access_event(

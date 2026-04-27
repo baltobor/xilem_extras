@@ -64,6 +64,7 @@ pub mod sheet;
 pub mod calendar_picker;
 pub mod time_picker;
 pub mod locale;
+pub mod chart;
 
 pub use traits::{
     Identifiable,
@@ -284,5 +285,13 @@ pub use time_picker::{
 };
 
 pub use locale::CalendarLocale;
+
+pub use chart::{
+    chart,
+    ChartView,
+    ChartWidget,
+    ChartAction,
+    ChartMode,
+};
 
 pub use xilem;
