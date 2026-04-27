@@ -56,6 +56,8 @@ pub enum Page {
     AppMenu,
     Calendar,
     Widgets,
+    Chart,
+    StockChart,
 }
 
 /// Application state.
@@ -113,6 +115,14 @@ pub struct AppModel {
     pub widgets_checkbox_1: bool,
     pub widgets_checkbox_2: bool,
     pub widgets_show_sheet: bool,
+
+    // Chart demo state (simple bar/line)
+    pub chart_mode: usize,  // 0=Bar, 1=Line
+    pub chart_show_values: bool,
+
+    // Stock chart demo state
+    pub stock_chart_mode: usize,
+    pub stock_chart_hover: Option<(String, f64)>,
 
     // Menu command channel (macOS/Windows only)
     #[cfg(not(target_os = "linux"))]
@@ -205,6 +215,14 @@ impl AppModel {
             widgets_checkbox_1: false,
             widgets_checkbox_2: true,
             widgets_show_sheet: false,
+
+            // Chart (simple bar/line)
+            chart_mode: 0,
+            chart_show_values: true,
+
+            // Stock chart
+            stock_chart_mode: 0,
+            stock_chart_hover: None,
 
             // Menu command channel (set by main)
             #[cfg(not(target_os = "linux"))]

@@ -29,7 +29,7 @@ use xilem::Color;
 // Layout constants
 const PADDING_LEFT: f64 = 40.0;   // Space for Y-axis labels
 const PADDING_RIGHT: f64 = 10.0;
-const PADDING_TOP: f64 = 25.0;    // Space for title and value labels
+const PADDING_TOP: f64 = 38.0;    // Space for title and value labels
 const PADDING_BOTTOM: f64 = 25.0; // Space for X-axis labels
 
 // Colors
@@ -112,6 +112,19 @@ impl ChartWidget {
         this.widget.labels = labels;
         this.widget.max_value = this.widget.values.iter().cloned().fold(0.0_f64, f64::max);
         this.widget.cached_font_size = 0.0; // Force rebuild
+        this.ctx.request_render();
+    }
+
+    /// Sets the chart mode.
+    pub fn set_mode(this: &mut WidgetMut<'_, Self>, mode: ChartMode) {
+        this.widget.mode = mode;
+        this.ctx.request_render();
+    }
+
+    /// Sets whether to show value labels.
+    pub fn set_show_values(this: &mut WidgetMut<'_, Self>, show: bool) {
+        this.widget.show_values = show;
+        this.widget.cached_font_size = 0.0; // Force rebuild of layouts
         this.ctx.request_render();
     }
 

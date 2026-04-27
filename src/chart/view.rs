@@ -74,6 +74,8 @@ impl<State, Action> ChartView<State, Action> {
 pub struct ChartViewState {
     values: Vec<f64>,
     labels: Vec<String>,
+    mode: ChartMode,
+    show_values: bool,
 }
 
 impl<State, Action> ViewMarker for ChartView<State, Action> {}
@@ -99,6 +101,8 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for ChartView
         let state = ChartViewState {
             values: self.values.clone(),
             labels: self.labels.clone(),
+            mode: self.mode,
+            show_values: self.show_values,
         };
         (pod, state)
     }
@@ -116,6 +120,18 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for ChartView
             ChartWidget::set_data(&mut element, self.values.clone(), self.labels.clone());
             view_state.values = self.values.clone();
             view_state.labels = self.labels.clone();
+        }
+
+        // Update mode if changed
+        if self.mode != view_state.mode {
+            ChartWidget::set_mode(&mut element, self.mode);
+            view_state.mode = self.mode;
+        }
+
+        // Update show_values if changed
+        if self.show_values != view_state.show_values {
+            ChartWidget::set_show_values(&mut element, self.show_values);
+            view_state.show_values = self.show_values;
         }
     }
 

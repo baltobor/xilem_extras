@@ -65,6 +65,7 @@ pub mod calendar_picker;
 pub mod time_picker;
 pub mod locale;
 pub mod chart;
+pub mod stock_chart;
 
 pub use traits::{
     Identifiable,

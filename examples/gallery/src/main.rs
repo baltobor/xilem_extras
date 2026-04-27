@@ -23,6 +23,8 @@ mod menu_demo;
 mod app_menu_demo;
 mod calendar_demo;
 mod widgets_demo;
+mod chart_demo;
+mod stock_chart_demo;
 
 use masonry::layout::AsUnit;
 use masonry::theme::default_property_set;
@@ -275,6 +277,8 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             nav_button("App Menu", Page::AppMenu, current_page),
             nav_button("Calendar", Page::Calendar, current_page),
             nav_button("Widgets", Page::Widgets, current_page),
+            nav_button("Chart", Page::Chart, current_page),
+            nav_button("Stock Chart", Page::StockChart, current_page),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(4.px())
@@ -293,6 +297,8 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             Page::AppMenu => app_menu_demo::app_menu_demo(model).boxed(),
             Page::Calendar => calendar_demo::calendar_demo(model).boxed(),
             Page::Widgets => widgets_demo::widgets_demo(model).boxed(),
+            Page::Chart => chart_demo::chart_demo(model).boxed(),
+            Page::StockChart => stock_chart_demo::stock_chart_demo(model).boxed(),
         },
     )
     .split_point_from_start(160.px())
