@@ -12,6 +12,7 @@ masonry = { git = "https://github.com/linebender/xilem", branch = "main" }
 masonry_winit = { git = "https://github.com/linebender/xilem", branch = "main" }
 xilem_material_icons = { path = "../../../xilem_material_icons" }
 tokio = { version = "1", features = ["time", "rt"] }
+chrono = "0.4"
 
 # Native menu bar (macOS and Windows only)
 [target.'cfg(not(target_os = "linux"))'.dependencies]

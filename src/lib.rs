@@ -59,7 +59,6 @@ pub mod theme;
 pub mod context_menu;
 pub mod menu_items;
 pub mod app_menu;
-pub mod virtual_list;
 pub mod sheet;
 pub mod calendar_picker;
 pub mod time_picker;
@@ -146,6 +145,30 @@ pub use list::{
     list_styled,
     ListAction,
     ListStyle,
+    // Widget-level (keyboard navigation, sections)
+    ListWidget,
+    ListWidgetAction,
+    ListWidgetStyle,
+    ListScrollState,
+    ListSection,
+    ListRangeAction,
+    ListRowAction,
+    // Virtualized list view (full-featured)
+    list_view,
+    list_view_styled,
+    ListView,
+    ListViewState,
+    ListViewAction,
+    ListViewStyle,
+    // Sectioned list view
+    list_view_sectioned,
+    SectionDef,
+    SectionedRowInfo,
+    SectionedListView,
+    SectionedListViewState,
+    // Navigable list view (simple API)
+    list_navigable,
+    ListNavigableView,
 };
 
 pub use table::{
@@ -254,13 +277,6 @@ pub use app_menu::{
     SHIFT,
     ALT,
     CTRL,
-};
-
-pub use virtual_list::{
-    virtual_list,
-    virtual_list_styled,
-    VirtualListStyle,
-    VirtualListState,
 };
 
 pub use sheet::{

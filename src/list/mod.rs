@@ -12,6 +12,8 @@
 //! - Selection with Cmd+click and Shift+click support
 //! - Double-click activation
 //! - Hover highlighting
+//! - Keyboard navigation with arrow keys
+//! - Optional sections with sticky headers
 //!
 //! # Example
 //!
@@ -35,5 +37,34 @@
 //! ```
 
 mod list_view;
+mod widget;
+mod list_widget_view;
 
 pub use list_view::{list, list_styled, ListAction, ListStyle};
+pub use widget::{
+    ListWidget,
+    ListWidgetAction,
+    ListWidgetStyle,
+    ListScrollState,
+    ListSection,
+    ListRangeAction,
+    ListRowAction,
+};
+pub use list_widget_view::{
+    // Full-featured virtualized list
+    list_view,
+    list_view_styled,
+    ListView,
+    ListViewState,
+    ListViewAction,
+    ListViewStyle,
+    // Sectioned list
+    list_view_sectioned,
+    SectionDef,
+    SectionedRowInfo,
+    SectionedListView,
+    SectionedListViewState,
+    // Simple navigable list (legacy)
+    list_navigable,
+    ListNavigableView,
+};

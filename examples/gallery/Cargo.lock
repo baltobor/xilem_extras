@@ -1362,6 +1362,7 @@ dependencies = [
 name = "gallery"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dark-light",
  "masonry",
  "masonry_winit",

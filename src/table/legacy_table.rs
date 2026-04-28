@@ -6,7 +6,7 @@
 //! (compatible with the Xilem licence).
 
 //! Legacy table view for displaying tabular data (non-virtualized).
-//! it was my first try. This file is considered to be deprecated.
+//! it was my first try. **This file is considered to be deprecated.**
 //!
 //! For new code, use [`super::table`] which is virtualized and handles large datasets efficiently.
 

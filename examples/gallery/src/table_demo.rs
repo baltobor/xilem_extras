@@ -179,6 +179,10 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         label("Click column headers to sort, drag dividers to resize")
             .text_size(12.0)
             .color(TEXT_SECONDARY),
+        label("Outdated. Please use the virtualized table.")
+            .text_size(12.0)
+            .color(TEXT_SECONDARY),            
+            
 
         // Table (header + rows)
         flex_col((

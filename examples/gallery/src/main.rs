@@ -16,6 +16,7 @@ mod mock_data;
 mod tree_demo;
 mod tree_view_demo;
 mod list_demo;
+mod sectioned_list_demo;
 mod table_demo;
 mod virtual_table_demo;
 mod tabs_demo;
@@ -270,6 +271,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             nav_button("Tree", Page::Tree, current_page),
             nav_button("Tree View", Page::TreeView, current_page),
             nav_button("List", Page::List, current_page),
+            nav_button("Sectioned List", Page::SectionedList, current_page),
             nav_button("Table", Page::Table, current_page),
             nav_button("Virtual Table", Page::VirtualTable, current_page),
             nav_button("Tabs", Page::Tabs, current_page),
@@ -290,6 +292,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             Page::Tree => tree_demo::tree_demo(model).boxed(),
             Page::TreeView => tree_view_demo::tree_view_demo(model).boxed(),
             Page::List => list_demo::list_demo(model).boxed(),
+            Page::SectionedList => sectioned_list_demo::sectioned_list_demo(model).boxed(),
             Page::Table => table_demo::table_demo(model).boxed(),
             Page::VirtualTable => virtual_table_demo::virtual_table_demo(model).boxed(),
             Page::Tabs => tabs_demo::tabs_demo(model).boxed(),

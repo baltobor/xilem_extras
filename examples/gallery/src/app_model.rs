@@ -49,6 +49,7 @@ pub enum Page {
     Tree,
     TreeView,
     List,
+    SectionedList,
     Table,
     VirtualTable,
     Tabs,
@@ -73,6 +74,7 @@ pub struct AppModel {
     // List demo state
     pub contacts: Vec<Contact>,
     pub list_selection: MultiSelection<u64>,
+    pub sectioned_list_selection: MultiSelection<u64>,
 
     // Table demo state
     pub cyclists: Vec<Cyclist>,
@@ -153,6 +155,7 @@ impl AppModel {
             // List
             contacts: mock_data::mock_contacts(),
             list_selection: MultiSelection::new(),
+            sectioned_list_selection: MultiSelection::new(),
 
             // Table
             cyclists: mock_data::mock_cyclists(),
