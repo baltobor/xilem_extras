@@ -32,7 +32,7 @@ use masonry::theme::default_property_set;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::core::fork;
-use xilem::view::{button, CrossAxisAlignment, MainAxisAlignment, split, flex_col, flex_row, label, task_raw, zstack};
+use xilem::view::{button, CrossAxisAlignment, split, flex_col, label, task_raw, zstack};
 use xilem::{window, EventLoop, WidgetView, WindowView, Xilem};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -44,7 +44,7 @@ use xilem::winit::event_loop::ActiveEventLoop;
 use xilem::winit::window::WindowId as WinitWindowId;
 use xilem::winit::event::{WindowEvent, DeviceEvent, DeviceId, StartCause};
 
-use xilem_extras::row_button;
+use xilem_extras::{row_button, sheet};
 use app_model::{AppModel, Page};
 
 // Material Symbols font
@@ -69,8 +69,6 @@ const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
 const BG_NAV: Color = Color::from_rgb8(45, 43, 40);
 const BG_HOVER: Color = Color::from_rgb8(55, 52, 48);
 const BG_ACTIVE: Color = Color::from_rgb8(65, 62, 58);
-const MODAL_BACKDROP: Color = Color::from_rgba8(0x00, 0x00, 0x00, 0xB0);
-const MODAL_BG: Color = Color::from_rgb8(55, 52, 48);
 
 #[cfg(target_os = "linux")]
 const MENU_BAR_BG: Color = Color::from_rgb8(38, 36, 33);
@@ -217,36 +215,28 @@ fn nav_button(text: &str, page: Page, current: Page) -> impl WidgetView<AppModel
     .background_color(bg)
 }
 
-/// Modal overlay for widgets demo
-fn modal_overlay() -> impl WidgetView<AppModel> {
+/// Modal content for sheet demo
+fn modal_content() -> impl WidgetView<AppModel> {
     flex_col((
-        flex_col((
-            label("Modal Overlay")
-                .text_size(14.0)
-                .weight(xilem::FontWeight::BOLD)
-                .color(TEXT_COLOR),
-            label("This is a modal overlay.")
-                .text_size(12.0)
-                .color(TEXT_SECONDARY),
-            label("Click Close button to dismiss.")
-                .text_size(10.0)
-                .color(TEXT_SECONDARY),
-            button(
-                label("Close").text_size(12.0),
-                |model: &mut AppModel| {
-                    model.widgets_show_sheet = false;
-                },
-            ),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .gap(8.0_f64.px())
-        .padding(20.0)
-        .background_color(MODAL_BG)
-        .corner_radius(8.0),
+        label("Modal Overlay")
+            .text_size(14.0)
+            .weight(xilem::FontWeight::BOLD)
+            .color(Color::BLACK),
+        label("This is a modal sheet.")
+            .text_size(12.0)
+            .color(Color::from_rgb8(80, 80, 80)),
+        label("Click backdrop or Close button to dismiss.")
+            .text_size(10.0)
+            .color(Color::from_rgb8(120, 120, 120)),
+        button(
+            label("Close").text_size(12.0),
+            |model: &mut AppModel| {
+                model.widgets_show_sheet = false;
+            },
+        ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
-    .main_axis_alignment(MainAxisAlignment::Center)
-    .background_color(MODAL_BACKDROP)
+    .gap(8.0_f64.px())
 }
 
 fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
@@ -309,9 +299,17 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     .bar_thickness(1.px())
     .solid_bar(true);
 
-    // Wrap with modal overlay if shown
+    // Wrap with sheet modal if shown
     let content_with_modal = if show_modal {
-        zstack((main_content, modal_overlay())).boxed()
+        zstack((
+            main_content,
+            sheet(
+                modal_content(),
+                |model: &mut AppModel| {
+                    model.widgets_show_sheet = false;
+                },
+            ),
+        )).boxed()
     } else {
         main_content.boxed()
     };

@@ -5,7 +5,11 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-//! Sheet layer widget that provides the modal overlay.
+//! Sheet layer widget (kept for backward compatibility).
+//!
+//! Note: The primary sheet implementation now uses SheetWidget directly
+//! without a separate layer. This module is kept for potential future use
+//! or alternative implementations.
 
 use tracing::{Span, trace_span};
 use xilem::masonry::accesskit::{Node, Role};
@@ -26,11 +30,10 @@ use super::widget::{SheetAction, SheetWidget};
 /// Default backdrop color (semi-transparent black).
 const BACKDROP_COLOR: Color = Color::from_rgba8(0x00, 0x00, 0x00, 0x80);
 
-/// A floating layer that displays a sheet modal.
+/// A floating layer that displays a sheet modal backdrop.
 ///
-/// Implements [`Layer`] to capture pointer events and dismiss on
-/// backdrop click. When dismissed, it submits a [`SheetAction::Dismissed`]
-/// action to the creator widget.
+/// Note: This is kept for backward compatibility. The primary sheet
+/// implementation now uses SheetWidget directly.
 pub struct SheetLayer {
     /// The creator widget ID (SheetWidget).
     creator: WidgetId,
@@ -125,7 +128,7 @@ impl Widget for SheetLayer {
     }
 
     fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {
-        // No children - content is passed through the layer
+        // No children
     }
 
     fn measure(
@@ -136,36 +139,36 @@ impl Widget for SheetLayer {
         len_req: LenReq,
         _cross_length: Option<f64>,
     ) -> f64 {
-        // Sheet layer fills available space (full window for layers)
-        // Use max content to expand fully
+        // Sheet layer fills available space
         match len_req {
             LenReq::FitContent(space) => space,
-            LenReq::MinContent | LenReq::MaxContent => {
-                match axis {
-                    Axis::Horizontal => 800.0, // Fallback
-                    Axis::Vertical => 600.0,
-                }
-            }
+            LenReq::MinContent | LenReq::MaxContent => match axis {
+                Axis::Horizontal => 800.0,
+                Axis::Vertical => 600.0,
+            },
         }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
-        // Calculate centered content rect
+        // Calculate centered content rect (placeholder size)
         let max_width = (size.width * 0.8).min(600.0);
         let max_height = (size.height * 0.8).min(400.0);
-        let content_width = max_width;
-        let content_height = max_height;
 
-        let x = (size.width - content_width) / 2.0;
-        let y = (size.height - content_height) / 2.0;
+        let x = (size.width - max_width) / 2.0;
+        let y = (size.height - max_height) / 2.0;
 
-        self.content_rect = Rect::new(x, y, x + content_width, y + content_height);
+        self.content_rect = Rect::new(x, y, x + max_width, y + max_height);
         ctx.clear_baselines();
     }
 
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let size = ctx.border_box_size();
 
         // Draw semi-transparent backdrop
