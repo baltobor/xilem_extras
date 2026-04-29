@@ -65,14 +65,19 @@ pub const DEFAULT_ROW_HEIGHT_HINT: f64 = 24.0;
 /// rectangle at `(0, target_y, child_width, target_y + row_height)` is
 /// visible.
 ///
-/// Defaults: both axes are constrained (`constrain_horizontal = true`,
-/// `constrain_vertical = true`) so the inner `Portal` honors the slot
-/// its parent gives it — without this, content larger than the slot
-/// would push surrounding siblings (header, footer, status bar, …) off
-/// the screen instead of becoming a scrollable region. Override via
+/// Defaults: both axes UNCONSTRAINED (`constrain_horizontal = false`,
+/// `constrain_vertical = false`) — matching xilem's stock `portal()`
+/// view. In masonry's `Portal` semantics, "constrained" actually means
+/// "this axis cannot scroll" (the portal forces the child to fit, no
+/// scrollbar, mouse-wheel disabled on that axis). The whole point of a
+/// scrolling tree view is to *allow* the child to overflow; the parent
+/// flex slot bounds the portal itself, and the portal then clips the
+/// content and exposes a scrollbar.
+///
+/// If you want the portal to behave like a non-scrolling clip on one
+/// axis (e.g. force a horizontal-only tree), opt in with
 /// [`ScrollFocus::constrain_horizontal`] /
-/// [`ScrollFocus::constrain_vertical`] when you really want unbounded
-/// growth.
+/// [`ScrollFocus::constrain_vertical`].
 pub fn scroll_focus<Child, State, Action>(
     child: Child,
     target_y: Option<f64>,
@@ -86,8 +91,8 @@ where
         child,
         target_y,
         row_height,
-        constrain_horizontal: true,
-        constrain_vertical: true,
+        constrain_horizontal: false,
+        constrain_vertical: false,
         content_must_fill: false,
         phantom: PhantomData,
     }
@@ -105,20 +110,21 @@ pub struct ScrollFocus<V, State, Action> {
 }
 
 impl<V, State, Action> ScrollFocus<V, State, Action> {
-    /// If `true` (default), the inner [`Portal`](widgets::Portal) honors
-    /// the horizontal space its parent gives it, scrolling content that
-    /// is wider than the slot. If `false`, the portal grows to fit the
-    /// content's natural width, which can push siblings out of layout.
+    /// If `true`, the portal does NOT scroll horizontally — the child
+    /// is forced to fit the portal's width and there is no horizontal
+    /// scrollbar. Default `false` (the child overflows as wide as it
+    /// wants and the portal scrolls horizontally to follow).
+    /// Mirrors [`Portal::constrain_horizontal`](widgets::Portal::constrain_horizontal).
     pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
         self.constrain_horizontal = constrain;
         self
     }
 
-    /// If `true` (default), the inner [`Portal`](widgets::Portal) honors
-    /// the vertical space its parent gives it, scrolling content that is
-    /// taller than the slot. If `false`, the portal grows to fit the
-    /// content's natural height — typically wrong inside a `flex_col`
-    /// because it pushes siblings (footers, status bars) off the screen.
+    /// If `true`, the portal does NOT scroll vertically — the child is
+    /// forced to fit the portal's height and there is no vertical
+    /// scrollbar. Default `false` (the child overflows as tall as it
+    /// wants and the portal scrolls vertically to follow).
+    /// Mirrors [`Portal::constrain_vertical`](widgets::Portal::constrain_vertical).
     pub fn constrain_vertical(mut self, constrain: bool) -> Self {
         self.constrain_vertical = constrain;
         self
