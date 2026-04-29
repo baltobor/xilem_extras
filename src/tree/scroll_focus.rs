@@ -64,6 +64,15 @@ pub const DEFAULT_ROW_HEIGHT_HINT: f64 = 24.0;
 /// between rebuilds and is `Some`, the inner portal scrolls so that the
 /// rectangle at `(0, target_y, child_width, target_y + row_height)` is
 /// visible.
+///
+/// Defaults: both axes are constrained (`constrain_horizontal = true`,
+/// `constrain_vertical = true`) so the inner `Portal` honors the slot
+/// its parent gives it — without this, content larger than the slot
+/// would push surrounding siblings (header, footer, status bar, …) off
+/// the screen instead of becoming a scrollable region. Override via
+/// [`ScrollFocus::constrain_horizontal`] /
+/// [`ScrollFocus::constrain_vertical`] when you really want unbounded
+/// growth.
 pub fn scroll_focus<Child, State, Action>(
     child: Child,
     target_y: Option<f64>,
@@ -77,6 +86,9 @@ where
         child,
         target_y,
         row_height,
+        constrain_horizontal: true,
+        constrain_vertical: true,
+        content_must_fill: false,
         phantom: PhantomData,
     }
 }
@@ -86,7 +98,39 @@ pub struct ScrollFocus<V, State, Action> {
     child: V,
     target_y: Option<f64>,
     row_height: f64,
+    constrain_horizontal: bool,
+    constrain_vertical: bool,
+    content_must_fill: bool,
     phantom: PhantomData<fn(State) -> Action>,
+}
+
+impl<V, State, Action> ScrollFocus<V, State, Action> {
+    /// If `true` (default), the inner [`Portal`](widgets::Portal) honors
+    /// the horizontal space its parent gives it, scrolling content that
+    /// is wider than the slot. If `false`, the portal grows to fit the
+    /// content's natural width, which can push siblings out of layout.
+    pub fn constrain_horizontal(mut self, constrain: bool) -> Self {
+        self.constrain_horizontal = constrain;
+        self
+    }
+
+    /// If `true` (default), the inner [`Portal`](widgets::Portal) honors
+    /// the vertical space its parent gives it, scrolling content that is
+    /// taller than the slot. If `false`, the portal grows to fit the
+    /// content's natural height — typically wrong inside a `flex_col`
+    /// because it pushes siblings (footers, status bars) off the screen.
+    pub fn constrain_vertical(mut self, constrain: bool) -> Self {
+        self.constrain_vertical = constrain;
+        self
+    }
+
+    /// If `true`, the child must fill the portal's viewport (mirrors
+    /// [`Portal::content_must_fill`](widgets::Portal::content_must_fill)).
+    /// Default is `false`, matching xilem's stock `portal()` view.
+    pub fn content_must_fill(mut self, must_fill: bool) -> Self {
+        self.content_must_fill = must_fill;
+        self
+    }
 }
 
 impl<V, State, Action> ViewMarker for ScrollFocus<V, State, Action> {}
@@ -102,11 +146,18 @@ where
 
     fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let (child, child_state) = self.child.build(ctx, app_state);
-        // We use the same default flags as xilem's `portal()` view so the
-        // behaviour is interchangeable when scroll-to is not in play:
-        // both axes are unconstrained, the child sizes itself, and we
-        // get scrollbars for any overflow.
-        let widget_pod = ctx.create_pod(widgets::Portal::new(child.new_widget));
+        // Honor the constraint flags from the builder (defaulting to
+        // both axes constrained — see `scroll_focus`'s doc) so the
+        // inner `Portal` sizes itself to whatever slot its parent
+        // hands it. Without this, a tree taller than the slot would
+        // push siblings off the screen instead of becoming
+        // scrollable, which broke layouts like
+        // `flex_col((header, tree, search_bar))`.
+        let portal = widgets::Portal::new(child.new_widget)
+            .constrain_horizontal(self.constrain_horizontal)
+            .constrain_vertical(self.constrain_vertical)
+            .content_must_fill(self.content_must_fill);
+        let widget_pod = ctx.create_pod(portal);
         (widget_pod, child_state)
     }
 
