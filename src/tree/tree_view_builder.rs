@@ -54,7 +54,7 @@ use crate::traits::{Identifiable, SelectionState, TreeNode};
 use xilem::masonry::core::PointerButton;
 
 use super::disclosure_row::disclosure_row;
-use super::flatten::{flatten_tree_with_parents, FlattenedNode};
+use super::flatten::{flatten_forest_with_parents, FlattenedNode};
 use super::keyboard_focus::{keyboard_focus, KeyAction};
 use super::scroll_focus::{scroll_focus, DEFAULT_ROW_HEIGHT_HINT};
 use super::tree_view::{TreeAction, TreeStyle};
@@ -106,7 +106,11 @@ pub struct TreeView<'a, N, State, Sel = ()>
 where
     N: TreeNode + 'a,
 {
-    root: &'a N,
+    /// Roots of the rendered forest. A single-root tree (`tree_view`) is
+    /// stored here as a one-element slice via `std::slice::from_ref` so
+    /// the rendering / flattening / keyboard-nav code paths can be
+    /// shared with `tree_forest_view`.
+    roots: &'a [N],
     expansion: &'a ExpansionState<N::Id>,
     selection: Option<&'a Sel>,
     style: TreeStyle,
@@ -136,7 +140,14 @@ where
     _phantom: std::marker::PhantomData<fn(&mut State)>,
 }
 
-/// Start a new tree-view builder.
+/// Start a new single-root tree-view builder.
+///
+/// Most file-system / outline trees have a single root (a project
+/// directory, a document); use this constructor for them. For
+/// multi-root structures (a section-marker outline where each section
+/// is its own root, a category list with several top-level groups),
+/// use [`tree_forest_view`] instead — the rest of the builder API is
+/// identical.
 pub fn tree_view<'a, N, State>(
     root: &'a N,
     expansion: &'a ExpansionState<N::Id>,
@@ -145,8 +156,26 @@ where
     N: TreeNode + 'a,
     State: 'static,
 {
+    tree_forest_view(std::slice::from_ref(root), expansion)
+}
+
+/// Start a new multi-root tree-view (forest) builder.
+///
+/// Each element of `roots` becomes a top-level row at depth 0. Aside
+/// from accepting a slice instead of a single node, this builder is
+/// identical to [`tree_view`] — every opt-in (`selection`, `icon_for`,
+/// `context_menu_for`, `editing`, …) works the same way and the
+/// keyboard-nav model is the same flat list semantics.
+pub fn tree_forest_view<'a, N, State>(
+    roots: &'a [N],
+    expansion: &'a ExpansionState<N::Id>,
+) -> TreeView<'a, N, State>
+where
+    N: TreeNode + 'a,
+    State: 'static,
+{
     TreeView {
-        root,
+        roots,
         expansion,
         selection: None,
         style: TreeStyle::new(),
@@ -182,7 +211,7 @@ where
         NewSel: SelectionState<N::Id>,
     {
         TreeView {
-            root: self.root,
+            roots: self.roots,
             expansion: self.expansion,
             selection: Some(selection),
             style: self.style,
@@ -339,11 +368,12 @@ where
 {
     /// Build the configured tree as a Xilem view with full keyboard navigation.
     pub fn build(self) -> impl WidgetView<State, ()> + use<'a, N, State, Sel> {
-        // Flatten the tree once. The result is captured both by the row-builder
+        // Flatten the forest once. The result is captured both by the row-builder
         // pass (for ordered iteration) and by the keyboard handler closure
-        // (for navigation lookups).
+        // (for navigation lookups). A single-root tree (the `tree_view`
+        // constructor) lands here as a 1-element slice.
         let mut flat_nodes: Vec<FlattenedNode<N::Id>> = Vec::new();
-        flatten_tree_with_parents(self.root, self.expansion, 0, None, &mut flat_nodes);
+        flatten_forest_with_parents(self.roots, self.expansion, &mut flat_nodes);
 
         // Compute selected index from current SelectionState.
         let selected_index = self
@@ -389,7 +419,12 @@ where
         selected_index: Option<usize>,
     ) -> Vec<Box<AnyWidgetView<State, ()>>> {
         let mut rows: Vec<Box<AnyWidgetView<State, ()>>> = Vec::with_capacity(flat_nodes.len());
-        self.build_rows_recursive(self.root, &mut rows, flat_nodes, selected_index);
+        // Iterate every root in document order so the recursion order
+        // matches what `flatten_forest_with_parents` produced. Each
+        // root starts a fresh subtree at depth 0.
+        for root in self.roots {
+            self.build_rows_recursive(root, &mut rows, flat_nodes, selected_index);
+        }
         rows
     }
 
@@ -718,6 +753,25 @@ mod tests {
             .text_color(Color::WHITE)
             .text_size(12.0)
             .label_for(|n: &Node| format!("[{}] {}", n.children.len(), n.label))
+            .on_action(|_state: &mut AppState, _id: &String, _action| {})
+            .build();
+    }
+
+    /// Confirms the multi-root constructor type-checks with the same
+    /// builder methods as the single-root one.
+    #[test]
+    fn forest_builder_compiles() {
+        let app = AppState {
+            sel: SingleSelection::new(),
+            exp: ExpansionState::new(),
+        };
+        let roots = vec![
+            Node { id: "a".into(), label: "A".into(), children: vec![] },
+            Node { id: "b".into(), label: "B".into(), children: vec![] },
+        ];
+        let _ = tree_forest_view::<Node, AppState>(&roots, &app.exp)
+            .selection(&app.sel)
+            .label_for(|n: &Node| n.label.clone())
             .on_action(|_state: &mut AppState, _id: &String, _action| {})
             .build();
     }

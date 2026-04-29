@@ -129,6 +129,7 @@ pub use tree::{
     tree_forest_styled,
     tree_forest_with_context_menu,
     tree_view,
+    tree_forest_view,
     HighlightFill,
     TreeAction,
     TreeStyle,

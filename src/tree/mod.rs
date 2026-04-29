@@ -33,10 +33,13 @@ pub use tree_view::{
     TreeAction, TreeStyle, flatten_tree, flatten_forest,
 };
 
-// Canonical tree view.
+// Canonical tree view. `tree_view` is the single-root constructor;
+// `tree_forest_view` is the multi-root flavour. Both share `TreeView`
+// as their builder type so every opt-in (selection, icon_for, …)
+// works identically across the two.
 pub use tree_view_builder::{
-    tree_view, HighlightFill, TreeView, DEFAULT_SELECTED_BG, DEFAULT_TEXT_COLOR,
-    DEFAULT_CHEVRON_COLOR,
+    tree_forest_view, tree_view, HighlightFill, TreeView, DEFAULT_SELECTED_BG,
+    DEFAULT_TEXT_COLOR, DEFAULT_CHEVRON_COLOR,
 };
 
 // Primitives — exposed for power users building custom tree-like views.
