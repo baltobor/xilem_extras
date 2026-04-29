@@ -44,16 +44,19 @@ use masonry::properties::Padding;
 use xilem::core::MessageResult;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_col, flex_row, label, CrossAxisAlignment};
+use xilem::view::{flex_col, flex_row, label, text_input, CrossAxisAlignment};
 use xilem::{AnyWidgetView, WidgetView};
 
 use crate::components::{row_button_with_press, RowButtonPress};
+use crate::context_menu::context_menu;
+use crate::menu_items::BoxedMenuEntry;
 use crate::traits::{Identifiable, SelectionState, TreeNode};
 use xilem::masonry::core::PointerButton;
 
 use super::disclosure_row::disclosure_row;
 use super::flatten::{flatten_tree_with_parents, FlattenedNode};
 use super::keyboard_focus::{keyboard_focus, KeyAction};
+use super::scroll_focus::{scroll_focus, DEFAULT_ROW_HEIGHT_HINT};
 use super::tree_view::{TreeAction, TreeStyle};
 use super::ExpansionState;
 
@@ -64,6 +67,9 @@ type IconFn<N, State> = dyn Fn(&N) -> Option<Box<AnyWidgetView<State, ()>>> + Se
 type LabelFn<N> = dyn Fn(&N) -> String + Send + Sync;
 type ActionFn<N, State> =
     dyn Fn(&mut State, &<N as Identifiable>::Id, TreeAction) + Send + Sync;
+type MenuFn<N, State> =
+    dyn Fn(&N) -> Vec<BoxedMenuEntry<State, ()>> + Send + Sync;
+type EditTextSetterFn<State> = dyn Fn(&mut State, String) + Send + Sync;
 
 /// Default selection background — a soft blue that reads on dark + light themes.
 pub const DEFAULT_SELECTED_BG: Color = Color::from_rgba8(60, 80, 110, 220);
@@ -91,6 +97,18 @@ where
     icon_for: Option<Arc<IconFn<N, State>>>,
     label_for: Option<Arc<LabelFn<N>>>,
     handler: Option<Arc<ActionFn<N, State>>>,
+    /// Per-node context-menu items. When set, a right-click on the row body
+    /// opens a popup with the items returned by this closure.
+    menu_items_for: Option<Arc<MenuFn<N, State>>>,
+    /// Id of the node currently in inline-edit mode. Provided by the app
+    /// (typically `model.editing_id.as_ref()`). When this matches a node's
+    /// id, the row renders a `text_input` instead of the label.
+    editing: Option<&'a N::Id>,
+    /// Current edit-buffer text, displayed in the `text_input` for the
+    /// row whose id matches `editing`. Required when `editing` is `Some`.
+    editing_text: &'a str,
+    /// Callback to update the edit buffer on every keystroke.
+    editing_text_setter: Option<Arc<EditTextSetterFn<State>>>,
     _phantom: std::marker::PhantomData<fn(&mut State)>,
 }
 
@@ -121,6 +139,10 @@ where
         icon_for: None,
         label_for: None,
         handler: None,
+        menu_items_for: None,
+        editing: None,
+        editing_text: "",
+        editing_text_setter: None,
         _phantom: std::marker::PhantomData,
     }
 }
@@ -147,6 +169,10 @@ where
             icon_for: self.icon_for,
             label_for: self.label_for,
             handler: self.handler,
+            menu_items_for: self.menu_items_for,
+            editing: self.editing,
+            editing_text: self.editing_text,
+            editing_text_setter: self.editing_text_setter,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -219,6 +245,50 @@ where
         self.handler = Some(Arc::new(h));
         self
     }
+
+    /// Per-node context menu items. The closure receives the node and returns
+    /// a `Vec<BoxedMenuEntry>`. Right-click on the row body opens the menu.
+    ///
+    /// Use `(item1, item2, separator(), item3).collect_entries()` to convert
+    /// a tuple of menu items into the required `Vec`.
+    ///
+    /// Without this call, right-clicks still emit `TreeAction::ContextMenu(pos)`
+    /// to your `on_action` handler, but no popup is rendered.
+    pub fn context_menu_for<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&N) -> Vec<BoxedMenuEntry<State, ()>> + Send + Sync + 'static,
+    {
+        self.menu_items_for = Some(Arc::new(f));
+        self
+    }
+
+    /// Enable inline-rename for a single node.
+    ///
+    /// Arguments:
+    /// - `editing`: which node is currently being edited, or `None`. Typically
+    ///   `model.editing_id.as_ref()`.
+    /// - `editing_text`: the current edit-buffer contents (needed because xilem
+    ///   `text_input` is a controlled widget — it gets reset to whatever string
+    ///   we hand it on each rebuild).
+    /// - `on_text_changed`: keystroke callback. Update your buffer here.
+    ///
+    /// On Enter the row dispatches `TreeAction::CommitEdit(text)`, on Escape
+    /// `TreeAction::CancelEdit`. Your `on_action` handler is responsible for
+    /// clearing the editing id and applying / discarding the new text.
+    pub fn editing<F>(
+        mut self,
+        editing: Option<&'a N::Id>,
+        editing_text: &'a str,
+        on_text_changed: F,
+    ) -> Self
+    where
+        F: Fn(&mut State, String) + Send + Sync + 'static,
+    {
+        self.editing = editing;
+        self.editing_text = editing_text;
+        self.editing_text_setter = Some(Arc::new(on_text_changed));
+        self
+    }
 }
 
 impl<'a, N, State, Sel> TreeView<'a, N, State, Sel>
@@ -254,10 +324,19 @@ where
         let user_handler = self.handler.clone();
         let flat_for_keys = flat_nodes;
 
-        keyboard_focus(content, move |state: &mut State, action: KeyAction| {
+        let key_layer = keyboard_focus(content, move |state: &mut State, action: KeyAction| {
             handle_key(state, action, &flat_for_keys, selected_index, user_handler.as_deref());
             MessageResult::Action(())
-        })
+        });
+
+        // Wrap in a portal that auto-scrolls to the selected row whenever
+        // selection changes. Row heights are content-based (flex_col), so
+        // `target_y` is approximate (`row_height_hint × index`); this is
+        // fine for selection-visibility — typical tree rows are uniform,
+        // and even when they aren't a few-pixel mis-target still keeps the
+        // row on screen.
+        let target_y = selected_index.map(|i| i as f64 * DEFAULT_ROW_HEIGHT_HINT);
+        scroll_focus(key_layer, target_y, DEFAULT_ROW_HEIGHT_HINT)
     }
 
     fn build_rows(
@@ -332,43 +411,84 @@ where
         } else {
             text_color
         };
-        let text = label(display).text_size(text_size).color(text_color_for_row);
-
-        // Wrap icon+text in a row_button so clicks dispatch Select / DoubleClick /
-        // ContextMenu. The chevron stays OUTSIDE this button so its clicks can
-        // be handled separately by `disclosure_row`.
-        let body = flex_row((icon_view, text)).gap(4.px());
 
         let node_id = node.id();
-        let user_handler_for_press = self.handler.clone();
-        let body_clickable = row_button_with_press(body, move |state: &mut State, press: &RowButtonPress| {
-            if let Some(h) = user_handler_for_press.as_ref() {
-                match press.button {
-                    Some(PointerButton::Secondary) => {
-                        h(state, &node_id, TreeAction::ContextMenu(press.position));
-                    }
-                    None | Some(PointerButton::Primary) => {
-                        if press.click_count >= 2 {
-                            h(state, &node_id, TreeAction::DoubleClick);
-                        } else {
-                            h(state, &node_id, TreeAction::Select);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        });
+        let is_editing = self.editing.map(|id| id == &node_id).unwrap_or(false);
 
-        // Selection background: applied to the ROW (chevron + body) so the
-        // highlight covers the whole line, not just the body.
-        let body_styled: Box<AnyWidgetView<State, ()>> = if is_selected {
-            Box::new(body_clickable.background_color(selected_bg))
-        } else if hover_bg != Color::TRANSPARENT {
-            // Hover bg comes from style.hover_bg — applied unconditionally;
-            // xilem's row_button paints hover internally.
-            Box::new(body_clickable)
+        // Render either a text_input (rename mode) or the regular row_button
+        // wrapping icon + label.
+        let body_with_menu: Box<AnyWidgetView<State, ()>> = if is_editing {
+            // Inline-edit mode: text_input replaces the label. The chevron
+            // and icon stay so layout doesn't shift. Clicks on the input area
+            // are handled by text_input itself; the row_button wrapping is
+            // intentionally skipped so cursor navigation inside the input
+            // works.
+            let setter = self.editing_text_setter.clone();
+            let editing_text = self.editing_text.to_string();
+            let user_handler_for_enter = self.handler.clone();
+            let id_for_enter = node_id.clone();
+            let mut input_view = text_input(editing_text, move |state: &mut State, new: String| {
+                if let Some(s) = setter.as_ref() {
+                    s(state, new);
+                }
+            })
+            .text_size(text_size);
+            input_view = input_view.on_enter(move |state, text| {
+                if let Some(h) = user_handler_for_enter.as_ref() {
+                    h(state, &id_for_enter, TreeAction::CommitEdit(text.clone()));
+                }
+            });
+            Box::new(flex_row((icon_view, input_view)).gap(4.px()))
         } else {
-            Box::new(body_clickable)
+            let text = label(display).text_size(text_size).color(text_color_for_row);
+
+            // Wrap icon+text in a row_button so clicks dispatch Select /
+            // DoubleClick / ContextMenu. The chevron stays OUTSIDE this button
+            // so its clicks can be handled separately by `disclosure_row`.
+            let body = flex_row((icon_view, text)).gap(4.px());
+
+            let node_id_for_press = node_id.clone();
+            let user_handler_for_press = self.handler.clone();
+            let body_clickable = row_button_with_press(body, move |state: &mut State, press: &RowButtonPress| {
+                if let Some(h) = user_handler_for_press.as_ref() {
+                    match press.button {
+                        Some(PointerButton::Secondary) => {
+                            h(state, &node_id_for_press, TreeAction::ContextMenu(press.position));
+                        }
+                        None | Some(PointerButton::Primary) => {
+                            if press.click_count >= 2 {
+                                h(state, &node_id_for_press, TreeAction::DoubleClick);
+                            } else {
+                                h(state, &node_id_for_press, TreeAction::Select);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            });
+
+            // Selection background: applied to the ROW (chevron + body) so the
+            // highlight covers the whole line, not just the body.
+            let body_styled: Box<AnyWidgetView<State, ()>> = if is_selected {
+                Box::new(body_clickable.background_color(selected_bg))
+            } else if hover_bg != Color::TRANSPARENT {
+                // Hover bg comes from style.hover_bg — applied unconditionally;
+                // xilem's row_button paints hover internally.
+                Box::new(body_clickable)
+            } else {
+                Box::new(body_clickable)
+            };
+
+            // Wrap the body in a context_menu when the user provided per-node
+            // items. The chevron is intentionally outside this wrapper so a
+            // right-click on it doesn't open the menu (matches typical tree UX).
+            match self.menu_items_for.as_ref() {
+                Some(menu_fn) => {
+                    let entries = menu_fn(node);
+                    Box::new(context_menu(body_styled, entries))
+                }
+                None => body_styled,
+            }
         };
 
         // Chevron handler dispatches TreeAction::Toggle.
@@ -380,13 +500,13 @@ where
             }
         };
 
-        // Indent + chevron (toggle button) + clickable body.
+        // Indent + chevron (toggle button) + clickable body (with optional menu).
         disclosure_row(
             depth,
             is_expanded,
             is_expandable,
             chevron_color,
-            body_styled,
+            body_with_menu,
             on_toggle,
         )
     }
@@ -482,6 +602,14 @@ fn handle_key<State, Id>(
         KeyAction::Edit => {
             if let Some(node) = flat_nodes.get(cur) {
                 h(state, &node.id, TreeAction::StartEdit);
+            }
+        }
+        KeyAction::Cancel => {
+            // Escape — only meaningful while inline-editing. We dispatch
+            // unconditionally and let the user's handler decide whether
+            // there is an in-progress edit to cancel.
+            if let Some(node) = flat_nodes.get(cur) {
+                h(state, &node.id, TreeAction::CancelEdit);
             }
         }
     }

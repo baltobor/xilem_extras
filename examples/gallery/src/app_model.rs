@@ -73,6 +73,10 @@ pub struct AppModel {
     /// Last node activated by Enter / double-click, surfaced in the demo
     /// label so the user can verify Activate is wired up.
     pub tree_activated: Option<String>,
+    /// Id of the node being inline-renamed, or `None` if not editing.
+    pub tree_editing: Option<String>,
+    /// Buffer text shown in the rename `text_input`.
+    pub tree_editing_text: String,
 
     // List demo state
     pub contacts: Vec<Contact>,
@@ -143,6 +147,19 @@ pub struct AppModel {
     pub bg_active: Arc<AtomicBool>,
 }
 
+/// Find the node's `name` field by `path`. Used to seed the rename buffer.
+fn find_node_name(node: &FileNode, target: &str) -> Option<String> {
+    if node.path == target {
+        return Some(node.name.clone());
+    }
+    for child in &node.children {
+        if let Some(found) = find_node_name(child, target) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 impl AppModel {
     pub fn new() -> Self {
         use crate::mock_data;
@@ -152,9 +169,16 @@ impl AppModel {
 
             // Tree
             file_tree: mock_data::mock_file_tree(),
-            tree_expansion: ExpansionState::with_expanded([".".to_string(), "src".to_string()]),
+            tree_expansion: ExpansionState::with_expanded([
+                ".".to_string(),
+                "src".to_string(),
+                "src/components".to_string(),
+                "tests".to_string(),
+            ]),
             tree_selection: SingleSelection::new(),
             tree_activated: None,
+            tree_editing: None,
+            tree_editing_text: String::new(),
 
             // List
             contacts: mock_data::mock_contacts(),
@@ -251,6 +275,71 @@ impl AppModel {
 
     pub fn select_tree_node(&mut self, id: String) {
         self.tree_selection.set(Some(id));
+    }
+
+    /// Begin inline-renaming the node with this id. Seeds the edit buffer
+    /// with the node's current name so the text_input shows the same string
+    /// the user is about to change.
+    pub fn start_editing_tree_node(&mut self, id: &str) {
+        if let Some(name) = find_node_name(&self.file_tree, id) {
+            self.tree_editing = Some(id.to_string());
+            self.tree_editing_text = name;
+        }
+    }
+
+    /// Apply the rename. The node's `name` becomes `new_name`; identity
+    /// (`path`) is preserved so selection / expansion state still points at
+    /// the same row.
+    pub fn rename_tree_node(&mut self, id: &str, new_name: String) {
+        fn rename_in(node: &mut FileNode, target: &str, new_name: &str) -> bool {
+            if node.path == target {
+                node.name = new_name.to_string();
+                return true;
+            }
+            for child in &mut node.children {
+                if rename_in(child, target, new_name) {
+                    return true;
+                }
+            }
+            false
+        }
+        rename_in(&mut self.file_tree, id, &new_name);
+        self.tree_editing = None;
+        self.tree_editing_text.clear();
+    }
+
+    /// Cancel any inline rename in progress.
+    pub fn cancel_editing_tree_node(&mut self) {
+        self.tree_editing = None;
+        self.tree_editing_text.clear();
+    }
+
+    /// Remove the node identified by `path` from the file tree. No-op if the
+    /// path is empty (the root) or not found.
+    pub fn delete_tree_node(&mut self, id: &str) {
+        if id.is_empty() {
+            return;
+        }
+        fn remove_in(node: &mut FileNode, target: &str) -> bool {
+            if let Some(pos) = node.children.iter().position(|c| c.path == target) {
+                node.children.remove(pos);
+                return true;
+            }
+            for child in &mut node.children {
+                if remove_in(child, target) {
+                    return true;
+                }
+            }
+            false
+        }
+        remove_in(&mut self.file_tree, id);
+        // Clear selection / activation if it pointed at the removed node.
+        if self.tree_selection.selected().map(|s| s.as_str()) == Some(id) {
+            self.tree_selection.set(None);
+        }
+        if self.tree_activated.as_deref() == Some(id) {
+            self.tree_activated = None;
+        }
     }
 
     // Tabs actions

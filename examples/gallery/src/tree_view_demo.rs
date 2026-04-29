@@ -14,9 +14,11 @@
 use masonry::layout::AsUnit;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_col, label, portal, CrossAxisAlignment};
+use xilem::view::{flex_col, label, CrossAxisAlignment};
 use xilem::{AnyWidgetView, WidgetView};
-use xilem_extras::{tree_view, TreeAction, TreeStyle};
+use xilem_extras::{
+    menu_item, separator, tree_view, BoxedMenuEntry, Identifiable, MenuItems, TreeAction, TreeStyle,
+};
 use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
@@ -54,6 +56,31 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
                 n.name.clone()
             }
         })
+        .context_menu_for(|node: &FileNode| -> Vec<BoxedMenuEntry<AppModel, ()>> {
+            // Each closure captures `id` by move so the menu item knows which
+            // node it is operating on without needing extra plumbing.
+            let id_open = node.id();
+            let id_rename = node.id();
+            let id_delete = node.id();
+            (
+                menu_item("Open", move |m: &mut AppModel| {
+                    m.tree_activated = Some(id_open.clone());
+                }),
+                menu_item("Rename", move |m: &mut AppModel| {
+                    m.start_editing_tree_node(&id_rename);
+                }),
+                separator(),
+                menu_item("Delete", move |m: &mut AppModel| {
+                    m.delete_tree_node(&id_delete);
+                }),
+            )
+                .collect_entries()
+        })
+        .editing(
+            model.tree_editing.as_ref(),
+            &model.tree_editing_text,
+            |state: &mut AppModel, new: String| state.tree_editing_text = new,
+        )
         .on_action(default_handler)
         .build();
 
@@ -79,12 +106,13 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
         label("Click chevron to toggle. Click row to select. Double-click or Enter to activate. Up/Down/Left/Right/Space/Enter for keyboard nav.")
             .text_size(11.0)
             .color(SUBTLE_FG),
-        portal(
-            flex_col((tree.boxed(),))
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(0.px())
-                .padding(8.0),
-        ),
+        // Scrolling lives inside `tree_view().build()` now (it wraps the
+        // content in `scroll_focus`, which is a portal that auto-scrolls
+        // to the selected row).
+        flex_col((tree.boxed(),))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .gap(0.px())
+            .padding(8.0),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
@@ -101,6 +129,15 @@ fn default_handler(model: &mut AppModel, id: &String, action: TreeAction) {
             model.select_tree_node(id.clone());
             model.tree_activated = Some(id.clone());
         }
+        TreeAction::StartEdit => model.start_editing_tree_node(id),
+        TreeAction::CommitEdit(text) => {
+            // Only commit if we actually have an active edit on this id;
+            // otherwise it's a stray Enter from somewhere else.
+            if model.tree_editing.as_deref() == Some(id.as_str()) {
+                model.rename_tree_node(id, text);
+            }
+        }
+        TreeAction::CancelEdit => model.cancel_editing_tree_node(),
         _ => {}
     }
 }

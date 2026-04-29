@@ -7,15 +7,49 @@
 
 //! `keyboard_focus` — wrap any xilem view in a transparent keyboard handler.
 //!
-//! Captures arrow keys / Home / End / PageUp / PageDown / Enter / Space / F2
-//! and emits semantic [`KeyAction`]s. Does NOT paint, does NOT manage scroll,
-//! does NOT own focus state. Strictly one responsibility: turn key events
-//! into actions.
+//! ## What this is
+//!
+//! A xilem `View` plus a tiny masonry widget (`KeyHandler`) that sits
+//! transparently around a child view. It accepts focus, captures keyboard
+//! events (arrow keys, Home, End, PageUp/PageDown, Enter, Space, F2,
+//! Escape), and emits semantic [`KeyAction`]s — nothing else. It does not
+//! paint, does not manage scroll, does not draw focus rings, does not own
+//! selection state. Hover/selection/focus visualization is the row
+//! builder's responsibility.
+//!
+//! ## Why this exists (xilem upstream gap)
+//!
+//! There is no stock xilem view that captures global keyboard events on
+//! behalf of an arbitrary child without simultaneously owning paint,
+//! layout, and focus visualization (for example
+//! [`xilem::view::sized_box`] is transparent but ignores keys; the
+//! built-in interactive views like `text_input` or `button` consume keys
+//! they think are theirs). Tree-style navigation (Up/Down/Left/Right
+//! across a flex_col of rows) needs *outer* keyboard capture: the rows
+//! stay clickable and stylable independently. We therefore implement the
+//! masonry `Widget` trait directly so we can override `on_text_event` and
+//! emit our own action type, while still forwarding layout/paint/measure
+//! to the child unchanged.
+//!
+//! ## Smallest upstream change that would let us delete this file
+//!
+//! A xilem helper view of the shape
+//! `keys(child).on_key(|state, key_event| Action)` — i.e. a transparent
+//! wrapper that exposes a callback for `TextEvent::Keyboard` events
+//! addressed to either the wrapper or any descendant — would replace this
+//! file with one expression. Equivalently, masonry could expose a
+//! "key listener" widget that does the same. As long as the wrapper is
+//! type-preserving (so child rebuilds work), the precise API shape does
+//! not matter. See the proposal section in
+//! `~/.claude/plans/inherited-fluttering-wolf.md`.
+//!
+//! ## Implementation note
 //!
 //! The masonry widget stores `WidgetPod<dyn Widget>` (same pattern as
 //! masonry's `SizedBox`). The xilem `View` wrapper preserves the inner
-//! view's concrete widget type via `WidgetMut::downcast`, so child rebuilds
-//! flow through xilem's normal lifecycle — no `replace_child` workaround.
+//! view's concrete widget type via `WidgetMut::downcast`, so child
+//! rebuilds flow through xilem's normal lifecycle — no `replace_child`
+//! workaround.
 
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -55,6 +89,8 @@ pub enum KeyAction {
     Toggle,
     /// F2 pressed.
     Edit,
+    /// Escape pressed. Used to cancel inline edits.
+    Cancel,
 }
 
 // =============================================================================
@@ -113,6 +149,7 @@ impl Widget for KeyHandler {
             Key::Named(NamedKey::PageDown) => Some(KeyAction::PageDown),
             Key::Named(NamedKey::Enter) => Some(KeyAction::Activate),
             Key::Named(NamedKey::F2) => Some(KeyAction::Edit),
+            Key::Named(NamedKey::Escape) => Some(KeyAction::Cancel),
             Key::Character(c) if c.as_str() == " " => Some(KeyAction::Toggle),
             _ => None,
         };
@@ -131,9 +168,18 @@ impl Widget for KeyHandler {
     ) {
         // Take focus on pointer down inside us, so subsequent keys land here.
         if let xilem::masonry::core::PointerEvent::Down(_) = event {
-            // The container takes focus on click so subsequent arrow keys
-            // route here regardless of which row_button was clicked.
-            ctx.request_focus();
+            // Take focus on click *unless* a focus-aware descendant
+            // already grabbed it (e.g., a `text_input` rendered for inline
+            // rename). `has_focus_target()` returns true if this widget OR
+            // any descendant currently holds focus; in that case we leave
+            // it alone so descendants don't lose focus to us via the
+            // "last request_focus wins" rule. When nothing in our subtree
+            // is focused yet — which is the common case for clicks on the
+            // chevron or row body — we take focus so subsequent arrow
+            // keys route to us.
+            if !ctx.has_focus_target() {
+                ctx.request_focus();
+            }
         }
     }
 

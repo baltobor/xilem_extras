@@ -19,6 +19,7 @@ mod expansion_state;
 mod flatten;
 mod disclosure_row;
 mod keyboard_focus;
+mod scroll_focus;
 mod tree_view;
 mod tree_view_builder;
 
@@ -41,3 +42,4 @@ pub use tree_view_builder::{
 pub use disclosure_row::disclosure_row;
 pub use flatten::{flatten_tree_with_parents, flatten_forest_with_parents, FlattenedNode};
 pub use keyboard_focus::{keyboard_focus, KeyAction, KeyHandler, KeyboardFocus};
+pub use scroll_focus::{scroll_focus, ScrollFocus, DEFAULT_ROW_HEIGHT_HINT};
