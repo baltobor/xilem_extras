@@ -71,8 +71,11 @@ type MenuFn<N, State> =
     dyn Fn(&N) -> Vec<BoxedMenuEntry<State, ()>> + Send + Sync;
 type EditTextSetterFn<State> = dyn Fn(&mut State, String) + Send + Sync;
 
-/// Default selection background — a soft blue that reads on dark + light themes.
-pub const DEFAULT_SELECTED_BG: Color = Color::from_rgba8(60, 80, 110, 220);
+/// Default selection background — a warm dark gray, neutral against the
+/// rest of a typical dark UI. Matches the legacy `tree_group` demo so the
+/// two views are visually consistent out of the box. Override with
+/// [`TreeView::selected_bg`] when you want a brand-coloured highlight.
+pub const DEFAULT_SELECTED_BG: Color = Color::from_rgb8(65, 62, 58);
 /// Default row text color — light gray, legible against `DEFAULT_SELECTED_BG`.
 pub const DEFAULT_TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
 /// Default chevron color — slightly dimmer than text.

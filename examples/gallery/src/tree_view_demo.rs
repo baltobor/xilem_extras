@@ -35,7 +35,8 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
     let tree = tree_view(&model.file_tree, &model.tree_expansion)
         .selection(&model.tree_selection)
         .style(TreeStyle::new().hover_bg(HOVER_BG).indent(18.0))
-        .selected_bg(Color::from_rgba8(80, 110, 60, 220))
+        // Selection background defaults to the same warm gray as the legacy
+        // tree_group demo. Use `.selected_bg(your_color)` to override.
         .text_color(HEADER_FG)
         .text_size(13.0)
         .icon_for(|node: &FileNode| -> Option<Box<AnyWidgetView<AppModel, ()>>> {
