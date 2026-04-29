@@ -138,6 +138,15 @@ pub use tree::{
     DEFAULT_CHEVRON_COLOR,
     flatten_tree,
     flatten_forest,
+    // Tree primitives (used by tree_view internally; exposed for power users)
+    FlattenedNode,
+    flatten_tree_with_parents,
+    flatten_forest_with_parents,
+    disclosure_row,
+    keyboard_focus,
+    KeyAction,
+    KeyHandler,
+    KeyboardFocus,
 };
 
 pub use list::{

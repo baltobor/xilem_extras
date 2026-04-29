@@ -21,7 +21,7 @@ use crate::menu_items::MenuItems;
 use super::ExpansionState;
 
 /// Actions that can occur on tree nodes.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TreeAction {
     /// Expand or collapse (single click on expandable node)
     Toggle,
@@ -31,10 +31,16 @@ pub enum TreeAction {
     DoubleClick,
     /// Right click context menu at the given position
     ContextMenu(Point),
-    /// Start inline editing (triggered by editable menu item like "Rename").
+    /// Start inline editing (triggered by F2 key or context menu).
     /// The handler receives the node_id and should set editing state so the
     /// row_builder can render a text_input instead of a label.
-    Edit,
+    StartEdit,
+    /// Commit inline editing with the new text value.
+    /// Sent when user presses Enter in the edit input.
+    CommitEdit(String),
+    /// Cancel inline editing without saving.
+    /// Sent when user presses Escape in the edit input.
+    CancelEdit,
 }
 
 /// Style configuration for tree rows.
@@ -378,7 +384,7 @@ where
 ///         }
 ///     },
 ///     |state, node_id, action| {
-///         if let TreeAction::Edit = action {
+///         if let TreeAction::StartEdit = action {
 ///             state.editing_id = Some(node_id.clone());
 ///         }
 ///         // ... handle other actions
@@ -814,8 +820,11 @@ mod tests {
         assert_ne!(TreeAction::Toggle, TreeAction::Select);
         assert_ne!(TreeAction::Select, TreeAction::DoubleClick);
         assert_ne!(TreeAction::DoubleClick, TreeAction::ContextMenu(Point::ZERO));
-        assert_eq!(TreeAction::Edit, TreeAction::Edit);
-        assert_ne!(TreeAction::Edit, TreeAction::Select);
+        assert_eq!(TreeAction::StartEdit, TreeAction::StartEdit);
+        assert_ne!(TreeAction::StartEdit, TreeAction::Select);
+        assert_eq!(TreeAction::CommitEdit("test".to_string()), TreeAction::CommitEdit("test".to_string()));
+        assert_ne!(TreeAction::CommitEdit("a".to_string()), TreeAction::CommitEdit("b".to_string()));
+        assert_eq!(TreeAction::CancelEdit, TreeAction::CancelEdit);
     }
 
     #[test]

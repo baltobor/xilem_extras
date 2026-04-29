@@ -70,6 +70,9 @@ pub struct AppModel {
     pub file_tree: FileNode,
     pub tree_expansion: ExpansionState<String>,
     pub tree_selection: SingleSelection<String>,
+    /// Last node activated by Enter / double-click, surfaced in the demo
+    /// label so the user can verify Activate is wired up.
+    pub tree_activated: Option<String>,
 
     // List demo state
     pub contacts: Vec<Contact>,
@@ -149,8 +152,9 @@ impl AppModel {
 
             // Tree
             file_tree: mock_data::mock_file_tree(),
-            tree_expansion: ExpansionState::with_expanded(["src".to_string()]),
+            tree_expansion: ExpansionState::with_expanded([".".to_string(), "src".to_string()]),
             tree_selection: SingleSelection::new(),
+            tree_activated: None,
 
             // List
             contacts: mock_data::mock_contacts(),

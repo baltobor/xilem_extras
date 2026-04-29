@@ -104,7 +104,7 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         menu_button(
             menu_label("Examples"),
             (
-                menu_item("Tree (low-level)", |model: &mut AppModel| {
+                menu_item("Tree Group (low-level)", |model: &mut AppModel| {
                     model.page = Page::Tree;
                 }),
                 menu_item("Tree View (builder)", |model: &mut AppModel| {
@@ -258,7 +258,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             label("Gallery")
                 .text_size(12.0)
                 .color(TEXT_SECONDARY),
-            nav_button("Tree", Page::Tree, current_page),
+            nav_button("Tree Group", Page::Tree, current_page),
             nav_button("Tree View", Page::TreeView, current_page),
             nav_button("List", Page::List, current_page),
             nav_button("Sectioned List", Page::SectionedList, current_page),

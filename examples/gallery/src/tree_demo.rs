@@ -160,18 +160,24 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
                 TreeAction::ContextMenu(_) => {
                     // Not used with tree_group_with_context_menu
                 }
-                TreeAction::Edit => {
+                TreeAction::StartEdit => {
                     // Inline editing not implemented in this demo
+                }
+                TreeAction::CommitEdit(_) | TreeAction::CancelEdit => {
+                    // Editing actions not used in this demo
                 }
             }
         },
     );
 
     flex_col((
-        label("Tree Demo")
+        label("Tree Group Demo")
             .text_size(15.0)
             .weight(xilem::FontWeight::BOLD)
             .color(TEXT_COLOR),
+        label("Showing how tree_group works.")
+            .text_size(12.0)
+            .color(Color::from_rgb8(160, 156, 150)),              
         label("Right-click items for context menu")
             .text_size(12.0)
             .color(Color::from_rgb8(160, 156, 150)),
