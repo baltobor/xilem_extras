@@ -34,6 +34,13 @@ pub const DEFAULT_INDENT_PER_DEPTH: f64 = 16.0;
 /// - `is_expandable: false` → renders a transparent spacer the same width
 ///   as the chevron so leaf rows align with their expandable siblings.
 ///
+/// `row_background` paints behind the entire row (chevron column + content).
+/// Use `Color::TRANSPARENT` when you don't want a row-wide highlight; the
+/// `tree_view` builder uses this for full-row selection fills. Note that
+/// for the bg to actually span the *full panel width*, the parent
+/// `flex_col` must use [`CrossAxisAlignment::Stretch`] — otherwise the row
+/// is sized to its content and the bg covers only that.
+///
 /// The function returns a `Box<AnyWidgetView<...>>` so callers building a
 /// `Vec` of heterogeneous rows (different content types per node) can collect
 /// them uniformly.
@@ -44,6 +51,7 @@ pub fn disclosure_row<State, Toggle>(
     chevron_color: Color,
     content: Box<AnyWidgetView<State, ()>>,
     on_toggle: Toggle,
+    row_background: Color,
 ) -> Box<AnyWidgetView<State, ()>>
 where
     State: 'static,
@@ -70,5 +78,9 @@ where
             right: 4.0,
         });
 
-    Box::new(row)
+    if row_background != Color::TRANSPARENT {
+        Box::new(row.background_color(row_background))
+    } else {
+        Box::new(row)
+    }
 }

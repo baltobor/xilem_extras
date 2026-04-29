@@ -17,8 +17,8 @@ use xilem::style::Style;
 use xilem::view::{flex_col, label, CrossAxisAlignment};
 use xilem::{AnyWidgetView, WidgetView};
 use xilem_extras::{
-    ferris, menu_item, rust_gear, separator, svg_icon, tree_view, BoxedMenuEntry, Identifiable,
-    MenuItems, TreeAction, TreeStyle,
+    ferris, menu_item, rust_gear, separator, svg_icon, tree_view, BoxedMenuEntry, HighlightFill,
+    Identifiable, MenuItems, TreeAction, TreeStyle,
 };
 use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
@@ -37,6 +37,9 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
         .style(TreeStyle::new().hover_bg(HOVER_BG).indent(18.0))
         // Selection background defaults to the same warm gray as the legacy
         // tree_group demo. Use `.selected_bg(your_color)` to override.
+        // Switch this to `HighlightFill::Item` to highlight only the
+        // icon + label box instead of the whole row.
+        .highlight_fill(HighlightFill::Row)
         .text_color(HEADER_FG)
         .text_size(13.0)
         .icon_for(|node: &FileNode| -> Option<Box<AnyWidgetView<AppModel, ()>>> {

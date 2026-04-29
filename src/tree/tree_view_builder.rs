@@ -83,6 +83,24 @@ pub const DEFAULT_CHEVRON_COLOR: Color = Color::from_rgb8(180, 178, 172);
 /// How many rows PageUp / PageDown moves at a time.
 const PAGE_SIZE: usize = 10;
 
+/// How wide the selection / hover highlight should be.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HighlightFill {
+    /// (Default.) The highlight covers only the icon + label box. The
+    /// chevron column and the empty space to the right of the label stay
+    /// in the parent's background color. Reads as a tighter, content-y
+    /// kind of selection — often the right call for a sidebar tree where
+    /// the panel itself has a meaningful fill.
+    #[default]
+    Item,
+    /// The highlight covers the entire row width — chevron column,
+    /// content, and any empty space out to the right edge of the
+    /// scrollable area. Matches the legacy `tree_group` look and most
+    /// macOS / GNOME file managers. Pick this when the tree is the
+    /// dominant surface of its pane.
+    Row,
+}
+
 #[must_use = "TreeView builders do nothing until you call .build()"]
 pub struct TreeView<'a, N, State, Sel = ()>
 where
@@ -112,6 +130,9 @@ where
     editing_text: &'a str,
     /// Callback to update the edit buffer on every keystroke.
     editing_text_setter: Option<Arc<EditTextSetterFn<State>>>,
+    /// Whether the selection / hover highlight covers only the row content
+    /// or the full row width.
+    highlight_fill: HighlightFill,
     _phantom: std::marker::PhantomData<fn(&mut State)>,
 }
 
@@ -146,6 +167,7 @@ where
         editing: None,
         editing_text: "",
         editing_text_setter: None,
+        highlight_fill: HighlightFill::Item,
         _phantom: std::marker::PhantomData,
     }
 }
@@ -176,6 +198,7 @@ where
             editing: self.editing,
             editing_text: self.editing_text,
             editing_text_setter: self.editing_text_setter,
+            highlight_fill: self.highlight_fill,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -292,6 +315,19 @@ where
         self.editing_text_setter = Some(Arc::new(on_text_changed));
         self
     }
+
+    /// Choose how wide the selection / hover highlight should be — full
+    /// row width ([`HighlightFill::Row`], like macOS Finder or the legacy
+    /// `tree_group` demo) or just the icon + label box
+    /// ([`HighlightFill::Item`], the default).
+    ///
+    /// In `Row` mode the rows stretch to the cross-axis size of the
+    /// surrounding `flex_col`, so the highlight reaches the right edge of
+    /// the scroll area; in `Item` mode rows stay content-sized.
+    pub fn highlight_fill(mut self, fill: HighlightFill) -> Self {
+        self.highlight_fill = fill;
+        self
+    }
 }
 
 impl<'a, N, State, Sel> TreeView<'a, N, State, Sel>
@@ -319,9 +355,14 @@ where
         // that dispatches Select / DoubleClick / ContextMenu.
         let rows = self.build_rows(&flat_nodes, selected_index);
 
-        let content = flex_col(rows)
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(0.px());
+        // `Row` highlight mode requires rows to stretch to the column's
+        // cross-axis (width) so the selection bg can reach the right edge
+        // of the scrollable area. `Item` mode keeps rows content-sized.
+        let cross = match self.highlight_fill {
+            HighlightFill::Row => CrossAxisAlignment::Stretch,
+            HighlightFill::Item => CrossAxisAlignment::Start,
+        };
+        let content = flex_col(rows).cross_axis_alignment(cross).gap(0.px());
 
         // Capture state needed by the keyboard handler.
         let user_handler = self.handler.clone();
@@ -470,17 +511,20 @@ where
                 }
             });
 
-            // Selection background: applied to the ROW (chevron + body) so the
-            // highlight covers the whole line, not just the body.
-            let body_styled: Box<AnyWidgetView<State, ()>> = if is_selected {
-                Box::new(body_clickable.background_color(selected_bg))
-            } else if hover_bg != Color::TRANSPARENT {
-                // Hover bg comes from style.hover_bg — applied unconditionally;
-                // xilem's row_button paints hover internally.
-                Box::new(body_clickable)
-            } else {
-                Box::new(body_clickable)
-            };
+            // Selection background painted around the icon + label only.
+            // In `HighlightFill::Row` mode we skip this and paint the
+            // selection on the *whole* row from `disclosure_row` instead
+            // (see the `row_background` argument below).
+            let body_styled: Box<AnyWidgetView<State, ()>> =
+                if is_selected && self.highlight_fill == HighlightFill::Item {
+                    Box::new(body_clickable.background_color(selected_bg))
+                } else if hover_bg != Color::TRANSPARENT {
+                    // Hover bg comes from style.hover_bg — applied unconditionally;
+                    // xilem's row_button paints hover internally.
+                    Box::new(body_clickable)
+                } else {
+                    Box::new(body_clickable)
+                };
 
             // Wrap the body in a context_menu when the user provided per-node
             // items. The chevron is intentionally outside this wrapper so a
@@ -503,6 +547,15 @@ where
             }
         };
 
+        // In `Row` highlight mode the selection background is painted on
+        // the entire row (chevron + content + trailing space). In `Item`
+        // mode it's already on body_styled above; pass TRANSPARENT here.
+        let row_bg = if is_selected && self.highlight_fill == HighlightFill::Row {
+            selected_bg
+        } else {
+            Color::TRANSPARENT
+        };
+
         // Indent + chevron (toggle button) + clickable body (with optional menu).
         disclosure_row(
             depth,
@@ -511,6 +564,7 @@ where
             chevron_color,
             body_with_menu,
             on_toggle,
+            row_bg,
         )
     }
 }

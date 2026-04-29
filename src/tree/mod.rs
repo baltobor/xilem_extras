@@ -35,7 +35,8 @@ pub use tree_view::{
 
 // Canonical tree view.
 pub use tree_view_builder::{
-    tree_view, TreeView, DEFAULT_SELECTED_BG, DEFAULT_TEXT_COLOR, DEFAULT_CHEVRON_COLOR,
+    tree_view, HighlightFill, TreeView, DEFAULT_SELECTED_BG, DEFAULT_TEXT_COLOR,
+    DEFAULT_CHEVRON_COLOR,
 };
 
 // Primitives — exposed for power users building custom tree-like views.
