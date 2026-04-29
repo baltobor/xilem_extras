@@ -17,7 +17,8 @@ use xilem::style::Style;
 use xilem::view::{flex_col, label, CrossAxisAlignment};
 use xilem::{AnyWidgetView, WidgetView};
 use xilem_extras::{
-    menu_item, separator, tree_view, BoxedMenuEntry, Identifiable, MenuItems, TreeAction, TreeStyle,
+    ferris, menu_item, rust_gear, separator, svg_icon, tree_view, BoxedMenuEntry, Identifiable,
+    MenuItems, TreeAction, TreeStyle,
 };
 use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
@@ -28,6 +29,7 @@ const HEADER_FG: Color = Color::from_rgb8(220, 218, 214);
 const SUBTLE_FG: Color = Color::from_rgb8(160, 156, 150);
 const HOVER_BG: Color = Color::from_rgb8(55, 53, 50);
 const FOLDER_FG: Color = Color::from_rgb8(220, 180, 80);
+const RUST_FG: Color = Color::from_rgb8(247, 76, 0);
 
 pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_> {
     let tree = tree_view(&model.file_tree, &model.tree_expansion)
@@ -37,17 +39,28 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
         .text_color(HEADER_FG)
         .text_size(13.0)
         .icon_for(|node: &FileNode| -> Option<Box<AnyWidgetView<AppModel, ()>>> {
-            let (icon, color) = if node.is_dir {
-                (icons::FOLDER, FOLDER_FG)
+            // Pick the right icon per node type. Same set as the legacy
+            // tree_group demo: Ferris for Cargo.toml, the Rust gear for
+            // any `.rs` file, the Material folder/document glyph otherwise.
+            if node.is_dir {
+                Some(Box::new(
+                    label(icons::FOLDER)
+                        .font(FONT_FAMILY)
+                        .text_size(ICON_SIZE_SM)
+                        .color(FOLDER_FG),
+                ))
+            } else if node.name == "Cargo.toml" {
+                Some(Box::new(svg_icon(ferris().size(13.0).color(RUST_FG))))
+            } else if node.name.ends_with(".rs") {
+                Some(Box::new(svg_icon(rust_gear().size(13.0).color(RUST_FG))))
             } else {
-                (icons::DESCRIPTION, HEADER_FG)
-            };
-            Some(Box::new(
-                label(icon)
-                    .font(FONT_FAMILY)
-                    .text_size(ICON_SIZE_SM)
-                    .color(color),
-            ))
+                Some(Box::new(
+                    label(icons::DESCRIPTION)
+                        .font(FONT_FAMILY)
+                        .text_size(ICON_SIZE_SM)
+                        .color(HEADER_FG),
+                ))
+            }
         })
         .label_for(|n: &FileNode| {
             if n.is_dir {
