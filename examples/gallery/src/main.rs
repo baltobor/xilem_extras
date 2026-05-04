@@ -25,6 +25,7 @@ mod app_menu_demo;
 mod calendar_demo;
 mod widgets_demo;
 mod chart_demo;
+mod progress_demo;
 mod stock_chart_demo;
 
 use masonry::layout::AsUnit;
@@ -271,6 +272,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             nav_button("Widgets", Page::Widgets, current_page),
             nav_button("Chart", Page::Chart, current_page),
             nav_button("Stock Chart", Page::StockChart, current_page),
+            nav_button("Progress", Page::Progress, current_page),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(4.px())
@@ -292,6 +294,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             Page::Widgets => widgets_demo::widgets_demo(model).boxed(),
             Page::Chart => chart_demo::chart_demo(model).boxed(),
             Page::StockChart => stock_chart_demo::stock_chart_demo(model).boxed(),
+            Page::Progress => progress_demo::progress_demo(model).boxed(),
         },
     )
     .split_point_from_start(160.px())

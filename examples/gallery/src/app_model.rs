@@ -59,6 +59,7 @@ pub enum Page {
     Widgets,
     Chart,
     StockChart,
+    Progress,
 }
 
 /// Application state.

@@ -64,6 +64,7 @@ pub mod calendar_picker;
 pub mod time_picker;
 pub mod locale;
 pub mod chart;
+pub mod progress;
 pub mod stock_chart;
 
 pub use traits::{
@@ -320,6 +321,18 @@ pub use chart::{
     ChartWidget,
     ChartAction,
     ChartMode,
+};
+
+pub use progress::{
+    progress_bar,
+    round_progress,
+    ProgressBarView,
+    ProgressBarWidget,
+    ProgressOrientation,
+    ProgressStyle,
+    RoundProgressSize,
+    RoundProgressView,
+    RoundProgressWidget,
 };
 
 pub use xilem;
