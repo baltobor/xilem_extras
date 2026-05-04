@@ -5543,7 +5543,7 @@ dependencies = [
 
 [[package]]
 name = "xilem_extras"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "chrono",
  "dark-light",

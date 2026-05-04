@@ -76,7 +76,7 @@ fn group_a() -> impl WidgetView<AppModel> + 'static {
             .weight(xilem::FontWeight::BOLD)
             .color(TEXT_COLOR),
         label(
-            "Three render styles. All use linear scaling — no log/dB transform."
+            "Three render styles. All use linear scaling."
                 .to_string(),
         )
         .text_size(11.0)
