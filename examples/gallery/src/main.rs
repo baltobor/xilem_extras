@@ -65,6 +65,7 @@ use xilem_extras::app_menu::muda::{Menu, MenuItem, MenuEvent, PredefinedMenuItem
 #[cfg(not(target_os = "linux"))]
 use std::sync::{mpsc, Arc, Mutex};
 
+// Some styling
 const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
 const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
 const BG_NAV: Color = Color::from_rgb8(45, 43, 40);
@@ -81,6 +82,8 @@ const MENU_TEXT_SIZE: f32 = (DEFAULT_ITEM_HEIGHT * 0.43) as f32;
 const MENU_PADDING_V: f64 = (DEFAULT_ITEM_HEIGHT - MENU_TEXT_SIZE as f64) / 2.0;
 #[cfg(target_os = "linux")]
 const MENU_PADDING_H: f64 = 10.0;
+
+// MARK: - Menu builder
 
 /// Build the application menu bar using xilem_extras menu_button.
 /// This is the fallback for Linux only.
@@ -240,6 +243,7 @@ fn modal_content() -> impl WidgetView<AppModel> {
     .gap(8.0_f64.px())
 }
 
+// --- MARK: App view 
 fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     // Poll and process native menu commands (macOS/Windows)
     #[cfg(not(target_os = "linux"))]
@@ -453,6 +457,9 @@ fn build_native_menu() -> Menu {
     menu
 }
 
+
+// --- MARK: GalleryApp
+
 /// Application wrapper for external event loop with muda integration
 struct GalleryApp {
     masonry_state: MasonryState<'static>,
@@ -580,6 +587,8 @@ fn gallery_window_logic(model: &mut AppModel) -> impl Iterator<Item = WindowView
     std::iter::once(main_window)
 }
 
+// --- MARK: Application entry point
+
 fn main() {
     // Build event loop - disable winit's default menu on macOS so muda owns it
     let mut event_loop_builder = EventLoop::with_user_event();
@@ -631,6 +640,8 @@ fn main() {
         windows,
         default_property_set(),
     );
+
+
 
     // Create and run the app
     let mut app = GalleryApp {

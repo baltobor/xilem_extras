@@ -54,10 +54,10 @@ use crate::traits::{Identifiable, SelectionState, TreeNode};
 use xilem::masonry::core::PointerButton;
 
 use super::disclosure_row::disclosure_row;
-use super::flatten::{flatten_forest_with_parents, FlattenedNode};
+use super::flatten::{flatten_forest_collecting, FlattenedNode};
 use super::keyboard_focus::{keyboard_focus, KeyAction};
 use super::scroll_focus::{scroll_focus, DEFAULT_ROW_HEIGHT_HINT};
-use super::tree_view::{TreeAction, TreeStyle};
+use super::types::{TreeAction, TreeStyle};
 use super::ExpansionState;
 
 // Trait-object aliases used by the builder. Storing user-supplied closures
@@ -368,22 +368,33 @@ where
 {
     /// Build the configured tree as a Xilem view with full keyboard navigation.
     pub fn build(self) -> impl WidgetView<State, ()> + use<'a, N, State, Sel> {
-        // Flatten the forest once. The result is captured both by the row-builder
-        // pass (for ordered iteration) and by the keyboard handler closure
-        // (for navigation lookups). A single-root tree (the `tree_view`
-        // constructor) lands here as a 1-element slice.
-        let mut flat_nodes: Vec<FlattenedNode<N::Id>> = Vec::new();
-        flatten_forest_with_parents(self.roots, self.expansion, &mut flat_nodes);
+        // Single tree walk produces parallel `node_refs` and `flat_nodes`
+        // (indices align). `node_refs` feeds the row-build loop here;
+        // `flat_nodes` is moved into the keyboard-handler closure where it
+        // is consulted by id/depth/parent_index for navigation lookups.
+        let (node_refs, flat_nodes) = flatten_forest_collecting(self.roots, self.expansion);
 
         // Compute selected index from current SelectionState.
         let selected_index = self
             .selection
             .and_then(|sel| flat_nodes.iter().position(|n| sel.is_selected(&n.id)));
 
-        // Build all visible rows recursively. Each chevron is a button that
-        // dispatches TreeAction::Toggle; each row body is a row_button_with_press
-        // that dispatches Select / DoubleClick / ContextMenu.
-        let rows = self.build_rows(&flat_nodes, selected_index);
+        // Build all visible rows in flat order. Each chevron is a button
+        // that dispatches TreeAction::Toggle; each row body is a
+        // row_button_with_press that dispatches Select / DoubleClick /
+        // ContextMenu.
+        let mut rows: Vec<Box<AnyWidgetView<State, ()>>> = Vec::with_capacity(node_refs.len());
+        for (i, node) in node_refs.into_iter().enumerate() {
+            let flat = &flat_nodes[i];
+            let is_selected = selected_index == Some(i);
+            rows.push(self.build_single_row(
+                node,
+                flat.depth,
+                flat.is_expanded,
+                flat.is_expandable,
+                is_selected,
+            ));
+        }
 
         // `Row` highlight mode requires rows to stretch to the column's
         // cross-axis (width) so the selection bg can reach the right edge
@@ -411,51 +422,6 @@ where
         // row on screen.
         let target_y = selected_index.map(|i| i as f64 * DEFAULT_ROW_HEIGHT_HINT);
         scroll_focus(key_layer, target_y, DEFAULT_ROW_HEIGHT_HINT)
-    }
-
-    fn build_rows(
-        &self,
-        flat_nodes: &[FlattenedNode<N::Id>],
-        selected_index: Option<usize>,
-    ) -> Vec<Box<AnyWidgetView<State, ()>>> {
-        let mut rows: Vec<Box<AnyWidgetView<State, ()>>> = Vec::with_capacity(flat_nodes.len());
-        // Iterate every root in document order so the recursion order
-        // matches what `flatten_forest_with_parents` produced. Each
-        // root starts a fresh subtree at depth 0.
-        for root in self.roots {
-            self.build_rows_recursive(root, &mut rows, flat_nodes, selected_index);
-        }
-        rows
-    }
-
-    fn build_rows_recursive(
-        &self,
-        node: &N,
-        rows: &mut Vec<Box<AnyWidgetView<State, ()>>>,
-        flat_nodes: &[FlattenedNode<N::Id>],
-        selected_index: Option<usize>,
-    ) {
-        let row_index = rows.len();
-        let Some(flat) = flat_nodes.get(row_index) else { return; };
-        let node_id = node.id();
-
-        // The recursion order MUST match the flatten order; this assertion
-        // catches the case where a `TreeNode` impl changes children between
-        // flatten and row-build calls.
-        debug_assert!(flat.id == node_id, "tree iteration order diverged from flatten order");
-
-        let depth = flat.depth;
-        let is_expanded = flat.is_expanded;
-        let is_expandable = flat.is_expandable;
-        let is_selected = selected_index == Some(row_index);
-
-        rows.push(self.build_single_row(node, depth, is_expanded, is_expandable, is_selected));
-
-        if is_expanded {
-            for child in node.children() {
-                self.build_rows_recursive(child, rows, flat_nodes, selected_index);
-            }
-        }
     }
 
     fn build_single_row(
@@ -594,6 +560,8 @@ where
         // Indent + chevron (toggle button) + clickable body (with optional menu).
         disclosure_row(
             depth,
+            self.style.indent,
+            self.style.chevron_col_width,
             is_expanded,
             is_expandable,
             chevron_color,
@@ -706,6 +674,8 @@ fn handle_key<State, Id>(
         }
     }
 }
+
+// --- MARK: TESTS
 
 #[cfg(test)]
 mod tests {

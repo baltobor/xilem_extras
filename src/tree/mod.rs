@@ -22,15 +22,21 @@ mod keyboard_focus;
 mod scroll_focus;
 mod tree_view;
 mod tree_view_builder;
+mod types;
 
 pub use expansion_state::ExpansionState;
+
+// Shared value types used by both the canonical builder and the legacy
+// `tree_group` family. Lives in its own module so the legacy file stays a
+// self-contained delete-target.
+pub use types::{TreeAction, TreeStyle};
 
 // Legacy: tree_group family (no keyboard navigation).
 pub use tree_view::{
     tree, tree_group, tree_group_styled, tree_group_with_context_menu,
     tree_group_with_context_menu_editable,
     tree_forest, tree_forest_styled, tree_forest_with_context_menu,
-    TreeAction, TreeStyle, flatten_tree, flatten_forest,
+    flatten_tree, flatten_forest,
 };
 
 // Canonical tree view. `tree_view` is the single-root constructor;

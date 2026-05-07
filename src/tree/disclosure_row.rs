@@ -18,21 +18,37 @@ use masonry::layout::AsUnit;
 use masonry::properties::Padding;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_row, label, CrossAxisAlignment};
+use xilem::view::{flex_row, label, sized_box, CrossAxisAlignment};
 use xilem::AnyWidgetView;
 
 use crate::components::{disclosure, row_button};
 
-/// One unit of indentation per depth level, in pixels.
-pub const DEFAULT_INDENT_PER_DEPTH: f64 = 16.0;
+/// One unit of indentation per depth level, in pixels. Sized so each
+/// level shifts a child's chevron clear of the parent's icon column —
+/// chevron glyph + 4px gap is roughly 16px, so 20px gives a clearly
+/// visible nesting step rather than children rendering under the
+/// parent's icon.
+pub const DEFAULT_INDENT_PER_DEPTH: f64 = 20.0;
+
+/// Default fixed width of the chevron column, in pixels. Both branches
+/// (expandable: chevron + row_button; leaf: transparent placeholder) are
+/// wrapped in a `sized_box` of this width so a leaf at depth N aligns
+/// horizontally with an expandable sibling at the same depth. Override
+/// per-call by passing a different `chevron_col_width` to `disclosure_row`.
+pub const DEFAULT_CHEVRON_COL_WIDTH: f64 = 16.0;
 
 /// A row with optional chevron + content, indented by depth.
 ///
-/// - `is_expandable: true` → renders a chevron wrapped in a `row_button`
-///   that fires `on_toggle` on primary click. The content is laid out next
-///   to the chevron and is *not* part of the toggle hit area.
-/// - `is_expandable: false` → renders a transparent spacer the same width
-///   as the chevron so leaf rows align with their expandable siblings.
+/// - `is_expandable: true` → the chevron column holds a chevron wrapped in
+///   a `row_button` that fires `on_toggle` on primary click. The content
+///   sits to the right and is *not* part of the toggle hit area.
+/// - `is_expandable: false` → the chevron column holds a transparent
+///   placeholder so leaf rows align with their expandable siblings.
+///
+/// Both branches occupy exactly `chevron_col_width` pixels; pass
+/// [`DEFAULT_CHEVRON_COL_WIDTH`] for a sane default. `indent_per_depth`
+/// scales the left padding linearly with `depth`; pass
+/// [`DEFAULT_INDENT_PER_DEPTH`] for the default.
 ///
 /// `row_background` paints behind the entire row (chevron column + content).
 /// Use `Color::TRANSPARENT` when you don't want a row-wide highlight; the
@@ -46,6 +62,8 @@ pub const DEFAULT_INDENT_PER_DEPTH: f64 = 16.0;
 /// them uniformly.
 pub fn disclosure_row<State, Toggle>(
     depth: usize,
+    indent_per_depth: f64,
+    chevron_col_width: f64,
     is_expanded: bool,
     is_expandable: bool,
     chevron_color: Color,
@@ -59,13 +77,14 @@ where
 {
     let chevron_view: Box<AnyWidgetView<State, ()>> = if is_expandable {
         let glyph = disclosure(is_expanded).color(chevron_color).build();
-        Box::new(row_button(glyph, move |state: &mut State| {
+        let btn = row_button(glyph, move |state: &mut State| {
             on_toggle(state);
-        }))
+        });
+        Box::new(sized_box(btn).width(chevron_col_width.px()))
     } else {
-        // Invisible spacer: two non-breaking spaces matches the chevron glyph's
-        // approximate width at default sizes and keeps labels visually aligned.
-        Box::new(label("\u{00A0}\u{00A0}").color(Color::TRANSPARENT))
+        // Empty label as a transparent stand-in; sized_box pins the column
+        // to the same width as the expandable branch.
+        Box::new(sized_box(label("")).width(chevron_col_width.px()))
     };
 
     let row = flex_row((chevron_view, content))
@@ -74,7 +93,7 @@ where
         .padding(Padding {
             top: 2.0,
             bottom: 2.0,
-            left: depth as f64 * DEFAULT_INDENT_PER_DEPTH,
+            left: depth as f64 * indent_per_depth,
             right: 4.0,
         });
 

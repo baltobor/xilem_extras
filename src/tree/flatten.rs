@@ -70,6 +70,61 @@ pub fn flatten_forest_with_parents<N: TreeNode>(
     }
 }
 
+/// Flatten a forest into parallel `(node_refs, flat_metadata)` vectors in a
+/// single traversal. Used by the canonical `tree_view` builder so it can
+/// drive row construction directly off `node_refs[i]` while feeding the
+/// owned `FlattenedNode<N::Id>` list into the (`'static`) keyboard handler
+/// closure.
+///
+/// Indices in the two vectors align: `node_refs[i]` is the node described
+/// by `flat[i]`. Replaces what was previously two passes — one
+/// [`flatten_forest_with_parents`] call followed by a recursive re-walk of
+/// `roots` to obtain `&N` per row.
+pub(crate) fn flatten_forest_collecting<'a, N: TreeNode>(
+    roots: &'a [N],
+    expansion: &ExpansionState<N::Id>,
+) -> (Vec<&'a N>, Vec<FlattenedNode<N::Id>>)
+where
+    N::Id: Clone,
+{
+    let mut nodes: Vec<&'a N> = Vec::new();
+    let mut flat: Vec<FlattenedNode<N::Id>> = Vec::new();
+    for root in roots {
+        collect_tree(root, expansion, 0, None, &mut nodes, &mut flat);
+    }
+    (nodes, flat)
+}
+
+fn collect_tree<'a, N: TreeNode>(
+    node: &'a N,
+    expansion: &ExpansionState<N::Id>,
+    depth: usize,
+    parent_index: Option<usize>,
+    nodes: &mut Vec<&'a N>,
+    flat: &mut Vec<FlattenedNode<N::Id>>,
+) where
+    N::Id: Clone,
+{
+    let current_index = flat.len();
+    let is_expanded = expansion.is_expanded(&node.id());
+    let is_expandable = node.is_expandable();
+
+    nodes.push(node);
+    flat.push(FlattenedNode {
+        id: node.id(),
+        depth,
+        is_expanded,
+        is_expandable,
+        parent_index,
+    });
+
+    if is_expanded {
+        for child in node.children() {
+            collect_tree(child, expansion, depth + 1, Some(current_index), nodes, flat);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

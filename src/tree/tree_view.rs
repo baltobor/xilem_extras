@@ -6,8 +6,6 @@
 //! (compatible with the Xilem licence).
 
 use masonry::layout::AsUnit;
-use xilem::masonry::kurbo::Point;
-use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::flex_col;
 use xilem::{WidgetView, AnyWidgetView};
@@ -19,75 +17,7 @@ use crate::components::{row_button_with_press, row_button_with_clicks, RowButton
 use crate::context_menu::context_menu;
 use crate::menu_items::MenuItems;
 use super::ExpansionState;
-
-/// Actions that can occur on tree nodes.
-#[derive(Debug, Clone, PartialEq)]
-pub enum TreeAction {
-    /// Expand or collapse (single click on expandable node)
-    Toggle,
-    /// Single click selection (on leaf nodes)
-    Select,
-    /// Double click activation (e.g., open file)
-    DoubleClick,
-    /// Right click context menu at the given position
-    ContextMenu(Point),
-    /// Start inline editing (triggered by F2 key or context menu).
-    /// The handler receives the node_id and should set editing state so the
-    /// row_builder can render a text_input instead of a label.
-    StartEdit,
-    /// Commit inline editing with the new text value.
-    /// Sent when user presses Enter in the edit input.
-    CommitEdit(String),
-    /// Cancel inline editing without saving.
-    /// Sent when user presses Escape in the edit input.
-    CancelEdit,
-}
-
-/// Style configuration for tree rows.
-#[derive(Debug, Clone)]
-pub struct TreeStyle {
-    /// Background color on hover.
-    pub hover_bg: Color,
-    /// Indentation per depth level in pixels.
-    pub indent: f64,
-    /// Gap between rows in pixels.
-    pub gap: f64,
-}
-
-impl Default for TreeStyle {
-    fn default() -> Self {
-        Self {
-            hover_bg: Color::TRANSPARENT,
-            indent: 16.0,
-            gap: 0.0,
-        }
-    }
-}
-
-impl TreeStyle {
-    /// Creates a new TreeStyle with default values.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Sets the hover background color.
-    pub fn hover_bg(mut self, color: Color) -> Self {
-        self.hover_bg = color;
-        self
-    }
-
-    /// Sets the indentation per depth level.
-    pub fn indent(mut self, indent: f64) -> Self {
-        self.indent = indent;
-        self
-    }
-
-    /// Sets the gap between rows.
-    pub fn gap(mut self, gap: f64) -> Self {
-        self.gap = gap;
-        self
-    }
-}
+pub use super::types::{TreeAction, TreeStyle};
 
 /// Collects visible tree nodes into a flat list for rendering.
 pub fn flatten_tree<'a, N: TreeNode>(
@@ -812,38 +742,6 @@ mod tests {
 
         let depths: Vec<_> = result.iter().map(|(_, d, _)| *d).collect();
         assert_eq!(depths, vec![0, 1, 2, 2, 1]);
-    }
-
-    #[test]
-    fn tree_action_equality() {
-        assert_eq!(TreeAction::Toggle, TreeAction::Toggle);
-        assert_ne!(TreeAction::Toggle, TreeAction::Select);
-        assert_ne!(TreeAction::Select, TreeAction::DoubleClick);
-        assert_ne!(TreeAction::DoubleClick, TreeAction::ContextMenu(Point::ZERO));
-        assert_eq!(TreeAction::StartEdit, TreeAction::StartEdit);
-        assert_ne!(TreeAction::StartEdit, TreeAction::Select);
-        assert_eq!(TreeAction::CommitEdit("test".to_string()), TreeAction::CommitEdit("test".to_string()));
-        assert_ne!(TreeAction::CommitEdit("a".to_string()), TreeAction::CommitEdit("b".to_string()));
-        assert_eq!(TreeAction::CancelEdit, TreeAction::CancelEdit);
-    }
-
-    #[test]
-    fn tree_style_default() {
-        let style = TreeStyle::default();
-        assert_eq!(style.hover_bg, Color::TRANSPARENT);
-        assert_eq!(style.indent, 16.0);
-        assert_eq!(style.gap, 0.0);
-    }
-
-    #[test]
-    fn tree_style_builder() {
-        let style = TreeStyle::new()
-            .hover_bg(Color::from_rgb8(50, 50, 50))
-            .indent(20.0)
-            .gap(2.0);
-
-        assert_eq!(style.indent, 20.0);
-        assert_eq!(style.gap, 2.0);
     }
 
     fn create_forest() -> Vec<TestNode> {
