@@ -5,24 +5,44 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-//! Styled Checkbox - Light mode checkbox for xilem
+//! Boolean controls with explicit styling — checkmark, on/off
+//! switch, and radio dot, all sharing the same `(label, value,
+//! on_toggle)` shape.
 //!
-//! Provides a checkbox with explicit light mode styling that works
-//! regardless of system dark/light mode. Uses xilem's property system
-//! to override theme defaults per-widget.
-//!
-//! Note: masonry's checkbox widget doesn't expose a label text color property,
-//! so we use an empty internal label and wrap checkbox + label in a flex_row.
+//! Internally these wrap xilem's own `checkbox`, `switch`, and
+//! `radio_button` views. The `CheckboxStyle` dispatcher lets
+//! callers swap styles without rewriting the surrounding view —
+//! a settings/inspector form can pick "Switch" for some rows and
+//! "Radio" for others without changing the call shape.
 
 use xilem::view::{checkbox, flex_row, label, CrossAxisAlignment};
+
+use super::switch_widget::synth_switch;
+use super::radio_widget::synth_radio;
 use xilem::style::Style;
-use xilem::WidgetView;
+use xilem::{AnyWidgetView, WidgetView};
 use masonry::layout::AsUnit;
 use masonry::peniko::color::{AlphaColor, Srgb};
 use masonry::peniko::Color;
 use masonry::properties::{Background, BorderColor, CheckmarkColor};
 
-/// Light mode checkbox colors
+/// Visual style applied to a boolean control. Lets callers reuse
+/// the same code path while presenting checkmarks, switches, or
+/// radio dots depending on the form's needs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum CheckboxStyle {
+    /// Classic checkbox with a checkmark glyph.
+    #[default]
+    Classic,
+    /// iOS / macOS-style on/off slider switch.
+    Switch,
+    /// Single radio dot (for boolean toggles inside groups that
+    /// otherwise use radio buttons — e.g. macOS-style "inline"
+    /// pickers).
+    Radio,
+}
+
+/// Light mode checkbox colors — applies to the `Classic` style.
 #[derive(Clone, Debug)]
 pub struct CheckboxColors {
     /// Background color (default: white)
@@ -78,27 +98,8 @@ impl CheckboxColors {
     }
 }
 
-/// Creates a styled checkbox with explicit colors that override system theme.
-///
-/// This ensures the checkbox is visible regardless of system dark/light mode.
-/// The label color is properly applied (masonry checkbox doesn't expose this,
-/// so we use an empty internal label + separate label widget).
-///
-/// # Arguments
-/// * `label_text` - Text label next to the checkbox
-/// * `checked` - Current checked state
-/// * `on_toggle` - Callback when checkbox is toggled
-///
-/// # Example
-/// ```ignore
-/// styled_checkbox(
-///     "Enable feature",
-///     model.feature_enabled,
-///     |model: &mut AppModel, checked: bool| {
-///         model.feature_enabled = checked;
-///     }
-/// )
-/// ```
+/// Creates a styled checkbox (classic checkmark) with explicit
+/// colors that override system theme.
 pub fn styled_checkbox<State, Action, F>(
     label_text: impl Into<masonry::core::ArcStr>,
     checked: bool,
@@ -109,42 +110,10 @@ where
     Action: 'static,
     F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
 {
-    let colors = CheckboxColors::default();
-    let label_text: masonry::core::ArcStr = label_text.into();
-
-    // Use empty internal label + separate label widget to control label color
-    flex_row((
-        checkbox("", checked, on_toggle)
-            .prop(Background::Color(colors.background))
-            .prop(BorderColor { color: colors.border })
-            .prop(CheckmarkColor { color: colors.checkmark }),
-        label(label_text).text_size(12.0).color(colors.label),
-    ))
-    .cross_axis_alignment(CrossAxisAlignment::Center)
-    .gap(6.0_f64.px())
+    styled_checkbox_colored(label_text, checked, CheckboxColors::default(), on_toggle)
 }
 
-/// Creates a styled checkbox with custom colors.
-///
-/// The label color is properly applied from the colors parameter.
-///
-/// # Arguments
-/// * `label_text` - Text label next to the checkbox
-/// * `checked` - Current checked state
-/// * `colors` - Custom color scheme
-/// * `on_toggle` - Callback when checkbox is toggled
-///
-/// # Example
-/// ```ignore
-/// styled_checkbox_colored(
-///     "Dark mode option",
-///     model.dark_mode,
-///     CheckboxColors::dark(),
-///     |model: &mut AppModel, checked: bool| {
-///         model.dark_mode = checked;
-///     }
-/// )
-/// ```
+/// Creates a styled checkbox (classic checkmark) with custom colors.
 pub fn styled_checkbox_colored<State, Action, F>(
     label_text: impl Into<masonry::core::ArcStr>,
     checked: bool,
@@ -159,7 +128,6 @@ where
     let label_text: masonry::core::ArcStr = label_text.into();
     let label_color = colors.label;
 
-    // Use empty internal label + separate label widget to control label color
     flex_row((
         checkbox("", checked, on_toggle)
             .prop(Background::Color(colors.background))
@@ -169,4 +137,151 @@ where
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(6.0_f64.px())
+}
+
+/// Labeled on/off switch — same call shape as `styled_checkbox`.
+/// Wraps the synth-style switch with a trailing label.
+///
+/// Defaults to a light label colour suitable for dark themes.
+/// Use [`styled_switch_colored`] to drive the label colour from
+/// the surrounding theme (e.g. flipping with a dark/light mode
+/// toggle).
+pub fn styled_switch<State, Action, F>(
+    label_text: impl Into<masonry::core::ArcStr>,
+    on: bool,
+    on_toggle: F,
+) -> impl WidgetView<State, Action>
+where
+    State: 'static,
+    Action: 'static,
+    F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
+{
+    styled_switch_colored(label_text, on, Color::WHITE, on_toggle)
+}
+
+/// Labeled on/off switch with an explicit label colour. Pair
+/// with the gallery's dark/light mode flag (or any caller-driven
+/// theme) so labels read on either background.
+pub fn styled_switch_colored<State, Action, F>(
+    label_text: impl Into<masonry::core::ArcStr>,
+    on: bool,
+    label_color: Color,
+    on_toggle: F,
+) -> impl WidgetView<State, Action>
+where
+    State: 'static,
+    Action: 'static,
+    F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
+{
+    let label_text: masonry::core::ArcStr = label_text.into();
+    flex_row((
+        synth_switch(on, on_toggle),
+        label(label_text).text_size(12.0).color(label_color),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(6.0_f64.px())
+}
+
+/// Labeled radio button — synth-style capsule + dot, click
+/// toggles. Defaults to a light label colour; see
+/// [`styled_radio_colored`] for theming.
+pub fn styled_radio<State, Action, F>(
+    label_text: impl Into<masonry::core::ArcStr>,
+    checked: bool,
+    on_toggle: F,
+) -> impl WidgetView<State, Action>
+where
+    State: 'static,
+    Action: 'static,
+    F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
+{
+    styled_radio_colored(label_text, checked, Color::WHITE, on_toggle)
+}
+
+/// Labeled radio with an explicit label colour, for callers that
+/// drive their own dark/light theme.
+pub fn styled_radio_colored<State, Action, F>(
+    label_text: impl Into<masonry::core::ArcStr>,
+    checked: bool,
+    label_color: Color,
+    on_toggle: F,
+) -> impl WidgetView<State, Action>
+where
+    State: 'static,
+    Action: 'static,
+    F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
+{
+    let label_text: masonry::core::ArcStr = label_text.into();
+    flex_row((
+        synth_radio(checked, on_toggle),
+        label(label_text).text_size(12.0).color(label_color),
+    ))
+    .cross_axis_alignment(CrossAxisAlignment::Center)
+    .gap(6.0_f64.px())
+}
+
+/// Boolean control with a runtime-selectable visual style.
+///
+/// All three styles share the same `(label, value, on_toggle)`
+/// signature, so callers can swap a row's style without changing
+/// the surrounding code:
+///
+/// ```ignore
+/// use xilem_extras::{styled_check, CheckboxStyle};
+///
+/// styled_check(CheckboxStyle::Switch, "Dark mode", model.dark_mode,
+///     |m: &mut AppModel, v| m.dark_mode = v)
+/// ```
+///
+/// Returns a boxed `AnyWidgetView` because the underlying view
+/// types differ between styles.
+pub fn styled_check<State, Action, F>(
+    style: CheckboxStyle,
+    label_text: impl Into<masonry::core::ArcStr>,
+    checked: bool,
+    on_toggle: F,
+) -> Box<AnyWidgetView<State, Action>>
+where
+    State: 'static,
+    Action: 'static,
+    F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
+{
+    let label_text = label_text.into();
+    match style {
+        CheckboxStyle::Classic => Box::new(styled_checkbox(label_text, checked, on_toggle)),
+        CheckboxStyle::Switch => Box::new(styled_switch(label_text, checked, on_toggle)),
+        CheckboxStyle::Radio => Box::new(styled_radio(label_text, checked, on_toggle)),
+    }
+}
+
+/// `styled_check` with explicit per-style colours so callers can
+/// drive a dark/light theme at the surrounding scope.
+///
+/// `colors` is consumed by `Classic`; the other styles take only
+/// the label colour from it.
+pub fn styled_check_colored<State, Action, F>(
+    style: CheckboxStyle,
+    label_text: impl Into<masonry::core::ArcStr>,
+    checked: bool,
+    colors: CheckboxColors,
+    on_toggle: F,
+) -> Box<AnyWidgetView<State, Action>>
+where
+    State: 'static,
+    Action: 'static,
+    F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
+{
+    let label_text = label_text.into();
+    let label_color = colors.label;
+    match style {
+        CheckboxStyle::Classic => {
+            Box::new(styled_checkbox_colored(label_text, checked, colors, on_toggle))
+        }
+        CheckboxStyle::Switch => {
+            Box::new(styled_switch_colored(label_text, checked, label_color, on_toggle))
+        }
+        CheckboxStyle::Radio => {
+            Box::new(styled_radio_colored(label_text, checked, label_color, on_toggle))
+        }
+    }
 }

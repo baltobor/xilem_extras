@@ -122,9 +122,21 @@ pub struct AppModel {
     // Widgets demo state
     pub widgets_text_light: String,
     pub widgets_text_dark: String,
+    pub widgets_password: String,
     pub widgets_checkbox_1: bool,
     pub widgets_checkbox_2: bool,
+    pub widgets_radio_demo: bool,
     pub widgets_show_sheet: bool,
+
+    // Form demo state (settings-style controls)
+    pub form_play_sounds: bool,
+    pub form_read_receipts: bool,
+    /// 0 = Direct messages, 1 = Mentions, 2 = Anything (radio group).
+    pub form_notify_about: u8,
+    /// Same options as `form_notify_about`, driving the
+    /// param_selector variant of the demo so the two styles can
+    /// be compared side by side.
+    pub form_notify_about_alt: usize,
 
     // Chart demo state (simple bar/line)
     pub chart_mode: usize,  // 0=Bar, 1=Line
@@ -244,9 +256,17 @@ impl AppModel {
             // Widgets
             widgets_text_light: String::new(),
             widgets_text_dark: String::new(),
+            widgets_password: String::new(),
             widgets_checkbox_1: false,
             widgets_checkbox_2: true,
+            widgets_radio_demo: true,
             widgets_show_sheet: false,
+
+            // Form
+            form_play_sounds: true,
+            form_read_receipts: false,
+            form_notify_about: 0,
+            form_notify_about_alt: 0,
 
             // Chart (simple bar/line)
             chart_mode: 0,

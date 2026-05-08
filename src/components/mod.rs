@@ -11,6 +11,10 @@ mod click_interceptor;
 mod clipped;
 mod styled_text_input;
 mod styled_checkbox;
+mod group_box;
+mod switch_widget;
+mod radio_widget;
+mod param_selector;
 pub mod svg_icon;
 
 #[cfg(feature = "rust-logos")]
@@ -25,13 +29,45 @@ pub use styled_text_input::{
     styled_text_input,
     styled_text_input_with_placeholder,
     styled_text_input_colored,
+    styled_secure_text_input,
     TextInputColors,
     StyledTextInput,
 };
 pub use styled_checkbox::{
     styled_checkbox,
     styled_checkbox_colored,
+    styled_switch,
+    styled_switch_colored,
+    styled_radio,
+    styled_radio_colored,
+    styled_check,
+    styled_check_colored,
     CheckboxColors,
+    CheckboxStyle,
+};
+pub use group_box::{
+    group_box,
+    GroupBox,
+    GroupBoxView,
+    inverse_contrast_color,
+};
+pub use switch_widget::{
+    synth_switch,
+    SwitchWidget,
+    SwitchToggled,
+    SynthSwitch,
+};
+pub use radio_widget::{
+    synth_radio,
+    RadioWidget,
+    RadioToggled,
+    SynthRadio,
+};
+pub use param_selector::{
+    param_selector,
+    LabelAlign,
+    ParamSelectorWidget,
+    ParamSelectorView,
 };
 
 #[cfg(feature = "rust-logos")]

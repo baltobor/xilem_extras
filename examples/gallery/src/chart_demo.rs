@@ -8,16 +8,13 @@
 //! Simple bar/line chart demo for the gallery.
 
 use masonry::layout::AsUnit;
-use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{button, checkbox, flex_col, flex_row, label, CrossAxisAlignment, FlexExt};
 use xilem::WidgetView;
 use xilem_extras::chart::{chart, ChartMode};
+use xilem_extras::Theme;
 
 use crate::app_model::AppModel;
-
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
-const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
 
 /// Sample monthly sales data.
 fn sample_monthly_data() -> (Vec<f64>, Vec<String>) {
@@ -66,6 +63,7 @@ fn mode_name(index: usize) -> &'static str {
 }
 
 pub fn chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
+    let theme = Theme::from_dark(model.dark_mode);
     let mode = mode_from_index(model.chart_mode);
     let show_values = model.chart_show_values;
 
@@ -78,10 +76,10 @@ pub fn chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         label("Chart Widget")
             .text_size(18.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label("Simple bar and line charts for data visualization")
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
 
         // Controls row
         flex_row((
@@ -102,7 +100,7 @@ pub fn chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         // Mode indicator
         label(format!("Mode: {}", mode_name(model.chart_mode)))
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
 
         // Charts grid - 3 charts showing different data
         flex_row((
@@ -140,4 +138,5 @@ pub fn chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(12.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }

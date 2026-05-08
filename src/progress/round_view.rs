@@ -18,9 +18,9 @@ use super::widget::ProgressStyle;
 /// Build a determinate round progress widget at the normal size.
 ///
 /// `value` is normalised against `min..max`; clamps out-of-range
-/// values rather than panicking. Switch to a busy / indeterminate
-/// indicator with `.busy()`; switch to the small (text-height)
-/// variant with `.small()`.
+/// values rather than panicking. Switch to the small (text-height)
+/// variant with `.small()`. For an indeterminate "still working"
+/// indicator, see `busy_hex` instead.
 ///
 /// # Example
 ///
@@ -33,9 +33,6 @@ use super::widget::ProgressStyle;
 ///
 /// // Inline indicator next to text.
 /// round_progress(0.66, 0.0, 1.0).small()
-///
-/// // Busy spinner — ignores the value.
-/// round_progress(0.0, 0.0, 1.0).busy()
 /// ```
 pub fn round_progress<State, Action>(
     value: f64,
@@ -49,7 +46,6 @@ pub fn round_progress<State, Action>(
         size: RoundProgressSize::Normal,
         style: ProgressStyle::Tint,
         tint: Color::from_rgb8(0x4A, 0x9E, 0xFF),
-        busy: false,
         reversed: false,
         _phantom: PhantomData,
     }
@@ -63,7 +59,6 @@ pub struct RoundProgressView<State, Action> {
     size: RoundProgressSize,
     style: ProgressStyle,
     tint: Color,
-    busy: bool,
     reversed: bool,
     _phantom: PhantomData<fn(&mut State) -> Action>,
 }
@@ -104,17 +99,9 @@ impl<State, Action> RoundProgressView<State, Action> {
         self
     }
 
-    /// Switch to busy / indeterminate mode. The arc becomes a
-    /// rotating segment; the value is ignored.
-    pub fn busy(mut self) -> Self {
-        self.busy = true;
-        self
-    }
-
     /// Reverse the colour gradient — high values become green,
     /// low values become red. See `progress_bar`'s `.reversed()`
-    /// for full semantics. No-op on `Monochrome` style and on
-    /// busy mode.
+    /// for full semantics. No-op on `Monochrome` style.
     pub fn reversed(mut self) -> Self {
         self.reversed = true;
         self
@@ -135,7 +122,6 @@ where
         let w = RoundProgressWidget::new(self.value, self.min, self.max, self.size)
             .with_style(self.style)
             .with_tint(self.tint)
-            .with_busy(self.busy)
             .with_reversed(self.reversed);
         let pod = ctx.with_action_widget(|ctx| ctx.create_pod(w));
         (pod, ())
@@ -163,9 +149,6 @@ where
         }
         if prev.size != self.size {
             RoundProgressWidget::set_size(&mut element, self.size);
-        }
-        if prev.busy != self.busy {
-            RoundProgressWidget::set_busy(&mut element, self.busy);
         }
         if prev.reversed != self.reversed {
             RoundProgressWidget::set_reversed(&mut element, self.reversed);

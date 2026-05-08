@@ -14,18 +14,14 @@ use xilem::view::{flex_col, flex_row, label, button};
 use xilem::WidgetView;
 
 use xilem_extras::{
-    SelectionState, SortOrder, SortDirection,
+    SelectionState, SortOrder, SortDirection, Theme,
     table, table_cell, TableAction,
 };
 
 use crate::app_model::AppModel;
 
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
-const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
-const BG_SELECTED: Color = Color::from_rgb8(65, 62, 58);
-const BG_STRIPE: Color = Color::from_rgb8(38, 36, 34);
-
 pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
+    let theme = Theme::from_dark(model.dark_mode);
     let row_count = model.virtual_cyclists.len();
     let selection_count = model.virtual_table_selection.count();
 
@@ -46,13 +42,13 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
         &model.virtual_table_selection,
         &model.virtual_table_sort,
         // Row builder: (state, idx, is_selected, is_striped, column_widths) -> RowView
-        |state: &mut AppModel, idx: usize, is_selected: bool, is_striped: bool, widths: &[f64]| {
+        move |state: &mut AppModel, idx: usize, is_selected: bool, is_striped: bool, widths: &[f64]| {
             let cyclist = &state.virtual_cyclists[idx];
 
             let row_bg = if is_selected {
-                BG_SELECTED
+                theme.active_bg()
             } else if is_striped {
-                BG_STRIPE
+                theme.section_bg()
             } else {
                 Color::TRANSPARENT
             };
@@ -63,12 +59,13 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
             let w2 = widths.get(2).copied().unwrap_or(100.0);
             let w3 = widths.get(3).copied().unwrap_or(60.0);
 
+            let txt = theme.text();
             // Build row with clipped cells to prevent text overflow
             flex_row((
-                table_cell(label(cyclist.name.clone()).text_size(13.0).color(TEXT_COLOR).padding(4.0), w0),
-                table_cell(label(cyclist.route.clone()).text_size(13.0).color(TEXT_COLOR).padding(4.0), w1),
-                table_cell(label(format!("{:.1} km", cyclist.distance_km)).text_size(13.0).color(TEXT_COLOR).padding(4.0), w2),
-                table_cell(label(format!("{}/10", cyclist.joy_level)).text_size(13.0).color(TEXT_COLOR).padding(4.0), w3),
+                table_cell(label(cyclist.name.clone()).text_size(13.0).color(txt).padding(4.0), w0),
+                table_cell(label(cyclist.route.clone()).text_size(13.0).color(txt).padding(4.0), w1),
+                table_cell(label(format!("{:.1} km", cyclist.distance_km)).text_size(13.0).color(txt).padding(4.0), w2),
+                table_cell(label(format!("{}/10", cyclist.joy_level)).text_size(13.0).color(txt).padding(4.0), w3),
             ))
             .gap(2.px())
             .background_color(row_bg)
@@ -99,10 +96,10 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
         label("Virtual Table Demo")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label(format!("{} rows - only visible rows are rendered", row_count))
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
 
         // The virtualized table
         table,
@@ -120,11 +117,11 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
                     }
                 ))
                 .text_size(12.0)
-                .color(TEXT_SECONDARY),
+                .color(theme.text_secondary()),
 
                 label(format!("Selected: {} cyclists", selection_count))
                     .text_size(12.0)
-                    .color(TEXT_SECONDARY),
+                    .color(theme.text_secondary()),
             ))
             .gap(16.px()),
         ))
@@ -140,4 +137,5 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
     ))
     .gap(8.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }

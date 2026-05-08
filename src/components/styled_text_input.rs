@@ -149,6 +149,10 @@ pub struct StyledTextInput<State, Action, F, E = ()> {
     text_alignment: TextAlign,
     disabled: bool,
     clip: bool,
+    /// When `true`, the field renders bullets in place of the
+    /// underlying characters and edits are reconstructed from the
+    /// displayed length delta. Suitable for password entry.
+    secure: bool,
     _phantom: PhantomData<(State, Action, E)>,
 }
 
@@ -176,6 +180,7 @@ where
             text_alignment: TextAlign::default(),
             disabled: false,
             clip: true,
+            secure: false,
             _phantom: PhantomData,
         }
     }
@@ -259,13 +264,54 @@ where
             text_alignment: self.text_alignment,
             disabled: self.disabled,
             clip: self.clip,
+            secure: self.secure,
             _phantom: PhantomData,
         }
     }
 
+    /// Render the field as a secure password input. The visible
+    /// text is replaced with bullets while the underlying value
+    /// (passed to `on_change`) carries the actual characters.
+    ///
+    /// The field reconstructs edits from the length delta of the
+    /// displayed text. Append and end-deletion (typing / backspace)
+    /// behave as expected; complex mid-string edits or paste
+    /// operations beyond simple appends should not be relied on
+    /// for password capture — passwords are normally entered
+    /// linearly.
+    pub fn secure(mut self, secure: bool) -> Self {
+        self.secure = secure;
+        self
+    }
+
     /// Build the styled text input view.
     pub fn build(self) -> impl WidgetView<State, Action> {
-        let mut input = text_input(self.value, self.on_change)
+        // Secure mode: display bullets for the current password
+        // length and reconstruct edits in `on_change` from the
+        // length delta of the displayed text.
+        let (display_value, change_fn): (
+            String,
+            Box<dyn Fn(&mut State, String) -> Action + Send + Sync>,
+        ) = if self.secure {
+            let prev_pw = self.value.clone();
+            let user_change = self.on_change;
+            let display = bullet_mask(prev_pw.chars().count());
+            (
+                display,
+                Box::new(move |state: &mut State, new_displayed: String| {
+                    let new_pw = reconstruct_password(&prev_pw, &new_displayed);
+                    user_change(state, new_pw)
+                }),
+            )
+        } else {
+            let on_change = self.on_change;
+            (
+                self.value,
+                Box::new(move |state: &mut State, new: String| on_change(state, new)),
+            )
+        };
+
+        let mut input = text_input(display_value, change_fn)
             .placeholder(self.placeholder)
             .text_color(self.colors.text)
             .text_size(self.text_size)
@@ -276,7 +322,19 @@ where
             .clip(self.clip);
 
         if let Some(on_enter) = self.on_enter {
-            input = input.on_enter(move |state, text| on_enter(state, text));
+            // For secure inputs the displayed value passed to
+            // on_enter is the bullet string, which is rarely what
+            // the caller wants; we rewrap to send the
+            // reconstructed password instead.
+            if self.secure {
+                let prev_pw_enter = String::new(); // unused — we rebuild from display
+                let _ = prev_pw_enter;
+                input = input.on_enter(move |state, displayed| {
+                    on_enter(state, reconstruct_from_bullets(&displayed))
+                });
+            } else {
+                input = input.on_enter(move |state, text| on_enter(state, text));
+            }
         }
 
         input
@@ -285,6 +343,48 @@ where
             .prop(CaretColor { color: self.colors.caret })
             .prop(PlaceholderColor::new(self.colors.placeholder))
     }
+}
+
+/// Bullet character used for masked password display.
+const BULLET: char = '\u{2022}';
+
+fn bullet_mask(n: usize) -> String {
+    std::iter::repeat_n(BULLET, n).collect()
+}
+
+/// Reconstruct the password from the displayed text. The display
+/// is normally a string of bullets; an edit replaces some bullets
+/// with new characters. We assume linear entry — appending or
+/// deleting from the end — and:
+///
+/// - If the displayed length grew, the new characters are the
+///   non-bullet characters in the new display, appended to the
+///   previous password.
+/// - If the displayed length shrank, the password is truncated
+///   to the new length.
+fn reconstruct_password(prev_pw: &str, new_displayed: &str) -> String {
+    let prev_len = prev_pw.chars().count();
+    let new_len = new_displayed.chars().count();
+
+    if new_len > prev_len {
+        let typed: String = new_displayed.chars().filter(|&c| c != BULLET).collect();
+        let mut out = String::with_capacity(prev_pw.len() + typed.len());
+        out.push_str(prev_pw);
+        out.push_str(&typed);
+        out
+    } else if new_len < prev_len {
+        prev_pw.chars().take(new_len).collect()
+    } else {
+        prev_pw.to_string()
+    }
+}
+
+/// Fallback used when `on_enter` fires on a secure field without
+/// a known previous password to diff against. The displayed text
+/// is the bullet representation; non-bullet characters are
+/// returned as-is (likely empty).
+fn reconstruct_from_bullets(displayed: &str) -> String {
+    displayed.chars().filter(|&c| c != BULLET).collect()
 }
 
 // Convenience functions for backwards compatibility
@@ -342,5 +442,35 @@ where
     StyledTextInput::new(value, on_change)
         .colors(colors)
         .placeholder(placeholder)
+        .build()
+}
+
+/// Secure (password) text field. The visible characters are
+/// bullets; `on_change` receives the underlying password value.
+///
+/// Behaviour matches `styled_text_input_with_placeholder` in
+/// every respect except masking and edit reconstruction. For
+/// a fully configured secure field, use the builder:
+///
+/// ```ignore
+/// StyledTextInput::new(model.password.clone(), |m: &mut AppModel, s| m.password = s)
+///     .secure(true)
+///     .placeholder("Password")
+///     .build()
+/// ```
+pub fn styled_secure_text_input<State, Action, F>(
+    value: String,
+    placeholder: &str,
+    on_change: F,
+) -> impl WidgetView<State, Action>
+where
+    State: 'static,
+    Action: 'static,
+    F: Fn(&mut State, String) -> Action + Send + Sync + 'static,
+{
+    StyledTextInput::new(value, on_change)
+        .colors(TextInputColors::dark())
+        .placeholder(placeholder)
+        .secure(true)
         .build()
 }

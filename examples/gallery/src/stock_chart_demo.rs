@@ -8,16 +8,13 @@
 //! Stock chart demo for the gallery.
 
 use masonry::layout::AsUnit;
-use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, CrossAxisAlignment};
 use xilem::WidgetView;
 use xilem_extras::stock_chart::{stock_chart, StockBar, StockChartMode};
+use xilem_extras::Theme;
 
 use crate::app_model::AppModel;
-
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
-const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
 
 /// Generate sample stock data.
 fn sample_stock_data() -> Vec<StockBar> {
@@ -66,6 +63,7 @@ fn mode_name(index: usize) -> &'static str {
 }
 
 pub fn stock_chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
+    let theme = Theme::from_dark(model.dark_mode);
     let bars = sample_stock_data();
     let mode = mode_from_index(model.stock_chart_mode);
 
@@ -80,10 +78,10 @@ pub fn stock_chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use
         label("Stock Chart")
             .text_size(18.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label("OHLCV financial data visualization")
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
 
         // Mode selector buttons
         flex_row((
@@ -110,10 +108,10 @@ pub fn stock_chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use
         flex_row((
             label(format!("Mode: {}", mode_name(model.stock_chart_mode)))
                 .text_size(12.0)
-                .color(TEXT_COLOR),
+                .color(theme.text()),
             label(hover_info)
                 .text_size(12.0)
-                .color(TEXT_SECONDARY),
+                .color(theme.text_secondary()),
         ))
         .gap(20.px()),
 
@@ -128,4 +126,5 @@ pub fn stock_chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(12.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }

@@ -6,5 +6,7 @@
 //! (compatible with the Xilem licence).
 
 mod tokens;
+mod color_scheme;
 
 pub use tokens::*;
+pub use color_scheme::Theme;

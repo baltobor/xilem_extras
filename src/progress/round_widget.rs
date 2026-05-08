@@ -21,18 +21,17 @@
 //!   sit inline with body text so it can stand in for a tiny
 //!   inline progress glyph.
 //!
-//! Doubles as a **busy / indeterminate indicator** when
-//! `set_busy(true)` is set. The lit arc becomes a fixed-length
-//! ~45° segment that rotates around the track at a steady
-//! ~1 rev / sec rate.
+//! Determinate only. Busy / indeterminate state lives in its own
+//! widget — see `busy_hex` for the beehive-style indicator.
 
 use std::f64::consts::{PI, TAU};
 
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent, PropertiesMut,
-    PropertiesRef, RegisterCtx, Update, UpdateCtx, Widget, WidgetId, WidgetMut,
+    PropertiesRef, RegisterCtx, UpdateCtx, Widget, WidgetId, WidgetMut,
 };
+use xilem::masonry::core::Update;
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Arc, Axis, Cap, Point, Size, Stroke, Vec2};
 use xilem::masonry::layout::LenReq;
@@ -81,13 +80,6 @@ const ARC_START: f64 = -PI / 2.0;
 /// Full 360° sweep — round progress wraps the entire ring,
 /// unlike a knob's 270° dial.
 const ARC_SWEEP_FULL: f64 = TAU;
-/// Length of the rotating arc segment in busy / indeterminate
-/// mode (≈45°). Visible enough to read as motion without
-/// looking like a half-finished progress.
-const BUSY_SEGMENT: f64 = PI / 4.0;
-/// One full rotation per second when busy.
-const BUSY_ROTATION_HZ: f64 = 1.0;
-
 /// Two predefined sizes for the round progress.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum RoundProgressSize {
@@ -122,19 +114,11 @@ pub struct RoundProgressWidget {
     max: f64,
     size: RoundProgressSize,
     style: ProgressStyle,
-    /// Tint colour used by `Monochrome` style (and the busy
-    /// segment regardless of style).
+    /// Tint colour used by `Monochrome` style.
     tint: Color,
-    /// When true, paint a rotating segment instead of a value.
-    busy: bool,
-    /// Accumulated busy-rotation phase in radians, updated by
-    /// `on_anim_frame`.
-    busy_phase: f64,
     /// Reverse the colour gradient — high values become green,
     /// low values become red. See `ProgressBarWidget` for full
-    /// semantics. No-op on `Monochrome` style and on busy mode
-    /// (the busy segment uses `tint` directly regardless of
-    /// level).
+    /// semantics. No-op on `Monochrome` style.
     reversed: bool,
 }
 
@@ -147,8 +131,6 @@ impl RoundProgressWidget {
             size,
             style: ProgressStyle::Gradient,
             tint: DEFAULT_MONO_TINT,
-            busy: false,
-            busy_phase: 0.0,
             reversed: false,
         }
     }
@@ -160,11 +142,6 @@ impl RoundProgressWidget {
 
     pub fn with_tint(mut self, color: Color) -> Self {
         self.tint = color;
-        self
-    }
-
-    pub fn with_busy(mut self, busy: bool) -> Self {
-        self.busy = busy;
         self
     }
 
@@ -202,17 +179,6 @@ impl RoundProgressWidget {
         if this.widget.size != size {
             this.widget.size = size;
             this.ctx.request_layout();
-            this.ctx.request_render();
-        }
-    }
-
-    /// Toggle the busy / indeterminate indicator. Kicking it on
-    /// also kicks off the animation tick; turning it off lets
-    /// the next frame settle the static lit arc.
-    pub fn set_busy(this: &mut WidgetMut<'_, Self>, busy: bool) {
-        if this.widget.busy != busy {
-            this.widget.busy = busy;
-            this.ctx.request_anim_frame();
             this.ctx.request_render();
         }
     }
@@ -283,35 +249,10 @@ impl Widget for RoundProgressWidget {
 
     fn update(
         &mut self,
-        ctx: &mut UpdateCtx<'_>,
+        _: &mut UpdateCtx<'_>,
         _: &mut PropertiesMut<'_>,
-        event: &Update,
+        _event: &Update,
     ) {
-        // Kick off the animation cycle on first add when busy.
-        // `on_anim_frame` keeps it going; turning busy off lets
-        // the cycle die naturally.
-        if matches!(event, Update::WidgetAdded) && self.busy {
-            ctx.request_anim_frame();
-        }
-    }
-
-    fn on_anim_frame(
-        &mut self,
-        ctx: &mut UpdateCtx<'_>,
-        _: &mut PropertiesMut<'_>,
-        interval: u64,
-    ) {
-        if !self.busy {
-            return;
-        }
-        // `interval` is the elapsed time in nanoseconds since
-        // the last frame. Advance the rotation phase
-        // proportionally so the spin rate is wall-clock-stable
-        // regardless of frame rate.
-        let dt_secs = interval as f64 / 1_000_000_000.0;
-        self.busy_phase = (self.busy_phase + dt_secs * BUSY_ROTATION_HZ * TAU) % TAU;
-        ctx.request_render();
-        ctx.request_anim_frame();
     }
 
     fn measure(
@@ -346,18 +287,6 @@ impl Widget for RoundProgressWidget {
             .stroke(track, &Stroke::new(ring_w).with_caps(Cap::Round), TRACK_COLOR)
             .draw();
 
-        if self.busy {
-            // Rotating segment in busy mode — start angle
-            // advances each anim frame; segment length is fixed.
-            let start = ARC_START + self.busy_phase;
-            let lit =
-                Arc::new(Point::new(cx, cy), Vec2::new(r, r), start, BUSY_SEGMENT, 0.0);
-            painter
-                .stroke(lit, &Stroke::new(ring_w).with_caps(Cap::Round), self.tint)
-                .draw();
-            return;
-        }
-
         let norm = self.normalized();
         if norm < 0.001 {
             return;
@@ -389,11 +318,9 @@ impl Widget for RoundProgressWidget {
     }
 
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
-        if !self.busy {
-            node.set_numeric_value(self.value);
-            node.set_min_numeric_value(self.min);
-            node.set_max_numeric_value(self.max);
-        }
+        node.set_numeric_value(self.value);
+        node.set_min_numeric_value(self.min);
+        node.set_max_numeric_value(self.max);
     }
 
     fn children_ids(&self) -> SmallVec<[WidgetId; 16]> {

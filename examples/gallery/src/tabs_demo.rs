@@ -8,20 +8,13 @@
 //! Tabs widget demo.
 
 use masonry::layout::AsUnit;
-use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, portal};
 use xilem::WidgetView;
 
-use xilem_extras::{TabBar, TabBarColors, TabItem, NavTabBar};
+use xilem_extras::{TabBar, TabBarColors, TabItem, NavTabBar, Theme};
 
 use crate::app_model::AppModel;
-
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
-const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
-const BG_TAB_ACTIVE: Color = Color::from_rgb8(55, 53, 50);
-const BG_TAB_INACTIVE: Color = Color::from_rgb8(45, 43, 40);
-const BG_TAB_BAR: Color = Color::from_rgb8(38, 36, 34);
 
 /// Tab content for the demo.
 pub struct DemoTab {
@@ -124,15 +117,16 @@ const NAV_TAB_CONTENT: [&str; 4] = [
 ];
 
 pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
+    let theme = Theme::from_dark(model.dark_mode);
     let active_idx = model.demo_active_tab;
 
     // Configure colors to match our theme
     let colors = TabBarColors {
-        active_bg: BG_TAB_ACTIVE,
-        inactive_bg: BG_TAB_INACTIVE,
-        bar_bg: BG_TAB_BAR,
-        text: TEXT_COLOR,
-        text_secondary: TEXT_SECONDARY,
+        active_bg: theme.active_bg(),
+        inactive_bg: theme.section_bg(),
+        bar_bg: theme.nav_bg(),
+        text: theme.text(),
+        text_secondary: theme.text_secondary(),
     };
 
     // Build the tab bar using the library component
@@ -152,12 +146,12 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     let content = if let Some(tab) = model.demo_tabs.get(active_idx) {
         label(tab.content.clone())
             .text_size(14.0)
-            .color(TEXT_COLOR)
+            .color(theme.text())
             .boxed()
     } else {
         label("No tabs open")
             .text_size(14.0)
-            .color(TEXT_SECONDARY)
+            .color(theme.text_secondary())
             .boxed()
     };
 
@@ -200,10 +194,10 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         label("TabBar - Document Tabs")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label("Click tabs to switch, X to close, arrows to navigate")
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
         tab_bar,
         portal(flex_col((content,)).padding(16.0)),
         flex_row((
@@ -231,14 +225,14 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         label("NavTabBar - Navigation Tabs")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label("Fixed tabs for view switching. Auto arrows when tabs overflow.")
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
         nav_tab_bar,
         label(nav_content)
             .text_size(14.0)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         flex_row((
             button(label("Add Nav Tab"), |model: &mut AppModel| {
                 let n = model.nav_tabs.len() + 1;
@@ -260,4 +254,5 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     ))
     .gap(8.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }

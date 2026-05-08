@@ -13,29 +13,27 @@ use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button};
 use xilem::{FontWeight, WidgetView};
 
-use xilem_extras::{list_view_sectioned, ListViewAction, ListViewStyle, SectionDef, SectionedRowInfo, SelectionState};
+use xilem_extras::{
+    list_view_sectioned, ListViewAction, ListViewStyle, SectionDef, SectionedRowInfo,
+    SelectionState, Theme,
+};
 use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
 
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
-const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
-const BG_HEADER: Color = Color::from_rgb8(35, 33, 30);
-const BG_SELECTED: Color = Color::from_rgb8(65, 62, 58);
-const BG_STRIPE: Color = Color::from_rgb8(42, 40, 38);
 const ICON_STAR: Color = Color::from_rgb8(255, 200, 50);
 const ICON_RECENT: Color = Color::from_rgb8(100, 150, 255);
 const ICON_CONTACT: Color = Color::from_rgb8(100, 180, 100);
 
-fn section_header(title: String) -> impl WidgetView<AppModel, ()> {
+fn section_header(title: String, theme: Theme) -> impl WidgetView<AppModel, ()> {
     flex_row((
         label(title)
             .text_size(12.0)
             .weight(FontWeight::BOLD)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
     ))
     .padding(8.0)
-    .background_color(BG_HEADER)
+    .background_color(theme.page_bg())
 }
 
 fn contact_item(
@@ -45,11 +43,12 @@ fn contact_item(
     icon_color: Color,
     is_selected: bool,
     is_striped: bool,
+    theme: Theme,
 ) -> impl WidgetView<AppModel, ()> {
     let row_bg = if is_selected {
-        BG_SELECTED
+        theme.active_bg()
     } else if is_striped {
-        BG_STRIPE
+        theme.section_bg()
     } else {
         Color::TRANSPARENT
     };
@@ -63,10 +62,10 @@ fn contact_item(
         flex_col((
             label(name)
                 .text_size(13.0)
-                .color(TEXT_COLOR),
+                .color(theme.text()),
             label(email)
                 .text_size(11.0)
-                .color(TEXT_SECONDARY),
+                .color(theme.text_secondary()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(2.px()),
@@ -78,6 +77,8 @@ fn contact_item(
 }
 
 pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_> {
+    let theme = Theme::from_dark(model.dark_mode);
+
     // Create sections from contacts
     // For demo: first 3 are "Favorites", next 5 are "Recent", rest are "All"
     let favorites = if model.contacts.len() >= 3 {
@@ -112,13 +113,13 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
         &model.sectioned_list_selection,
         ListViewStyle::new()
             .row_height(52.0)
-            .selected_bg(BG_SELECTED)
+            .selected_bg(theme.active_bg())
             .striped(true)
-            .stripe_bg(BG_STRIPE),
-        |state: &mut AppModel, row_info| {
+            .stripe_bg(theme.section_bg()),
+        move |state: &mut AppModel, row_info| {
             match row_info {
                 SectionedRowInfo::Header { title, .. } => {
-                    section_header(title).boxed()
+                    section_header(title, theme).boxed()
                 }
                 SectionedRowInfo::Item {
                     section_index,
@@ -140,6 +141,7 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
                         icon_color,
                         is_selected,
                         is_striped,
+                        theme,
                     ).boxed()
                 }
             }
@@ -158,10 +160,10 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
         label("Sectioned Contacts")
             .text_size(16.0)
             .weight(FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label("Grouped list with section headers, keyboard navigation")
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
 
         list_view,
 
@@ -169,7 +171,7 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
         flex_row((
             label(format!("Selected: {} contacts", model.sectioned_list_selection.count()))
                 .text_size(12.0)
-                .color(TEXT_SECONDARY),
+                .color(theme.text_secondary()),
             button(label("Clear"), |model: &mut AppModel| {
                 model.sectioned_list_selection.clear();
             }),
@@ -179,4 +181,5 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }

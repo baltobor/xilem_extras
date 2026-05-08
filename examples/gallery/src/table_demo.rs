@@ -14,7 +14,7 @@ use xilem::view::{flex_col, flex_row, label, button, sized_box, CrossAxisAlignme
 use xilem::WidgetView;
 
 use xilem_extras::{
-    SelectionState, SelectionModifiers, SortOrder, SortDirection,
+    SelectionState, SelectionModifiers, SortOrder, SortDirection, Theme,
     row_button, row_button_with_modifiers, resizable_header,
 };
 use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
@@ -24,12 +24,6 @@ use crate::mock_data::Cyclist;
 
 const ICON_COL_WIDTH: f64 = 24.0;
 
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
-const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
-const HEADER_BG: Color = Color::from_rgb8(45, 43, 40);
-const BG_HOVER: Color = Color::from_rgb8(55, 53, 50);
-const BG_SELECTED: Color = Color::from_rgb8(65, 62, 58);
-const BG_STRIPE: Color = Color::from_rgb8(38, 36, 34);
 const BIKE_COLOR: Color = Color::from_rgb8(100, 180, 100);
 
 fn sort_indicator(sort_order: &SortOrder, column: &str) -> &'static str {
@@ -45,6 +39,7 @@ fn column_header<'a>(
     column_key: &'a str,
     width: f64,
     sort_order: &'a SortOrder,
+    theme: Theme,
 ) -> impl WidgetView<AppModel> + use<'a> {
     let indicator = sort_indicator(sort_order, column_key);
     let col_key = column_key.to_string();
@@ -53,11 +48,11 @@ fn column_header<'a>(
         label(title.to_string())
             .text_size(12.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label(indicator.to_string())
             .font(FONT_FAMILY)
             .text_size(ICON_SIZE_SM)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
     ))
     .gap(4.px())
     .padding(8.0)
@@ -66,14 +61,14 @@ fn column_header<'a>(
     row_button(row, move |model: &mut AppModel| {
         model.table_sort.toggle_column(&col_key, false);
     })
-    .hover_bg(BG_HOVER)
-    .background_color(HEADER_BG)
+    .hover_bg(theme.hover_bg())
+    .background_color(theme.nav_bg())
 }
 
-fn table_cell(value: String, width: f64) -> impl WidgetView<AppModel> {
+fn table_cell(value: String, width: f64, theme: Theme) -> impl WidgetView<AppModel> {
     label(value)
         .text_size(13.0)
-        .color(TEXT_COLOR)
+        .color(theme.text())
         .padding(8.0)
         .width((width as i32).px())
 }
@@ -83,12 +78,13 @@ fn cyclist_row<'a>(
     is_selected: bool,
     is_striped: bool,
     col_widths: &'a xilem_extras::ColumnWidths,
+    theme: Theme,
 ) -> impl WidgetView<AppModel> + use<'a> {
     let id = cyclist.id;
     let row_bg = if is_selected {
-        BG_SELECTED
+        theme.active_bg()
     } else if is_striped {
-        BG_STRIPE
+        theme.section_bg()
     } else {
         Color::TRANSPARENT
     };
@@ -105,10 +101,10 @@ fn cyclist_row<'a>(
             .text_size(ICON_SIZE_SM)
             .color(BIKE_COLOR)
             .width((ICON_COL_WIDTH as i32).px()),
-        table_cell(cyclist.name.clone(), name_w),
-        table_cell(cyclist.route.clone(), route_w),
-        table_cell(format!("{:.1} km", cyclist.distance_km), dist_w),
-        table_cell(format!("{}/10", cyclist.joy_level), joy_w),
+        table_cell(cyclist.name.clone(), name_w, theme),
+        table_cell(cyclist.route.clone(), route_w, theme),
+        table_cell(format!("{:.1} km", cyclist.distance_km), dist_w, theme),
+        table_cell(format!("{}/10", cyclist.joy_level), joy_w, theme),
     ))
     .gap(0.px());
 
@@ -122,13 +118,14 @@ fn cyclist_row<'a>(
             let sel_mods = SelectionModifiers::from_modifiers(modifiers);
             model.table_selection.select(id, sel_mods);
         })
-        .hover_bg(BG_HOVER)
+        .hover_bg(theme.hover_bg())
         .background_color(row_bg)
     )
     .width((total_width as i32).px())
 }
 
 pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
+    let theme = Theme::from_dark(model.dark_mode);
     // Sort the data
     let sorted_cyclists = model.table_sort.sorted(&model.cyclists);
 
@@ -147,15 +144,15 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     let rows: Vec<_> = sorted_cyclists.iter().enumerate().map(|(idx, cyclist)| {
         let is_selected = model.table_selection.is_selected(&cyclist.id);
         let is_striped = idx % 2 == 1;
-        cyclist_row(cyclist, is_selected, is_striped, &model.table_column_widths).boxed()
+        cyclist_row(cyclist, is_selected, is_striped, &model.table_column_widths, theme).boxed()
     }).collect();
 
     // Build resizable header columns
     let header_columns = vec![
-        column_header("Name", "name", name_w, &model.table_sort).boxed(),
-        column_header("Route", "route", route_w, &model.table_sort).boxed(),
-        column_header("Distance", "distance_km", dist_w, &model.table_sort).boxed(),
-        column_header("Joy", "joy_level", joy_w, &model.table_sort).boxed(),
+        column_header("Name", "name", name_w, &model.table_sort, theme).boxed(),
+        column_header("Route", "route", route_w, &model.table_sort, theme).boxed(),
+        column_header("Distance", "distance_km", dist_w, &model.table_sort, theme).boxed(),
+        column_header("Joy", "joy_level", joy_w, &model.table_sort, theme).boxed(),
     ];
 
     let resizable_hdr = resizable_header(
@@ -175,13 +172,13 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         label("Cyclists")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label("Click column headers to sort, drag dividers to resize")
             .text_size(12.0)
-            .color(TEXT_SECONDARY),
+            .color(theme.text_secondary()),
         label("Outdated. Please use the virtualized table.")
             .text_size(12.0)
-            .color(TEXT_SECONDARY),            
+            .color(theme.text_secondary()),            
             
 
         // Table (header + rows)
@@ -194,11 +191,11 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                         .text_size(ICON_SIZE_SM)
                         .color(BIKE_COLOR)
                         .width((ICON_COL_WIDTH as i32).px())
-                        .background_color(HEADER_BG),
+                        .background_color(theme.nav_bg()),
                     resizable_hdr,
                 ))
                 .gap(0.px())
-                .background_color(HEADER_BG)
+                .background_color(theme.nav_bg())
             )
             .width((total_width as i32).px()),
 
@@ -223,17 +220,17 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                     }
                 ))
                 .text_size(12.0)
-                .color(TEXT_SECONDARY),
+                .color(theme.text_secondary()),
 
                 label(format!("Selected: {} cyclists", model.table_selection.count()))
                     .text_size(12.0)
-                    .color(TEXT_SECONDARY),
+                    .color(theme.text_secondary()),
             ))
             .gap(16.px()),
 
             label(format!("Last click modifiers: {}", model.last_click_mods))
                 .text_size(12.0)
-                .color(TEXT_SECONDARY),
+                .color(theme.text_secondary()),
         ))
         .gap(4.px()),
 
@@ -249,4 +246,5 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     ))
     .gap(8.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }

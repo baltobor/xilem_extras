@@ -16,26 +16,26 @@ use xilem::{WidgetView, AnyWidgetView};
 
 use xilem_extras::{
     tree_group_with_context_menu, TreeAction, TreeStyle, svg_icon, rust_gear, ferris,
-    menu_item, separator,
+    menu_item, separator, Theme,
 };
 use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
 use crate::mock_data::FileNode;
 
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
 const FOLDER_COLOR: Color = Color::from_rgb8(220, 180, 80);
 const RUST_COLOR: Color = Color::from_rgb8(247, 76, 0);
-const BG_SELECTED: Color = Color::from_rgb8(65, 62, 58);
 
 fn build_tree_row(
     node: &FileNode,
     depth: usize,
     is_expanded: bool,
     is_selected: bool,
+    theme: Theme,
 ) -> Box<AnyWidgetView<AppModel, ()>> {
     let indent = (depth * 16) as f64;
-    let row_bg = if is_selected { BG_SELECTED } else { Color::TRANSPARENT };
+    let row_bg = if is_selected { theme.active_bg() } else { Color::TRANSPARENT };
+    let text_color = theme.text();
 
     if node.is_dir {
         // Directory row with chevron and folder icon
@@ -55,14 +55,14 @@ fn build_tree_row(
             label(chevron.to_string())
                 .font(FONT_FAMILY)
                 .text_size(ICON_SIZE_SM)
-                .color(TEXT_COLOR),
+                .color(text_color),
             label(folder_icon.to_string())
                 .font(FONT_FAMILY)
                 .text_size(ICON_SIZE_SM)
                 .color(FOLDER_COLOR),
             label(node.name.clone())
                 .text_size(15.0)
-                .color(TEXT_COLOR),
+                .color(text_color),
         ))
         .gap(4.px())
         .padding(Padding::left(indent))
@@ -78,7 +78,7 @@ fn build_tree_row(
                 svg_icon(rust_gear().size(13.0).color(RUST_COLOR)),
                 label(node.name.clone())
                     .text_size(15.0)
-                    .color(TEXT_COLOR),
+                    .color(text_color),
             ))
             .gap(4.px())
             .padding(Padding::left(file_indent))
@@ -90,7 +90,7 @@ fn build_tree_row(
                 svg_icon(ferris().size(13.0).color(RUST_COLOR)),
                 label(node.name.clone())
                     .text_size(15.0)
-                    .color(TEXT_COLOR),
+                    .color(text_color),
             ))
             .gap(4.px())
             .padding(Padding::left(file_indent))
@@ -102,10 +102,10 @@ fn build_tree_row(
                 label(icons::DESCRIPTION.to_string())
                     .font(FONT_FAMILY)
                     .text_size(ICON_SIZE_SM)
-                    .color(TEXT_COLOR),
+                    .color(text_color),
                 label(node.name.clone())
                     .text_size(15.0)
-                    .color(TEXT_COLOR),
+                    .color(text_color),
             ))
             .gap(4.px())
             .padding(Padding::left(file_indent))
@@ -115,16 +115,15 @@ fn build_tree_row(
     }
 }
 
-const BG_HOVER: Color = Color::from_rgb8(55, 53, 50);
-
 pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_> {
+    let theme = Theme::from_dark(model.dark_mode);
     // Using the new type-safe context menu API
     // Each menu item carries its own action - no index matching needed!
     let tree_view = tree_group_with_context_menu(
         &model.file_tree,
         &model.tree_expansion,
         Some(&model.tree_selection),
-        TreeStyle::new().hover_bg(BG_HOVER),
+        TreeStyle::new().hover_bg(theme.hover_bg()),
         |node_id: &String| {
             // Clone the node_id for use in closures
             let id = node_id.clone();
@@ -147,8 +146,8 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
                 }),
             )
         },
-        |node: &FileNode, depth, is_expanded, is_selected| {
-            build_tree_row(node, depth, is_expanded, is_selected)
+        move |node: &FileNode, depth, is_expanded, is_selected| {
+            build_tree_row(node, depth, is_expanded, is_selected, theme)
         },
         |state: &mut AppModel, node_id: &String, action| {
             match action {
@@ -174,16 +173,16 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
         label("Tree Group Demo")
             .text_size(15.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
         label("Showing how tree_group works.")
             .text_size(12.0)
-            .color(Color::from_rgb8(160, 156, 150)),              
+            .color(theme.text_secondary()),
         label("Right-click items for context menu")
             .text_size(12.0)
-            .color(Color::from_rgb8(160, 156, 150)),
+            .color(theme.text_secondary()),
         label(format!("Last action: {}", model.menu_last_action))
             .text_size(12.0)
-            .color(Color::from_rgb8(160, 156, 150)),
+            .color(theme.text_secondary()),
         portal(
             flex_col((tree_view,))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -194,4 +193,5 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }

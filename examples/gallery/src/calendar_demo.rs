@@ -13,14 +13,9 @@ use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, CrossAxisAlignment, MainAxisAlignment};
 use xilem::{WidgetView};
-use xilem_extras::{calendar_picker, CalendarLocale};
+use xilem_extras::{calendar_picker, CalendarLocale, Theme};
 
 use crate::app_model::AppModel;
-
-// Demo page colors
-const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
-const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
-const BG_CONTENT: Color = Color::from_rgb8(35, 33, 30);
 
 // Calendar colors
 const CAL_TEXT: Color = Color::from_rgba8(0x33, 0x33, 0x33, 0xFF);
@@ -39,6 +34,7 @@ const CELL: f64 = 28.0;
 const LOCALE: CalendarLocale = CalendarLocale::English;
 
 pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
+    let theme = Theme::from_dark(model.dark_mode);
     let today = Local::now().date_naive();
     let display_date = model.calendar_selected_date.unwrap_or(today);
     let date_text = display_date.format("%d.%m.%Y").to_string();
@@ -63,12 +59,12 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
         label("Calendar & Time Picker")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
 
         // Selected date display
         label(selected_text)
             .text_size(12.0)
-            .color(TEXT_COLOR),
+            .color(theme.text()),
 
         flex_row((
             // Calendar section
@@ -95,8 +91,8 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
                 // Date, week display, and today button
                 flex_row((
                     flex_row((
-                        label(date_text).text_size(10.0).color(TEXT_SECONDARY),
-                        label(kw_text).text_size(10.0).color(TEXT_SECONDARY),
+                        label(date_text).text_size(10.0).color(theme.text_secondary()),
+                        label(kw_text).text_size(10.0).color(theme.text_secondary()),
                     )).gap(8.0_f64.px()),
                     today_btn(),
                 ))
@@ -111,7 +107,7 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
             // Time picker section
             flex_col((
                 build_time_picker(model.calendar_hour, model.calendar_minute),
-                label(time_text).text_size(10.0).color(TEXT_SECONDARY),
+                label(time_text).text_size(10.0).color(theme.text_secondary()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)
             .gap(4.0_f64.px()),
@@ -122,7 +118,7 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(10.0_f64.px())
     .padding(12.0)
-    .background_color(BG_CONTENT)
+    .background_color(theme.page_bg())
 }
 
 fn arrow_btn(text: &'static str, target: NaiveDate) -> impl WidgetView<AppModel> {

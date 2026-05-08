@@ -151,7 +151,18 @@ impl Widget for PulldownMenuItem {
                 let child_length =
                     ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
                 let checkmark_space = if self.checked.is_some() { CHECKMARK_WIDTH } else { 0.0 };
-                child_length + 2.0 * ITEM_PADDING_H + checkmark_space
+                let natural = child_length + 2.0 * ITEM_PADDING_H + checkmark_space;
+                // Stretch to the dropdown width so the hover area
+                // covers the whole row, matching tree-view rows.
+                // The dropdown calls measure with `MinContent` /
+                // `MaxContent` to size itself, then with
+                // `FitContent(width)` to lay out each item — only
+                // the second case should fill.
+                if let LenReq::FitContent(available) = len_req {
+                    available.max(natural)
+                } else {
+                    natural
+                }
             }
             Axis::Vertical => DEFAULT_ITEM_HEIGHT,
         }

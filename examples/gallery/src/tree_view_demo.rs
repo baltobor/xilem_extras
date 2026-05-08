@@ -18,31 +18,32 @@ use xilem::view::{flex_col, label, CrossAxisAlignment};
 use xilem::{AnyWidgetView, WidgetView};
 use xilem_extras::{
     ferris, menu_item, rust_gear, separator, svg_icon, tree_view, BoxedMenuEntry, HighlightFill,
-    Identifiable, MenuItems, TreeAction, TreeStyle,
+    Identifiable, MenuItems, Theme, TreeAction, TreeStyle,
 };
 use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
 
 use crate::app_model::AppModel;
 use crate::mock_data::FileNode;
 
-const HEADER_FG: Color = Color::from_rgb8(220, 218, 214);
-const SUBTLE_FG: Color = Color::from_rgb8(160, 156, 150);
-const HOVER_BG: Color = Color::from_rgb8(55, 53, 50);
 const FOLDER_FG: Color = Color::from_rgb8(220, 180, 80);
 const RUST_FG: Color = Color::from_rgb8(247, 76, 0);
 
 pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_> {
+    let theme = Theme::from_dark(model.dark_mode);
+    let header_fg = theme.text();
+    let subtle_fg = theme.text_secondary();
+
     let tree = tree_view(&model.file_tree, &model.tree_expansion)
         .selection(&model.tree_selection)
-        .style(TreeStyle::new().hover_bg(HOVER_BG).indent(18.0))
+        .style(TreeStyle::new().hover_bg(theme.hover_bg()).indent(18.0))
         // Selection background defaults to the same warm gray as the legacy
         // tree_group demo. Use `.selected_bg(your_color)` to override.
         // Switch this to `HighlightFill::Item` to highlight only the
         // icon + label box instead of the whole row.
         .highlight_fill(HighlightFill::Row)
-        .text_color(HEADER_FG)
+        .text_color(header_fg)
         .text_size(13.0)
-        .icon_for(|node: &FileNode| -> Option<Box<AnyWidgetView<AppModel, ()>>> {
+        .icon_for(move |node: &FileNode| -> Option<Box<AnyWidgetView<AppModel, ()>>> {
             // Pick the right icon per node type. Same set as the legacy
             // tree_group demo: Ferris for Cargo.toml, the Rust gear for
             // any `.rs` file, the Material folder/document glyph otherwise.
@@ -62,7 +63,7 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
                     label(icons::DESCRIPTION)
                         .font(FONT_FAMILY)
                         .text_size(ICON_SIZE_SM)
-                        .color(HEADER_FG),
+                        .color(header_fg),
                 ))
             }
         })
@@ -105,7 +106,7 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
         label("Tree View — Keyboard Navigation")
             .text_size(15.0)
             .weight(xilem::FontWeight::BOLD)
-            .color(HEADER_FG),
+            .color(header_fg),
         label(format!(
             "selection: {}    activated: {}",
             model
@@ -119,10 +120,10 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
                 .unwrap_or("(none)"),
         ))
         .text_size(12.0)
-        .color(SUBTLE_FG),
+        .color(subtle_fg),
         label("Click chevron to toggle. Click row to select. Double-click or Enter to activate. Up/Down/Left/Right/Space/Enter for keyboard nav.")
             .text_size(11.0)
-            .color(SUBTLE_FG),
+            .color(subtle_fg),
         // Scrolling lives inside `tree_view().build()` now (it wraps the
         // content in `scroll_focus`, which is a portal that auto-scrolls
         // to the selected row).
@@ -134,6 +135,7 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
     .padding(16.0)
+    .background_color(theme.page_bg())
 }
 
 fn default_handler(model: &mut AppModel, id: &String, action: TreeAction) {

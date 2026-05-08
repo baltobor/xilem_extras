@@ -45,7 +45,7 @@ use xilem::winit::event_loop::ActiveEventLoop;
 use xilem::winit::window::WindowId as WinitWindowId;
 use xilem::winit::event::{WindowEvent, DeviceEvent, DeviceId, StartCause};
 
-use xilem_extras::{row_button, sheet};
+use xilem_extras::{row_button, sheet, Theme};
 use app_model::{AppModel, Page};
 
 // Material Symbols font
@@ -65,11 +65,20 @@ use xilem_extras::app_menu::muda::{Menu, MenuItem, MenuEvent, PredefinedMenuItem
 #[cfg(not(target_os = "linux"))]
 use std::sync::{mpsc, Arc, Mutex};
 
-// Some styling
+// Some styling. Demo-only fallbacks; the gallery now derives all
+// colours from `xilem_extras::Theme` via `model.dark_mode`. These
+// constants stay for the few spots that don't yet thread the
+// theme through (modal content, Linux menu bar) and are otherwise
+// unused.
+#[allow(dead_code)]
 const TEXT_COLOR: Color = Color::from_rgb8(220, 218, 214);
+#[allow(dead_code)]
 const TEXT_SECONDARY: Color = Color::from_rgb8(160, 156, 150);
+#[allow(dead_code)]
 const BG_NAV: Color = Color::from_rgb8(45, 43, 40);
+#[allow(dead_code)]
 const BG_HOVER: Color = Color::from_rgb8(55, 52, 48);
+#[allow(dead_code)]
 const BG_ACTIVE: Color = Color::from_rgb8(65, 62, 58);
 
 #[cfg(target_os = "linux")]
@@ -108,14 +117,17 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         menu_button(
             menu_label("Examples"),
             (
-                menu_item("Tree Group (low-level)", |model: &mut AppModel| {
+                menu_item("Tree Group", |model: &mut AppModel| {
                     model.page = Page::Tree;
                 }),
-                menu_item("Tree View (builder)", |model: &mut AppModel| {
+                menu_item("Tree View", |model: &mut AppModel| {
                     model.page = Page::TreeView;
                 }),
                 menu_item("List View", |model: &mut AppModel| {
                     model.page = Page::List;
+                }),
+                menu_item("Sectioned List", |model: &mut AppModel| {
+                    model.page = Page::SectionedList;
                 }),
                 menu_item("Table View", |model: &mut AppModel| {
                     model.page = Page::Table;
@@ -132,6 +144,22 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
                 }),
                 menu_item("App Menu Bar", |model: &mut AppModel| {
                     model.page = Page::AppMenu;
+                }),
+                separator(),
+                menu_item("Calendar", |model: &mut AppModel| {
+                    model.page = Page::Calendar;
+                }),
+                menu_item("Widgets", |model: &mut AppModel| {
+                    model.page = Page::Widgets;
+                }),
+                menu_item("Progress", |model: &mut AppModel| {
+                    model.page = Page::Progress;
+                }),
+                menu_item("Chart", |model: &mut AppModel| {
+                    model.page = Page::Chart;
+                }),
+                menu_item("Stock Chart", |model: &mut AppModel| {
+                    model.page = Page::StockChart;
                 }),
             ),
         ),
@@ -202,20 +230,25 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     .background_color(MENU_BAR_BG)
 }
 
-fn nav_button(text: &str, page: Page, current: Page) -> impl WidgetView<AppModel> + use<'_> {
+fn nav_button(
+    text: &str,
+    page: Page,
+    current: Page,
+    theme: Theme,
+) -> impl WidgetView<AppModel> + use<'_> {
     let is_active = page == current;
-    let bg = if is_active { BG_ACTIVE } else { BG_NAV };
+    let bg = if is_active { theme.active_bg() } else { theme.nav_bg() };
 
     row_button(
         label(text.to_string())
             .text_size(13.0)
-            .color(TEXT_COLOR)
+            .color(theme.text())
             .padding(8.0),
         move |model: &mut AppModel| {
             model.page = page;
         },
     )
-    .hover_bg(BG_HOVER)
+    .hover_bg(theme.hover_bg())
     .background_color(bg)
 }
 
@@ -251,6 +284,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
 
     let current_page = model.page;
     let show_modal = model.widgets_show_sheet;
+    let theme = Theme::from_dark(model.dark_mode);
 
     // Main content area with sidebar
     let main_content = split(
@@ -259,29 +293,29 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             label("xilem_extras")
                 .text_size(14.0)
                 .weight(xilem::FontWeight::BOLD)
-                .color(TEXT_COLOR),
+                .color(theme.text()),
             label("Gallery")
                 .text_size(12.0)
-                .color(TEXT_SECONDARY),
-            nav_button("Tree Group", Page::Tree, current_page),
-            nav_button("Tree View", Page::TreeView, current_page),
-            nav_button("List", Page::List, current_page),
-            nav_button("Sectioned List", Page::SectionedList, current_page),
-            nav_button("Table", Page::Table, current_page),
-            nav_button("Virtual Table", Page::VirtualTable, current_page),
-            nav_button("Tabs", Page::Tabs, current_page),
-            nav_button("Menu", Page::Menu, current_page),
-            nav_button("App Menu", Page::AppMenu, current_page),
-            nav_button("Calendar", Page::Calendar, current_page),
-            nav_button("Widgets", Page::Widgets, current_page),
-            nav_button("Chart", Page::Chart, current_page),
-            nav_button("Stock Chart", Page::StockChart, current_page),
-            nav_button("Progress", Page::Progress, current_page),
+                .color(theme.text_secondary()),
+            nav_button("Tree Group", Page::Tree, current_page, theme),
+            nav_button("Tree View", Page::TreeView, current_page, theme),
+            nav_button("List", Page::List, current_page, theme),
+            nav_button("Sectioned List", Page::SectionedList, current_page, theme),
+            nav_button("Table", Page::Table, current_page, theme),
+            nav_button("Virtual Table", Page::VirtualTable, current_page, theme),
+            nav_button("Tabs", Page::Tabs, current_page, theme),
+            nav_button("Menu", Page::Menu, current_page, theme),
+            nav_button("App Menu", Page::AppMenu, current_page, theme),
+            nav_button("Calendar", Page::Calendar, current_page, theme),
+            nav_button("Widgets", Page::Widgets, current_page, theme),
+            nav_button("Progress", Page::Progress, current_page, theme),
+            nav_button("Chart", Page::Chart, current_page, theme),
+            nav_button("Stock Chart", Page::StockChart, current_page, theme),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(4.px())
         .padding(12.0)
-        .background_color(BG_NAV),
+        .background_color(theme.nav_bg()),
 
         // Demo content
         match model.page {
@@ -367,12 +401,19 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
 #[cfg(not(target_os = "linux"))]
 mod menu_ids {
     pub const TREE: &str = "tree";
+    pub const TREE_VIEW: &str = "tree_view";
     pub const LIST: &str = "list";
+    pub const SECTIONED_LIST: &str = "sectioned_list";
     pub const TABLE: &str = "table";
     pub const VIRTUAL_TABLE: &str = "virtual_table";
     pub const TABS: &str = "tabs";
     pub const MENU: &str = "menu";
     pub const APP_MENU: &str = "app_menu";
+    pub const CALENDAR: &str = "calendar";
+    pub const WIDGETS: &str = "widgets";
+    pub const PROGRESS: &str = "progress";
+    pub const CHART: &str = "chart";
+    pub const STOCK_CHART: &str = "stock_chart";
     pub const UNDO: &str = "undo";
     pub const REDO: &str = "redo";
     pub const CUT: &str = "cut";
@@ -415,14 +456,22 @@ fn build_native_menu() -> Menu {
 
     // Examples menu - Navigate to different demos
     let examples_menu = Submenu::new("Examples", true);
-    examples_menu.append(&MenuItem::with_id(TREE, "Tree View", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(TREE, "Tree Group", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(TREE_VIEW, "Tree View", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(LIST, "List View", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(SECTIONED_LIST, "Sectioned List", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(TABLE, "Table View", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(VIRTUAL_TABLE, "Virtual Table (10k)", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(TABS, "Tabs", true, None::<Accelerator>)).ok();
     examples_menu.append(&PredefinedMenuItem::separator()).ok();
     examples_menu.append(&MenuItem::with_id(MENU, "Pulldown Menus", true, None::<Accelerator>)).ok();
     examples_menu.append(&MenuItem::with_id(APP_MENU, "App Menu Bar", true, None::<Accelerator>)).ok();
+    examples_menu.append(&PredefinedMenuItem::separator()).ok();
+    examples_menu.append(&MenuItem::with_id(CALENDAR, "Calendar", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(WIDGETS, "Widgets", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(PROGRESS, "Progress", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(CHART, "Chart", true, None::<Accelerator>)).ok();
+    examples_menu.append(&MenuItem::with_id(STOCK_CHART, "Stock Chart", true, None::<Accelerator>)).ok();
     menu.append(&examples_menu).ok();
 
     // Edit menu
@@ -492,12 +541,19 @@ impl ApplicationHandler<MasonryUserEvent> for GalleryApp {
             while let Ok(event) = MenuEvent::receiver().try_recv() {
                 let cmd = match event.id().0.as_str() {
                     TREE => Some(MenuCommand::GotoPage(Page::Tree)),
+                    TREE_VIEW => Some(MenuCommand::GotoPage(Page::TreeView)),
                     LIST => Some(MenuCommand::GotoPage(Page::List)),
+                    SECTIONED_LIST => Some(MenuCommand::GotoPage(Page::SectionedList)),
                     TABLE => Some(MenuCommand::GotoPage(Page::Table)),
                     VIRTUAL_TABLE => Some(MenuCommand::GotoPage(Page::VirtualTable)),
                     TABS => Some(MenuCommand::GotoPage(Page::Tabs)),
                     MENU => Some(MenuCommand::GotoPage(Page::Menu)),
                     APP_MENU => Some(MenuCommand::GotoPage(Page::AppMenu)),
+                    CALENDAR => Some(MenuCommand::GotoPage(Page::Calendar)),
+                    WIDGETS => Some(MenuCommand::GotoPage(Page::Widgets)),
+                    PROGRESS => Some(MenuCommand::GotoPage(Page::Progress)),
+                    CHART => Some(MenuCommand::GotoPage(Page::Chart)),
+                    STOCK_CHART => Some(MenuCommand::GotoPage(Page::StockChart)),
                     UNDO => Some(MenuCommand::Undo),
                     REDO => Some(MenuCommand::Redo),
                     CUT => Some(MenuCommand::Cut),

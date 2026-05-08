@@ -66,6 +66,7 @@ pub mod locale;
 pub mod chart;
 pub mod progress;
 pub mod stock_chart;
+pub mod form;
 
 pub use traits::{
     Identifiable,
@@ -105,12 +106,53 @@ pub use components::{
     styled_text_input,
     styled_text_input_with_placeholder,
     styled_text_input_colored,
+    styled_secure_text_input,
     TextInputColors,
     StyledTextInput,
     styled_checkbox,
     styled_checkbox_colored,
+    styled_switch,
+    styled_switch_colored,
+    styled_radio,
+    styled_radio_colored,
+    styled_check,
+    styled_check_colored,
     CheckboxColors,
+    CheckboxStyle,
+    group_box,
+    GroupBox,
+    GroupBoxView,
+    inverse_contrast_color,
+    synth_switch,
+    SwitchWidget,
+    SwitchToggled,
+    SynthSwitch,
+    synth_radio,
+    RadioWidget,
+    RadioToggled,
+    SynthRadio,
+    param_selector,
+    LabelAlign,
+    ParamSelectorWidget,
+    ParamSelectorView,
 };
+
+pub use form::{
+    form,
+    form_section,
+    form_row,
+    form_toggle,
+    form_radio,
+    form_checkbox,
+    form_themed,
+    form_section_themed,
+    form_row_themed,
+    form_toggle_themed,
+    form_radio_themed,
+    form_checkbox_themed,
+};
+
+pub use theme::Theme;
 
 #[cfg(feature = "rust-logos")]
 pub use components::{
@@ -326,6 +368,10 @@ pub use chart::{
 pub use progress::{
     progress_bar,
     round_progress,
+    busy_hex,
+    BusyHexSize,
+    BusyHexView,
+    BusyHexWidget,
     ProgressBarView,
     ProgressBarWidget,
     ProgressOrientation,
