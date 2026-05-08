@@ -6,17 +6,30 @@ High-level widget library for [Xilem](https://github.com/linebender/xilem) provi
 
 ## Overview
 
-This library extends Xilem with common UI patterns for building desktop applications. It provides composable, trait-based widgets that integrate seamlessly with Xilem's reactive architecture.
+This library extends Xilem with common UI patterns for building desktop applications. It provides composable, trait-based widgets that integrate seamlessly with Xilem's reactive architecture. It is still experimental. But you can already use it to build Applications. This is no official xilem package. 
+But I try to keep it up to date and compatible to Xilem.
 
 ## Available Widgets
 
+- **Tree Group** - Hierarchical data group for DIY groups.
 - **Tree View** - Hierarchical data with expand/collapse, selection, and keyboard navigation
 - **List View** - Selectable lists with sections and disclosure groups
 - **Table View** - Sortable data grids with resizable columns and multi-column sorting
-- **Menu Button** - Pulldown menus with separators (macOS-style)
+- **Menu Button** - Pulldown menus with separators
+- **App Menu** - Pulldown menus with nested sub menus fpr limnux, and muda for MacOS and Windows.
 - **Dropdown Select** - Value selection dropdowns
-- **Row Button** - Full-width clickable rows with hover states
 - **Tabs** - Tab bar with closeable tabs
+- **Calendar Picker** - Pick a date.
+- **Styled Widget** - Wrapped xilem widgets, which can have a style. You can switch dark and bright modes.
+- **Modal Overlay** - Sometimes you need a modal sheet. It's there
+- **Progress Bars** - Tinted, color gradient, monochrome. Linear or circular. Busy indicator.
+- **Chart** - Simple chat to represent numeric data
+- **Stock Chart** - The classic with candle stick, bar, line and a value picker crosshair.
+
+<img width="1012" height="1135" alt="xilem_extras_widgets_bright png" src="https://github.com/user-attachments/assets/2f49f004-c130-4ef3-9996-45fdd59028f9" />
+<img width="1012" height="1135" alt="xilem_extras_widgets_dark" src="https://github.com/user-attachments/assets/044218db-3a58-486a-92d4-d4b8965926ba" />
+
+
 
 ## Quick Start
 
