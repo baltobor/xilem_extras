@@ -224,6 +224,71 @@ impl TableWidget {
         }
     }
 
+    /// Report a finite intrinsic width so a horizontal-scrolling
+    /// host container (typically a `portal(...)`) can wrap the
+    /// table without tripping Masonry's "measured inline length
+    /// must be finite" assertion.
+    ///
+    /// # Why this exists at all
+    ///
+    /// The virtualized table widget genuinely doesn't have a fixed
+    /// "natural" width — it scales to whatever budget the parent
+    /// hands it via `LenReq::FitContent(available)`. That's the
+    /// happy path: a parent gives a finite budget, the table fills
+    /// it, internal columns share that space.
+    ///
+    /// But the moment a host wraps the table in a horizontal-scroll
+    /// container, the parent's `LenReq::MaxContent` query starts
+    /// flowing in. A horizontal-scroll container *has* infinite
+    /// horizontal room conceptually, so it asks the child "how
+    /// wide do you want to be at most?" — the child's answer
+    /// becomes the scroll content size. Returning `f64::INFINITY`
+    /// (the old behaviour) is technically the most accurate answer
+    /// for an infinitely-scalable widget, but Masonry's layout
+    /// pipeline treats `inf` as a programming error and emits a
+    /// stream of `chosen border-box size width must be
+    /// non-negative` traces while the table content disappears
+    /// from the screen.
+    ///
+    /// # The fix
+    ///
+    /// Report the table's most recent actual size as the intrinsic
+    /// max. That's effectively "I am as wide as I was the last
+    /// time someone laid me out." Two cases:
+    ///
+    /// 1. The table has been laid out at least once — return that
+    ///    size's width. The portal then knows exactly how much
+    ///    content to scroll over; if the user later resizes the
+    ///    surrounding window, the next layout pass updates the
+    ///    cached width and the portal re-syncs.
+    ///
+    /// 2. First layout hasn't happened yet — return a reasonable
+    ///    fallback (`DEFAULT_FALLBACK_WIDTH` below). One frame
+    ///    later the cache is populated and the next measure call
+    ///    returns the real value.
+    ///
+    /// This is intentionally a one-frame approximation. A more
+    /// precise answer would require the widget to know its column
+    /// widths individually (today it only knows column keys —
+    /// widths flow through the row-builder closure in
+    /// `table_view.rs`), which is a bigger refactor. Reporting the
+    /// last known layout width is enough to satisfy the
+    /// "finiteness" contract Masonry requires.
+    fn intrinsic_max_width(&self) -> f64 {
+        /// First-frame fallback when no layout has happened yet.
+        /// 800 px is wider than `MinContent` (200) and matches the
+        /// vertical-axis fallback (400 — vertical's own
+        /// `MaxContent` value), so a host that wraps the table in
+        /// a brand-new portal sees a reasonable initial content
+        /// size before the first real layout settles.
+        const DEFAULT_FALLBACK_WIDTH: f64 = 800.0;
+        if self.size.width > 0.0 {
+            self.size.width
+        } else {
+            DEFAULT_FALLBACK_WIDTH
+        }
+    }
+
     /// Hit test for header column.
     fn hit_test_header_column(&self, x: f64) -> Option<(usize, &str)> {
         for (i, col) in self.column_layouts.iter().enumerate() {
@@ -664,7 +729,7 @@ impl Widget for TableWidget {
                 match len_req {
                     LenReq::FitContent(available) => available,
                     LenReq::MinContent => 200.0, // Minimum reasonable table width
-                    LenReq::MaxContent => f64::INFINITY,
+                    LenReq::MaxContent => self.intrinsic_max_width(),
                 }
             }
             Axis::Vertical => {
