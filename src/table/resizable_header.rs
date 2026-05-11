@@ -325,39 +325,43 @@ impl Widget for ResizableHeader {
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         self.size = size;
 
-        // Calculate total current width and divider space
-        let divider_count = self.column_widths.len().saturating_sub(1);
-        let divider_space = divider_count as f64 * DIVIDER_WIDTH;
-        let current_total: f64 = self.column_widths.iter().sum();
-        let available_width = size.width - divider_space;
-
-        // Scale columns to fill available width
-        let scale = if current_total > 0.0 {
-            available_width / current_total
-        } else {
-            1.0
-        };
-
-        // Update column layout with scaled widths
+        // Lay out columns at their configured widths verbatim — no
+        // scale-to-fit. The old behaviour computed
+        // `scale = available_width / current_total` and multiplied
+        // every column by it, which kept the header tidily inside
+        // the table's allotted width but made the labels overlap
+        // whenever the column-sum exceeded the pane width (the
+        // exact case a horizontal-scroll host portal creates: the
+        // body lays out at column-sum width, the header's parent
+        // budget is still pane width, so the scale collapses every
+        // column to ~50% of its intended width and the labels
+        // crash into each other).
+        //
+        // The right thing here is to let the header overflow its
+        // allotted size — same as the body rows do. The surrounding
+        // `portal(...)` clips both and provides horizontal scroll
+        // over the union. Configured widths are the user's truth
+        // (`MIN_COLUMN_WIDTH` still applies as a floor for very
+        // narrow user-set values).
         self.columns.clear();
         let mut x = 0.0;
         for (i, key) in self.column_keys.iter().enumerate() {
             let base_width = self.column_widths.get(i).copied().unwrap_or(100.0);
-            let scaled_width = (base_width * scale).max(MIN_COLUMN_WIDTH);
+            let column_width = base_width.max(MIN_COLUMN_WIDTH);
             self.columns.push(ColumnInfo {
                 key: key.clone(),
-                width: scaled_width,
+                width: column_width,
                 x_offset: x,
             });
             // Add divider gap after each column except the last
             if i < self.column_keys.len() - 1 {
-                x += scaled_width + DIVIDER_WIDTH;
+                x += column_width + DIVIDER_WIDTH;
             } else {
-                x += scaled_width;
+                x += column_width;
             }
         }
 
-        // Layout children with scaled widths
+        // Layout children at their configured widths
         for (i, child) in self.children.iter_mut().enumerate() {
             if let Some(col) = self.columns.get(i) {
                 let child_size = Size::new(col.width, size.height);
