@@ -7,6 +7,8 @@
 
 //! Table widget demo - celebrating active mobility.
 
+use std::sync::Arc;
+
 use masonry::layout::AsUnit;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
@@ -163,7 +165,7 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             ("joy_level", joy_w),
         ],
         header_columns,
-        |model: &mut AppModel, column_key: String, new_width: f64| {
+        |model: &mut AppModel, column_key: Arc<str>, new_width: f64| {
             model.table_column_widths.set(&column_key, new_width);
         },
     );

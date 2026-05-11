@@ -6,6 +6,7 @@
 //! (compatible with the Xilem licence).
 
 use std::cmp::Ordering;
+use std::sync::Arc;
 
 use crate::traits::TableRow;
 
@@ -40,15 +41,16 @@ impl SortDirection {
 /// Sort descriptors can be chained for multi-column sorting.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SortDescriptor {
-    /// The column key to sort by.
-    pub column: String,
+    /// The column key to sort by. `Arc<str>` so cloning a descriptor (e.g.
+    /// when rebuilding sort state) is a refcount bump, not a heap allocation.
+    pub column: Arc<str>,
     /// The sort direction.
     pub direction: SortDirection,
 }
 
 impl SortDescriptor {
     /// Creates a new sort descriptor.
-    pub fn new(column: impl Into<String>, direction: SortDirection) -> Self {
+    pub fn new(column: impl Into<Arc<str>>, direction: SortDirection) -> Self {
         Self {
             column: column.into(),
             direction,
@@ -56,12 +58,12 @@ impl SortDescriptor {
     }
 
     /// Creates an ascending sort descriptor.
-    pub fn ascending(column: impl Into<String>) -> Self {
+    pub fn ascending(column: impl Into<Arc<str>>) -> Self {
         Self::new(column, SortDirection::Ascending)
     }
 
     /// Creates a descending sort descriptor.
-    pub fn descending(column: impl Into<String>) -> Self {
+    pub fn descending(column: impl Into<Arc<str>>) -> Self {
         Self::new(column, SortDirection::Descending)
     }
 
@@ -99,7 +101,7 @@ impl SortOrder {
     }
 
     /// Creates a sort order with a single descriptor.
-    pub fn single(column: impl Into<String>, direction: SortDirection) -> Self {
+    pub fn single(column: impl Into<Arc<str>>, direction: SortDirection) -> Self {
         Self {
             descriptors: vec![SortDescriptor::new(column, direction)],
         }
@@ -114,7 +116,7 @@ impl SortOrder {
 
     /// Returns the primary (first) sort column, if any.
     pub fn primary_column(&self) -> Option<&str> {
-        self.descriptors.first().map(|d| d.column.as_str())
+        self.descriptors.first().map(|d| &*d.column)
     }
 
     /// Returns the sort direction for the primary column.
@@ -126,13 +128,13 @@ impl SortOrder {
     pub fn direction_for(&self, column: &str) -> Option<SortDirection> {
         self.descriptors
             .iter()
-            .find(|d| d.column == column)
+            .find(|d| &*d.column == column)
             .map(|d| d.direction)
     }
 
     /// Returns the position of a column in the sort order (0-indexed).
     pub fn position_of(&self, column: &str) -> Option<usize> {
-        self.descriptors.iter().position(|d| d.column == column)
+        self.descriptors.iter().position(|d| &*d.column == column)
     }
 
     /// Returns the number of sort descriptors.
@@ -297,14 +299,14 @@ mod tests {
     #[test]
     fn sort_descriptor_ascending() {
         let desc = SortDescriptor::ascending("name");
-        assert_eq!(desc.column, "name");
+        assert_eq!(&*desc.column, "name");
         assert_eq!(desc.direction, SortDirection::Ascending);
     }
 
     #[test]
     fn sort_descriptor_descending() {
         let desc = SortDescriptor::descending("age");
-        assert_eq!(desc.column, "age");
+        assert_eq!(&*desc.column, "age");
         assert_eq!(desc.direction, SortDirection::Descending);
     }
 

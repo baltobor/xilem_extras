@@ -10,6 +10,8 @@
 //!
 //! For new code, use [`super::table`] which is virtualized and handles large datasets efficiently.
 
+use std::sync::Arc;
+
 use masonry::layout::AsUnit;
 use xilem::masonry::core::PointerButton;
 use xilem::masonry::peniko::Color;
@@ -25,13 +27,13 @@ use crate::traits::{Identifiable, SelectionModifiers, SelectionState};
 #[derive(Debug, Clone, PartialEq)]
 pub enum LegacyTableAction<Id> {
     /// Column header clicked for sorting.
-    Sort(String, SortDirection),
+    Sort(Arc<str>, SortDirection),
     /// Row selected with optional modifiers.
     Select(Id, SelectionModifiers),
     /// Row activated (double-click or Enter).
     Activate(Id),
     /// Column resized (column_key, new_width).
-    ColumnResized(String, f64),
+    ColumnResized(Arc<str>, f64),
 }
 
 /// Style configuration for table.
@@ -330,7 +332,7 @@ mod tests {
     fn table_action_sort() {
         let action = LegacyTableAction::<u64>::Sort("name".into(), SortDirection::Ascending);
         if let LegacyTableAction::Sort(col, dir) = action {
-            assert_eq!(col, "name");
+            assert_eq!(&*col, "name");
             assert_eq!(dir, SortDirection::Ascending);
         } else {
             panic!("Expected Sort action");
@@ -372,7 +374,7 @@ mod tests {
     fn table_action_column_resized() {
         let action = LegacyTableAction::<u64>::ColumnResized("name".into(), 150.0);
         if let LegacyTableAction::ColumnResized(col, width) = action {
-            assert_eq!(col, "name");
+            assert_eq!(&*col, "name");
             assert!((width - 150.0).abs() < f64::EPSILON);
         } else {
             panic!("Expected ColumnResized action");

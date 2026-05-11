@@ -79,6 +79,7 @@
 
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::core::Widget;
@@ -94,14 +95,15 @@ use crate::traits::{Identifiable, SelectionModifiers, SelectionState, TableRow};
 /// Actions that can occur on virtual table rows or columns.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TableAction<Id> {
-    /// Column header clicked for sorting.
-    Sort(String, SortDirection),
+    /// Column header clicked for sorting. Key is `Arc<str>` — shared with the
+    /// column definition, so dispatching a sort action allocates nothing.
+    Sort(Arc<str>, SortDirection),
     /// Row selected with optional modifiers.
     Select(Id, SelectionModifiers),
     /// Row activated (double-click or Enter).
     Activate(Id),
-    /// Column resized (column_key, new_width).
-    ColumnResized(String, f64),
+    /// Column resized. Key is `Arc<str>` for the same reason as `Sort`.
+    ColumnResized(Arc<str>, f64),
 }
 
 /// Create the view id used for child row views.
@@ -188,7 +190,7 @@ where
         let header = self.build_header(ctx, app_state);
 
         // Extract column keys for hit testing
-        let column_keys: Vec<String> = self.columns.iter().map(|c| c.key.clone()).collect();
+        let column_keys: Vec<Arc<str>> = self.columns.iter().map(|c| c.key.clone()).collect();
 
         // Create table widget with style and set initial item count
         let widget = TableWidget::new_with_item_count(
@@ -471,7 +473,7 @@ where
 
         // Build header cell widgets
         let mut children: Vec<NewWidget<dyn Widget>> = Vec::new();
-        let mut column_keys: Vec<String> = Vec::new();
+        let mut column_keys: Vec<Arc<str>> = Vec::new();
 
         for col in self.columns.iter() {
             // Add sort indicator to title

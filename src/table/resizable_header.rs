@@ -8,6 +8,7 @@
 //! Resizable table header widget with draggable column dividers.
 
 use std::any::TypeId;
+use std::sync::Arc;
 
 use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
 use xilem::core::MessageResult;
@@ -34,14 +35,15 @@ const DIVIDER_WIDTH: f64 = 2.0;
 /// Action emitted when a column is resized.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColumnResizeAction {
-    pub column_key: String,
+    /// `Arc<str>` — cloned from the column definition, no allocation on resize.
+    pub column_key: Arc<str>,
     pub new_width: f64,
 }
 
 /// Internal column info for layout.
 #[derive(Debug, Clone)]
 struct ColumnInfo {
-    key: String,
+    key: Arc<str>,
     width: f64,
     x_offset: f64,
 }
@@ -52,7 +54,7 @@ struct ColumnInfo {
 /// between them that can be dragged to resize columns.
 pub struct ResizableHeader {
     children: Vec<WidgetPod<dyn Widget>>,
-    column_keys: Vec<String>,
+    column_keys: Vec<Arc<str>>,
     column_widths: Vec<f64>,
     columns: Vec<ColumnInfo>,
     size: Size,
@@ -70,7 +72,7 @@ impl ResizableHeader {
     /// Creates a new resizable header with the given column children.
     pub fn new(
         children: Vec<NewWidget<dyn Widget>>,
-        column_keys: Vec<String>,
+        column_keys: Vec<Arc<str>>,
         column_widths: Vec<f64>,
     ) -> Self {
         let children: Vec<_> = children.into_iter().map(|c| c.to_pod()).collect();
@@ -483,7 +485,7 @@ impl Widget for ResizableHeader {
 
 /// Xilem view for a resizable header row.
 pub struct ResizableHeaderView<F, State, Action, V> {
-    column_keys: Vec<String>,
+    column_keys: Vec<Arc<str>>,
     column_widths: Vec<f64>,
     children: Vec<V>,
     callback: F,
@@ -507,10 +509,10 @@ pub fn resizable_header<State: 'static, Action: 'static, V, F>(
 ) -> ResizableHeaderView<F, State, Action, V>
 where
     V: WidgetView<State, Action>,
-    F: Fn(&mut State, String, f64) -> Action + Send + Sync + 'static,
+    F: Fn(&mut State, Arc<str>, f64) -> Action + Send + Sync + 'static,
 {
     ResizableHeaderView {
-        column_keys: columns.iter().map(|(k, _)| k.to_string()).collect(),
+        column_keys: columns.iter().map(|(k, _)| Arc::from(*k)).collect(),
         column_widths: columns.iter().map(|(_, w)| *w).collect(),
         children,
         callback,
@@ -523,7 +525,7 @@ impl<F, State, Action, V> ViewMarker for ResizableHeaderView<F, State, Action, V
 impl<F, State, Action, V> View<State, Action, ViewCtx> for ResizableHeaderView<F, State, Action, V>
 where
     V: WidgetView<State, Action>,
-    F: Fn(&mut State, String, f64) -> Action + Send + Sync + 'static,
+    F: Fn(&mut State, Arc<str>, f64) -> Action + Send + Sync + 'static,
     State: 'static,
     Action: 'static,
 {

@@ -5,6 +5,8 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
+use std::sync::Arc;
+
 /// Column alignment options.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Alignment {
@@ -35,7 +37,12 @@ impl Default for ColumnWidth {
 #[derive(Debug, Clone)]
 pub struct ColumnDef {
     /// Unique key for this column (used for cell lookup).
-    pub key: String,
+    ///
+    /// `Arc<str>` so that callers constructing keys from runtime data (e.g.
+    /// CSV header names) never need `Box::leak` to satisfy a `'static` bound,
+    /// and so that cloning a key during header layout or action dispatch is
+    /// a single atomic reference-count bump rather than a heap allocation.
+    pub key: Arc<str>,
     /// Display title in the header.
     pub title: String,
     /// Column width specification.
@@ -52,7 +59,7 @@ pub struct ColumnDef {
 
 impl ColumnDef {
     /// Creates a new column definition.
-    pub fn new(key: impl Into<String>, title: impl Into<String>) -> Self {
+    pub fn new(key: impl Into<Arc<str>>, title: impl Into<String>) -> Self {
         Self {
             key: key.into(),
             title: title.into(),
@@ -72,7 +79,7 @@ pub struct ColumnBuilder {
 
 impl ColumnBuilder {
     /// Creates a new column builder.
-    pub fn new(key: impl Into<String>, title: impl Into<String>) -> Self {
+    pub fn new(key: impl Into<Arc<str>>, title: impl Into<String>) -> Self {
         Self {
             def: ColumnDef::new(key, title),
         }
@@ -143,7 +150,7 @@ impl ColumnBuilder {
 ///     .align(Alignment::End)
 ///     .build();
 /// ```
-pub fn column(key: impl Into<String>, title: impl Into<String>) -> ColumnBuilder {
+pub fn column(key: impl Into<Arc<str>>, title: impl Into<String>) -> ColumnBuilder {
     ColumnBuilder::new(key, title)
 }
 
@@ -154,7 +161,7 @@ mod tests {
     #[test]
     fn column_default_values() {
         let col = column("test", "Test").build();
-        assert_eq!(col.key, "test");
+        assert_eq!(&*col.key, "test");
         assert_eq!(col.title, "Test");
         assert_eq!(col.width, ColumnWidth::Flex(1.0));
         assert!(col.sortable);
@@ -213,7 +220,7 @@ mod tests {
             .sortable(true)
             .build();
 
-        assert_eq!(col.key, "name");
+        assert_eq!(&*col.key, "name");
         assert_eq!(col.title, "Full Name");
         assert_eq!(col.width, ColumnWidth::Flex(2.0));
         assert_eq!(col.alignment, Alignment::Start);

@@ -44,6 +44,7 @@
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::ops::Range;
+use std::sync::Arc;
 
 use tracing::{trace_span, Span};
 use xilem::masonry::accesskit::{Node, Role};
@@ -97,8 +98,8 @@ pub struct TableRowClickAction {
 pub struct TableHeaderClickAction {
     /// Column index that was clicked.
     pub column_index: usize,
-    /// Column key.
-    pub column_key: String,
+    /// Column key. `Arc<str>` — cloned from the column definition, no allocation.
+    pub column_key: Arc<str>,
 }
 
 /// Combined action for table events.
@@ -117,7 +118,7 @@ pub enum TableWidgetAction {
 /// Column layout info for hit testing.
 #[derive(Debug, Clone)]
 struct ColumnLayout {
-    key: String,
+    key: Arc<str>,
     x_start: f64,
     width: f64,
 }
@@ -142,7 +143,7 @@ pub struct TableWidget {
     /// Style configuration.
     style: TableStyle,
     /// Column keys for header click detection.
-    column_keys: Vec<String>,
+    column_keys: Vec<Arc<str>>,
     /// Computed column layouts for hit testing.
     column_layouts: Vec<ColumnLayout>,
     /// Whether we're waiting for view to handle range action.
@@ -164,7 +165,7 @@ pub struct TableWidget {
 
 impl TableWidget {
     /// Creates a new table widget with a header.
-    pub fn new(header: NewWidget<dyn Widget>, style: TableStyle, column_keys: Vec<String>) -> Self {
+    pub fn new(header: NewWidget<dyn Widget>, style: TableStyle, column_keys: Vec<Arc<str>>) -> Self {
         Self::new_with_item_count(header, style, column_keys, 0)
     }
 
@@ -172,7 +173,7 @@ impl TableWidget {
     pub fn new_with_item_count(
         header: NewWidget<dyn Widget>,
         style: TableStyle,
-        column_keys: Vec<String>,
+        column_keys: Vec<Arc<str>>,
         item_count: usize,
     ) -> Self {
         let mut state = TableScrollState::new(style.row_height);
@@ -290,10 +291,10 @@ impl TableWidget {
     }
 
     /// Hit test for header column.
-    fn hit_test_header_column(&self, x: f64) -> Option<(usize, &str)> {
+    fn hit_test_header_column(&self, x: f64) -> Option<(usize, Arc<str>)> {
         for (i, col) in self.column_layouts.iter().enumerate() {
             if x >= col.x_start && x < col.x_start + col.width {
-                return Some((i, &col.key));
+                return Some((i, col.key.clone()));
             }
         }
         None
@@ -575,7 +576,7 @@ impl Widget for TableWidget {
                         ctx.submit_action::<Self::Action>(TableWidgetAction::HeaderClick(
                             TableHeaderClickAction {
                                 column_index: col_idx,
-                                column_key: col_key.to_string(),
+                                column_key: col_key.clone(),
                             },
                         ));
                         ctx.set_handled();

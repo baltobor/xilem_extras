@@ -82,7 +82,7 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
                     state.last_click_mods = format!("Activated cyclist #{}", id);
                 }
                 TableAction::Sort(column, direction) => {
-                    state.virtual_table_sort = SortOrder::single(&column, direction);
+                    state.virtual_table_sort = SortOrder::single(&*column, direction);
                 }
                 TableAction::ColumnResized(column_key, new_width) => {
                     state.virtual_table_column_widths.set(&column_key, new_width);
