@@ -18,6 +18,20 @@
 //! - Closable tabs with X button
 //! - Dirty state indicator (asterisk)
 //! - Scrollable with navigation arrows
+//! 
+//! The X button is on the left side **on purpose**!
+//! When you close a tab, the tab next to it moves over from the right. 
+//! What I really hate about almost all other tab layouts is when the tab moves 
+//! over and the close button ends up in a different spot. 
+//! 
+//! Because the X is on the left side, the tab's close button moves of the 
+//! right tab moves over, and the new close button appears directly under 
+//! the mouse pointer. This means that if you want to quickly close several 
+//! tabs next to each other, you can keep the mouse in one place and simply 
+//! click multiple times. Tabs resize with the text length. And if tabs change 
+//! size along with the text, a close icon on the right side would shift 
+//! position along with the text. This results in the mouse pointer moving 
+//! very slowly when you want to close several tabs in a row one ofter another. 
 //!
 //! ```ignore
 //! use xilem_extras::tabs::{TabBar, TabItem};
