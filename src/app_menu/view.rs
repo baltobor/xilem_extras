@@ -10,6 +10,7 @@
 //! This module provides convenience functions for building application menu bars
 //! using the existing menu_button infrastructure.
 
+use xilem::masonry::layout::Length;
 use xilem::masonry::peniko::Color;
 use xilem::style::{Padding, Style};
 use xilem::view::{flex_col, label, CrossAxisAlignment};
@@ -157,9 +158,9 @@ pub fn menu_bar_label<'a, State: 'static, Action: 'static>(text: &'a str) -> imp
         .text_size(MENU_TEXT_SIZE)
         .color(MENU_TEXT_COLOR)
         .padding(Padding {
-            top: MENU_PADDING_V,
-            bottom: MENU_PADDING_V,
-            left: MENU_PADDING_H,
-            right: MENU_PADDING_H,
+            top: Length::px(MENU_PADDING_V),
+            bottom: Length::px(MENU_PADDING_V),
+            left: Length::px(MENU_PADDING_H),
+            right: Length::px(MENU_PADDING_H),
         })
 }

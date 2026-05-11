@@ -7,7 +7,7 @@
 
 //! Simple bar/line chart demo for the gallery.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::style::Style;
 use xilem::view::{button, checkbox, flex_col, flex_row, label, CrossAxisAlignment, FlexExt};
 use xilem::WidgetView;
@@ -137,6 +137,6 @@ pub fn chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Stretch)
     .gap(12.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

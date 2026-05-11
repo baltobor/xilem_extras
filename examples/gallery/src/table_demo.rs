@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, flex_row, label, button, sized_box, CrossAxisAlignment};
@@ -57,7 +57,7 @@ fn column_header<'a>(
             .color(theme.text()),
     ))
     .gap(4.px())
-    .padding(8.0)
+    .padding(Length::px(8.0))
     .width((width as i32).px());
 
     row_button(row, move |model: &mut AppModel| {
@@ -71,7 +71,7 @@ fn table_cell(value: String, width: f64, theme: Theme) -> impl WidgetView<AppMod
     label(value)
         .text_size(13.0)
         .color(theme.text())
-        .padding(8.0)
+        .padding(Length::px(8.0))
         .width((width as i32).px())
 }
 
@@ -247,6 +247,6 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         .gap(8.px()),
     ))
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

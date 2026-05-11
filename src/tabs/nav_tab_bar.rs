@@ -12,7 +12,7 @@
 
 use std::marker::PhantomData;
 
-use xilem::masonry::layout::AsUnit;
+use xilem::masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::{Padding, Style};
 use xilem::view::{button, flex_row, label, portal, FlexExt};
@@ -211,10 +211,10 @@ impl<'a, State, Action, T: TabItem, S> NavTabBar<'a, State, Action, T, S> {
     }
 
     /// Returns the golden ratio padding for tabs.
-    pub fn tab_padding() -> (f64, f64) {
-        let pad_v = 3.0;
+    pub fn tab_padding() -> (Length, Length) {
+        let pad_v = 3.0_f64;
         let pad_h = (pad_v * PHI).round();
-        (pad_h, pad_v)
+        (Length::px(pad_h), Length::px(pad_v))
     }
 
     /// Estimates the total width of all tabs in pixels.
@@ -222,6 +222,7 @@ impl<'a, State, Action, T: TabItem, S> NavTabBar<'a, State, Action, T, S> {
     /// Uses average character width and padding to approximate layout.
     pub fn estimated_tabs_width(&self) -> f64 {
         let (pad_h, _) = Self::tab_padding();
+        let pad_h = pad_h.get();
         let scale = self.text_size as f64 / 13.0; // Scale relative to default
         let char_width = AVG_CHAR_WIDTH * scale;
         let gap = 4.0; // Gap between tabs
@@ -304,8 +305,8 @@ where
                     },
                 )
                 .background_color(bg)
-                .border(Color::TRANSPARENT, 0.0)
-                .corner_radius(corner_radius)
+                .border(Color::TRANSPARENT, Length::ZERO)
+                .corner_radius(Length::px(corner_radius))
                 .padding(tab_padding)
                 .boxed()
             })
@@ -341,8 +342,8 @@ where
             )
             .disabled(!can_prev)
             .background_color(colors.bar_bg)
-            .border(Color::TRANSPARENT, 0.0)
-            .padding(2.0);
+            .border(Color::TRANSPARENT, Length::ZERO)
+            .padding(Length::px(2.0));
 
             let on_select_next = self.on_select.clone();
             let next_color = if can_next {
@@ -369,8 +370,8 @@ where
             )
             .disabled(!can_next)
             .background_color(colors.bar_bg)
-            .border(Color::TRANSPARENT, 0.0)
-            .padding(2.0);
+            .border(Color::TRANSPARENT, Length::ZERO)
+            .padding(Length::px(2.0));
 
             flex_row((scrollable_tabs, prev_btn, next_btn))
                 .gap(4.px())
@@ -421,7 +422,7 @@ mod tests {
     #[test]
     fn nav_tab_padding_golden_ratio() {
         let (h, v) = NavTabBar::<(), (), SimpleTab, ()>::tab_padding();
-        assert!((h / v - PHI).abs() < 0.1);
+        assert!((h.get() / v.get() - PHI).abs() < 0.1);
     }
 
     #[test]

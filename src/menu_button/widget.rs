@@ -21,7 +21,7 @@ use xilem::masonry::core::{
     TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Size, Vec2};
-use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 
 use super::MenuDropdown;
 
@@ -289,8 +289,8 @@ impl Widget for MenuButton {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
 

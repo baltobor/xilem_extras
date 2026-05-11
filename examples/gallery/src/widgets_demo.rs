@@ -16,7 +16,7 @@
 //! flips `model.dark_mode`, which the gallery picks up on the
 //! next render and threads through the entire view tree.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::style::Style;
 use xilem::view::{button, flex_col, label, portal, CrossAxisAlignment};
 use xilem::WidgetView;
@@ -83,9 +83,9 @@ pub fn widgets_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(6.0_f64.px())
-            .padding(10.0)
+            .padding(Length::px(10.0))
             .background_color(bg_section)
-            .corner_radius(6.0),
+            .corner_radius(Length::px(6.0)),
 
             // Boolean control styles, all theme-driven.
             flex_col((
@@ -125,9 +125,9 @@ pub fn widgets_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(6.0_f64.px())
-            .padding(10.0)
+            .padding(Length::px(10.0))
             .background_color(bg_section)
-            .corner_radius(6.0),
+            .corner_radius(Length::px(6.0)),
 
             // Form
             label("Form")
@@ -230,13 +230,13 @@ pub fn widgets_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             ))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(6.0_f64.px())
-            .padding(10.0)
+            .padding(Length::px(10.0))
             .background_color(bg_section)
-            .corner_radius(6.0),
+            .corner_radius(Length::px(6.0)),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(12.0_f64.px())
-        .padding(12.0)
+        .padding(Length::px(12.0))
         .background_color(bg_content),
     )
     .constrain_horizontal(true)

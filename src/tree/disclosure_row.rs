@@ -14,7 +14,7 @@
 //!
 //! This is pure xilem composition — no masonry widget, no type erasure.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use masonry::properties::Padding;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
@@ -91,10 +91,10 @@ where
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .gap(4.px())
         .padding(Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: depth as f64 * indent_per_depth,
-            right: 4.0,
+            top: Length::px(2.0),
+            bottom: Length::px(2.0),
+            left: Length::px(depth as f64 * indent_per_depth),
+            right: Length::px(4.0),
         });
 
     if row_background != Color::TRANSPARENT {

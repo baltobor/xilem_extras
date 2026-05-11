@@ -19,7 +19,7 @@ use xilem::masonry::core::{
     RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
-use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 
 use super::ContextMenuDropdown;
 use crate::menu_button::PulldownMenuItem;
@@ -153,8 +153,8 @@ impl Widget for ContextMenuWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
 

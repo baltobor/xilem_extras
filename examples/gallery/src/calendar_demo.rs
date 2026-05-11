@@ -8,7 +8,7 @@
 //! Calendar and Time Picker demo page.
 
 use chrono::{Datelike, Duration, Local, NaiveDate};
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, CrossAxisAlignment, MainAxisAlignment};
@@ -100,9 +100,9 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
                 .width(((CELL * 7.0) as i32).px()),
             ))
             .gap(4.0_f64.px())
-            .padding(6.0)
+            .padding(Length::px(6.0))
             .background_color(CAL_BG)
-            .corner_radius(6.0),
+            .corner_radius(Length::px(6.0)),
 
             // Time picker section
             flex_col((
@@ -117,7 +117,7 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(10.0_f64.px())
-    .padding(12.0)
+    .padding(Length::px(12.0))
     .background_color(theme.page_bg())
 }
 
@@ -161,9 +161,9 @@ fn build_time_picker(hour: u8, minute: u8) -> impl WidgetView<AppModel> {
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(2.0_f64.px())
-    .padding(4.0)
+    .padding(Length::px(4.0))
     .background_color(TIME_BG)
-    .corner_radius(4.0)
+    .corner_radius(Length::px(4.0))
 }
 
 fn time_btn(text: &'static str, is_hour: bool, is_up: bool) -> impl WidgetView<AppModel> {

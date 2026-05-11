@@ -83,6 +83,7 @@ use std::sync::Arc;
 
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::core::Widget;
+use xilem::masonry::layout::Length;
 use xilem::style::Style;
 use xilem::view::label;
 use xilem::{Pod, ViewCtx, WidgetView};
@@ -489,7 +490,7 @@ where
             let lbl = label(title)
                 .text_size(13.0)
                 .color(text_color)
-                .padding(4.0);
+                .padding(Length::px(4.0));
 
             // Build the view to get a widget - use View trait bound to help inference
             let (pod, _view_state) = View::<State, (), ViewCtx>::build(&lbl, ctx, app_state);

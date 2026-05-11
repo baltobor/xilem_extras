@@ -23,7 +23,7 @@ use xilem::masonry::core::{
     TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size, Vec2};
-use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
@@ -230,16 +230,16 @@ impl Widget for DropdownSelect {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
 
         let label_len = ctx.compute_length(&mut self.label, auto_length, context_size, axis, cross_length);
 
         match axis {
-            Axis::Horizontal => label_len + 2.0 * PADDING_H,
-            Axis::Vertical => label_len + 2.0 * PADDING_V,
+            Axis::Horizontal => Length::px(label_len.get() + 2.0 * PADDING_H),
+            Axis::Vertical => Length::px(label_len.get() + 2.0 * PADDING_V),
         }
     }
 

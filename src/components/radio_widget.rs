@@ -22,7 +22,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Circle, Point, Rect, RoundedRect, Size, Stroke};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::{Color, Fill};
 use xilem::{Pod, ViewCtx};
 
@@ -161,11 +161,11 @@ impl Widget for RadioWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         _len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         match axis {
-            Axis::Horizontal => FRAME_W,
-            Axis::Vertical => FRAME_H,
+            Axis::Horizontal => Length::px(FRAME_W),
+            Axis::Vertical => Length::px(FRAME_H),
         }
     }
 

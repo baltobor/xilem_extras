@@ -28,7 +28,7 @@ use xilem::masonry::core::{
 use tracing::{trace_span, Span};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Point, Rect, RoundedRect, Size};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
 use xilem::masonry::properties::Background;
 
@@ -736,27 +736,27 @@ impl Widget for ListWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         match axis {
             Axis::Horizontal => {
                 match len_req {
                     LenReq::FitContent(available) => available,
-                    LenReq::MinContent => 200.0,
-                    LenReq::MaxContent => 600.0, // Reasonable default width
+                    LenReq::MinContent => Length::px(200.0),
+                    LenReq::MaxContent => Length::px(600.0), // Reasonable default width
                 }
             }
             Axis::Vertical => {
                 match len_req {
                     LenReq::FitContent(available) => available,
-                    LenReq::MinContent => 100.0,
+                    LenReq::MinContent => Length::px(100.0),
                     // For max content, return actual content height or reasonable default
                     LenReq::MaxContent => {
                         let content_height = self.state.content_height();
                         if content_height > 0.0 {
-                            content_height
+                            Length::px(content_height)
                         } else {
-                            400.0
+                            Length::px(400.0)
                         }
                     }
                 }

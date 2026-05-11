@@ -31,7 +31,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Rect, Size};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Fill;
 use xilem::Color;
 
@@ -256,13 +256,13 @@ impl Widget for ProgressBarWidget {
         _: &PropertiesRef<'_>,
         axis: Axis,
         _: LenReq,
-        _: Option<f64>,
-    ) -> f64 {
+        _: Option<Length>,
+    ) -> Length {
         match (self.orientation, axis) {
-            (ProgressOrientation::Horizontal, Axis::Horizontal) => self.main_axis_len,
-            (ProgressOrientation::Horizontal, Axis::Vertical) => self.cross_axis_len,
-            (ProgressOrientation::Vertical, Axis::Horizontal) => self.cross_axis_len,
-            (ProgressOrientation::Vertical, Axis::Vertical) => self.main_axis_len,
+            (ProgressOrientation::Horizontal, Axis::Horizontal) => Length::px(self.main_axis_len),
+            (ProgressOrientation::Horizontal, Axis::Vertical) => Length::px(self.cross_axis_len),
+            (ProgressOrientation::Vertical, Axis::Horizontal) => Length::px(self.cross_axis_len),
+            (ProgressOrientation::Vertical, Axis::Vertical) => Length::px(self.main_axis_len),
         }
     }
 

@@ -12,7 +12,7 @@
 
 use std::sync::Arc;
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::core::PointerButton;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
@@ -257,7 +257,7 @@ where
 
     let header_row = flex_row(header_cells)
         .gap(style.column_gap.px())
-        .padding(4.0)
+        .padding(Length::px(4.0))
         .background_color(style.header_bg)
         .height(style.header_height.px());
 
@@ -291,7 +291,7 @@ where
 
             let row_content = flex_row(cells)
                 .gap(style.column_gap.px())
-                .padding(4.0)
+                .padding(Length::px(4.0))
                 .background_color(row_bg)
                 .height(style.row_height.px());
 

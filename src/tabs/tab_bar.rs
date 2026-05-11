@@ -9,7 +9,7 @@
 
 use std::marker::PhantomData;
 
-use xilem::masonry::layout::AsUnit;
+use xilem::masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::{Padding, Style};
 use xilem::view::{button, flex_row, label, portal, FlexExt};
@@ -185,10 +185,10 @@ impl<'a, State, Action, T: TabItem, S, C> TabBar<'a, State, Action, T, S, C> {
     }
 
     /// Returns the golden ratio padding for tabs.
-    pub fn tab_padding() -> (f64, f64) {
-        let pad_v = 3.0;
+    pub fn tab_padding() -> (Length, Length) {
+        let pad_v = 3.0_f64;
         let pad_h = (pad_v * PHI).round();
-        (pad_h, pad_v)
+        (Length::px(pad_h), Length::px(pad_v))
     }
 }
 
@@ -250,8 +250,8 @@ where
                     },
                 )
                 .background_color(bg)
-                .border(Color::TRANSPARENT, 0.0)
-                .padding(0.0);
+                .border(Color::TRANSPARENT, Length::ZERO)
+                .padding(Length::ZERO);
 
                 let on_select = self.on_select.clone();
                 let select_btn = button(
@@ -265,8 +265,8 @@ where
                     },
                 )
                 .background_color(bg)
-                .border(Color::TRANSPARENT, 0.0)
-                .padding(0.0);
+                .border(Color::TRANSPARENT, Length::ZERO)
+                .padding(Length::ZERO);
 
                 flex_row((close_btn, select_btn))
                     .gap(2.px())
@@ -303,8 +303,8 @@ where
             )
             .disabled(!can_prev)
             .background_color(colors.bar_bg)
-            .border(Color::TRANSPARENT, 0.0)
-            .padding(2.0);
+            .border(Color::TRANSPARENT, Length::ZERO)
+            .padding(Length::px(2.0));
 
             let on_select_next = self.on_select.clone();
             let next_color = if can_next {
@@ -328,8 +328,8 @@ where
             )
             .disabled(!can_next)
             .background_color(colors.bar_bg)
-            .border(Color::TRANSPARENT, 0.0)
-            .padding(2.0);
+            .border(Color::TRANSPARENT, Length::ZERO)
+            .padding(Length::px(2.0));
 
             flex_row((scrollable_tabs, prev_btn, next_btn))
                 .gap(1.px())
@@ -381,7 +381,7 @@ mod tests {
     #[test]
     fn tab_padding_golden_ratio() {
         let (h, v) = TabBar::<(), (), SimpleTab, (), ()>::tab_padding();
-        assert!((h / v - PHI).abs() < 0.1);
+        assert!((h.get() / v.get() - PHI).abs() < 0.1);
     }
 
     #[test]

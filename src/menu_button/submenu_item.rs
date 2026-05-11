@@ -24,7 +24,7 @@ use xilem::masonry::core::{
     Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
-use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
@@ -131,17 +131,17 @@ impl Widget for PulldownSubmenuItem {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         match axis {
             Axis::Horizontal => {
                 let auto_length = len_req.into();
                 let context_size = LayoutSize::maybe(axis.cross(), cross_length);
                 let child_length =
                     ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
-                child_length + 2.0 * ITEM_PADDING_H + ARROW_WIDTH
+                Length::px(child_length.get() + 2.0 * ITEM_PADDING_H + ARROW_WIDTH)
             }
-            Axis::Vertical => DEFAULT_ITEM_HEIGHT,
+            Axis::Vertical => Length::px(DEFAULT_ITEM_HEIGHT),
         }
     }
 

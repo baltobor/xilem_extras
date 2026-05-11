@@ -18,7 +18,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, BezPath, Point, Rect, RoundedRect, Size, Stroke};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
 
 // Layout constants
@@ -244,11 +244,11 @@ impl Widget for TimePickerWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         _len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         match axis {
-            Axis::Horizontal => WIDGET_WIDTH,
-            Axis::Vertical => WIDGET_HEIGHT,
+            Axis::Horizontal => Length::px(WIDGET_WIDTH),
+            Axis::Vertical => Length::px(WIDGET_HEIGHT),
         }
     }
 

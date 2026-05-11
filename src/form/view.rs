@@ -8,7 +8,7 @@
 //! Form container, sections, and labeled rows.
 
 use masonry::core::ArcStr;
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, flex_row, label, CrossAxisAlignment, FlexExt, FlexSequence};
@@ -67,9 +67,9 @@ where
     flex_col(sequence)
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(FORM_GAP.px())
-        .padding(FORM_PADDING)
+        .padding(Length::px(FORM_PADDING))
         .background_color(FORM_BG)
-        .corner_radius(8.0)
+        .corner_radius(Length::px(8.0))
 }
 
 // MARK: - Form section
@@ -200,9 +200,9 @@ where
     flex_col(sequence)
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(FORM_GAP.px())
-        .padding(FORM_PADDING)
+        .padding(Length::px(FORM_PADDING))
         .background_color(theme.bg())
-        .corner_radius(8.0)
+        .corner_radius(Length::px(8.0))
 }
 
 /// Themed [`form_section`]. The group-box tint follows

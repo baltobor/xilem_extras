@@ -15,7 +15,7 @@ use xilem::masonry::core::{
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, BezPath, Line, Point, Rect, Size, Stroke};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
 use tracing::{trace_span, Span};
 
@@ -566,18 +566,18 @@ impl Widget for StockChartWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         match axis {
             Axis::Horizontal => match len_req {
-                LenReq::FitContent(available) => available.min(800.0).max(200.0),
-                LenReq::MinContent => 200.0,
-                LenReq::MaxContent => 800.0,
+                LenReq::FitContent(available) => Length::px(available.get().min(800.0).max(200.0)),
+                LenReq::MinContent => Length::px(200.0),
+                LenReq::MaxContent => Length::px(800.0),
             },
             Axis::Vertical => match len_req {
-                LenReq::FitContent(available) => available.min(400.0).max(150.0),
-                LenReq::MinContent => 150.0,
-                LenReq::MaxContent => 400.0,
+                LenReq::FitContent(available) => Length::px(available.get().min(400.0).max(150.0)),
+                LenReq::MinContent => Length::px(150.0),
+                LenReq::MaxContent => Length::px(400.0),
             },
         }
     }

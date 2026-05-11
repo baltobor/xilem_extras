@@ -26,7 +26,7 @@ use xilem::masonry::core::{
     PaintCtx, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx,
     TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
-use xilem::masonry::layout::{LenReq, LayoutSize, SizeDef};
+use xilem::masonry::layout::{LenReq, LayoutSize, Length, SizeDef};
 use xilem::masonry::kurbo::Axis;
 use xilem::{Pod, ViewCtx, WidgetView};
 
@@ -107,8 +107,8 @@ impl Widget for ClickInterceptorWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
         ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length)

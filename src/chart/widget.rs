@@ -21,7 +21,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Affine, Axis, BezPath, Line, Point, Rect, RoundedRect, Size, Stroke};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::parley::{Layout as ParleyLayout, StyleSet};
 use xilem::masonry::peniko::{Brush, Fill};
 use xilem::Color;
@@ -242,12 +242,12 @@ impl Widget for ChartWidget {
 
     fn update(&mut self, _: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, _: &Update) {}
 
-    fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<f64>) -> f64 {
+    fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<Length>) -> Length {
         // Return minimum sizes - flex(1.0) will expand to fill available space
         // paint() uses ctx.content_box_size() so it adapts to actual size
         match axis {
-            Axis::Horizontal => 100.0,
-            Axis::Vertical => 80.0,
+            Axis::Horizontal => Length::px(100.0),
+            Axis::Vertical => Length::px(80.0),
         }
     }
 

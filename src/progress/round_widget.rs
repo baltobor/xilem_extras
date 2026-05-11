@@ -34,7 +34,7 @@ use xilem::masonry::core::{
 use xilem::masonry::core::Update;
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Arc, Axis, Cap, Point, Size, Stroke, Vec2};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::Color;
 
 use smallvec::SmallVec;
@@ -261,9 +261,9 @@ impl Widget for RoundProgressWidget {
         _: &PropertiesRef<'_>,
         _axis: Axis,
         _: LenReq,
-        _: Option<f64>,
-    ) -> f64 {
-        self.size.box_side()
+        _: Option<Length>,
+    ) -> Length {
+        Length::px(self.size.box_side())
     }
 
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}

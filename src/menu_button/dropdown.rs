@@ -20,7 +20,7 @@ use xilem::masonry::core::{
     Widget, WidgetId, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
-use xilem::masonry::layout::{LayoutSize, LenDef, LenReq, SizeDef};
+use xilem::masonry::layout::{LayoutSize, LenDef, LenReq, Length, SizeDef};
 use xilem::masonry::properties::Gap;
 
 use super::widget::{MenuButton, MenuButtonPress, MenuItemData};
@@ -255,15 +255,15 @@ impl Widget for MenuDropdown {
         props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         let scale = 1.0;
         let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
         let (len_req, min_result) = match len_req {
-            LenReq::MinContent | LenReq::MaxContent => (len_req, 0.),
-            LenReq::FitContent(space) => (LenReq::MinContent, space),
+            LenReq::MinContent | LenReq::MaxContent => (len_req, 0.0_f64),
+            LenReq::FitContent(space) => (LenReq::MinContent, space.get()),
         };
 
         let auto_length = len_req.into();
@@ -274,8 +274,8 @@ impl Widget for MenuDropdown {
             let child_length =
                 ctx.compute_length(child, auto_length, context_size, axis, cross_length);
             match axis {
-                Axis::Horizontal => length = length.max(child_length),
-                Axis::Vertical => length += child_length,
+                Axis::Horizontal => length = length.max(child_length.get()),
+                Axis::Vertical => length += child_length.get(),
             }
         }
 
@@ -284,7 +284,7 @@ impl Widget for MenuDropdown {
             length += gap_count * gap_length;
         }
 
-        min_result.max(length)
+        Length::px(min_result.max(length))
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, props: &PropertiesRef<'_>, size: Size) {
@@ -292,8 +292,8 @@ impl Widget for MenuDropdown {
         let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
-        let width_def = LenDef::FitContent(size.width);
-        let height_def = LenDef::FitContent(size.height);
+        let width_def = LenDef::FitContent(Length::px(size.width));
+        let height_def = LenDef::FitContent(Length::px(size.height));
         let auto_size = SizeDef::new(width_def, height_def);
         let context_size = size.into();
 
@@ -508,15 +508,15 @@ impl Widget for SubmenuDropdown {
         props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         let scale = 1.0;
         let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
         let (len_req, min_result) = match len_req {
-            LenReq::MinContent | LenReq::MaxContent => (len_req, 0.),
-            LenReq::FitContent(space) => (LenReq::MinContent, space),
+            LenReq::MinContent | LenReq::MaxContent => (len_req, 0.0_f64),
+            LenReq::FitContent(space) => (LenReq::MinContent, space.get()),
         };
 
         let auto_length = len_req.into();
@@ -527,8 +527,8 @@ impl Widget for SubmenuDropdown {
             let child_length =
                 ctx.compute_length(child, auto_length, context_size, axis, cross_length);
             match axis {
-                Axis::Horizontal => length = length.max(child_length),
-                Axis::Vertical => length += child_length,
+                Axis::Horizontal => length = length.max(child_length.get()),
+                Axis::Vertical => length += child_length.get(),
             }
         }
 
@@ -537,7 +537,7 @@ impl Widget for SubmenuDropdown {
             length += gap_count * gap_length;
         }
 
-        min_result.max(length)
+        Length::px(min_result.max(length))
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, props: &PropertiesRef<'_>, size: Size) {
@@ -545,8 +545,8 @@ impl Widget for SubmenuDropdown {
         let gap = props.get::<Gap>(ctx.property_cache());
         let gap_length = gap.gap.dp(scale);
 
-        let width_def = LenDef::FitContent(size.width);
-        let height_def = LenDef::FitContent(size.height);
+        let width_def = LenDef::FitContent(Length::px(size.width));
+        let height_def = LenDef::FitContent(Length::px(size.height));
         let auto_size = SizeDef::new(width_def, height_def);
         let context_size = size.into();
 

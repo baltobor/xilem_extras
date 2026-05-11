@@ -26,7 +26,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, BezPath, Point, Size};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Fill;
 use xilem::Color;
 
@@ -247,12 +247,12 @@ impl Widget for BusyHexWidget {
         _: &PropertiesRef<'_>,
         _axis: Axis,
         _: LenReq,
-        _: Option<f64>,
-    ) -> f64 {
+        _: Option<Length>,
+    ) -> Length {
         if !self.busy && self.hide_when_not_busy {
-            0.0
+            Length::ZERO
         } else {
-            self.size.box_side()
+            Length::px(self.size.box_side())
         }
     }
 

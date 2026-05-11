@@ -7,7 +7,7 @@
 
 //! Sectioned list demo - demonstrates grouped lists with section headers.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button};
@@ -32,7 +32,7 @@ fn section_header(title: String, theme: Theme) -> impl WidgetView<AppModel, ()> 
             .weight(FontWeight::BOLD)
             .color(theme.text_secondary()),
     ))
-    .padding(8.0)
+    .padding(Length::px(8.0))
     .background_color(theme.page_bg())
 }
 
@@ -72,7 +72,7 @@ fn contact_item(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(8.px())
-    .padding(8.0)
+    .padding(Length::px(8.0))
     .background_color(row_bg)
 }
 
@@ -180,6 +180,6 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

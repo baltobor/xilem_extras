@@ -7,7 +7,7 @@
 
 //! Virtual Table demo - testing with 10,000 rows.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, flex_row, label, button};
@@ -62,10 +62,10 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
             let txt = theme.text();
             // Build row with clipped cells to prevent text overflow
             flex_row((
-                table_cell(label(cyclist.name.clone()).text_size(13.0).color(txt).padding(4.0), w0),
-                table_cell(label(cyclist.route.clone()).text_size(13.0).color(txt).padding(4.0), w1),
-                table_cell(label(format!("{:.1} km", cyclist.distance_km)).text_size(13.0).color(txt).padding(4.0), w2),
-                table_cell(label(format!("{}/10", cyclist.joy_level)).text_size(13.0).color(txt).padding(4.0), w3),
+                table_cell(label(cyclist.name.clone()).text_size(13.0).color(txt).padding(Length::px(4.0)), w0),
+                table_cell(label(cyclist.route.clone()).text_size(13.0).color(txt).padding(Length::px(4.0)), w1),
+                table_cell(label(format!("{:.1} km", cyclist.distance_km)).text_size(13.0).color(txt).padding(Length::px(4.0)), w2),
+                table_cell(label(format!("{}/10", cyclist.joy_level)).text_size(13.0).color(txt).padding(Length::px(4.0)), w3),
             ))
             .gap(2.px())
             .background_color(row_bg)
@@ -136,6 +136,6 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
         .gap(8.px()),
     ))
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

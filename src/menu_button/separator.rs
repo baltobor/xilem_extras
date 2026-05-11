@@ -21,7 +21,7 @@ use xilem::masonry::core::{
     Widget, WidgetId,
 };
 use xilem::masonry::kurbo::{Axis, Size};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 
 /// Separator line color (subtle gray).
 const SEPARATOR_COLOR: Color = Color::from_rgba8(0x58, 0x56, 0x52, 0xFF);
@@ -102,17 +102,17 @@ impl Widget for MenuSeparator {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         match axis {
             Axis::Horizontal => {
                 // Use available width from FitContent, or cross_length, or a minimum
                 match len_req {
                     LenReq::FitContent(available) => available,
-                    _ => cross_length.unwrap_or(100.0),
+                    _ => cross_length.unwrap_or(Length::px(100.0)),
                 }
             }
-            Axis::Vertical => SEPARATOR_HEIGHT + 2.0 * SEPARATOR_MARGIN_V,
+            Axis::Vertical => Length::px(SEPARATOR_HEIGHT + 2.0 * SEPARATOR_MARGIN_V),
         }
     }
 

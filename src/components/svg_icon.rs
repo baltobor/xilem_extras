@@ -29,7 +29,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::kurbo::{Affine, BezPath, Size, Stroke};
 use xilem::masonry::peniko::Color;
 use xilem::masonry::kurbo::Axis;
@@ -199,11 +199,11 @@ impl Widget for SvgIconWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         _len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         match axis {
-            Axis::Horizontal => self.icon.width(),
-            Axis::Vertical => self.icon.height(),
+            Axis::Horizontal => Length::px(self.icon.width()),
+            Axis::Vertical => Length::px(self.icon.height()),
         }
     }
 

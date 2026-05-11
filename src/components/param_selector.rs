@@ -29,7 +29,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Affine, Axis, Circle, Point, Rect, RoundedRect, Size, Stroke, Vec2};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::parley::Layout;
 use xilem::masonry::peniko::{Color, Fill};
 use xilem::{Pod, ViewCtx};
@@ -242,14 +242,14 @@ impl Widget for ParamSelectorWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         _len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         self.ensure_text_layouts(ctx.text_contexts());
 
         match axis {
             Axis::Horizontal => {
                 let dot_col_w = Self::dot_col_w();
-                match self.label_align {
+                let width = match self.label_align {
                     LabelAlign::Left | LabelAlign::Right => {
                         let max_text_w = self
                             .text_layouts
@@ -280,9 +280,10 @@ impl Widget for ParamSelectorWidget {
                             .fold(0.0_f64, f64::max);
                         max_left_w + LABEL_GAP + dot_col_w + LABEL_GAP + max_right_w
                     }
-                }
+                };
+                Length::px(width)
             }
-            Axis::Vertical => self.count as f64 * ROW_HEIGHT,
+            Axis::Vertical => Length::px(self.count as f64 * ROW_HEIGHT),
         }
     }
 

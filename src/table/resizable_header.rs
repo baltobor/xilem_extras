@@ -22,7 +22,7 @@ use xilem::masonry::core::{
     PaintCtx, PointerButtonEvent, PointerEvent, PointerUpdate, PropertiesMut, PropertiesRef,
     QueryCtx, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
-use xilem::masonry::layout::{LenReq, LayoutSize};
+use xilem::masonry::layout::{LenReq, LayoutSize, Length};
 use xilem::masonry::properties::Background;
 use xilem::masonry::kurbo::Axis;
 use xilem::{Pod, ViewCtx, WidgetView};
@@ -298,18 +298,18 @@ impl Widget for ResizableHeader {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         self.update_column_layout();
 
         match axis {
             Axis::Horizontal => {
-                self.columns.iter().map(|c| c.width).sum()
+                Length::px(self.columns.iter().map(|c| c.width).sum())
             }
             Axis::Vertical => {
-                let mut max_height = 0.0f64;
+                let mut max_height = Length::ZERO;
                 for (i, child) in self.children.iter_mut().enumerate() {
-                    let col_width = self.columns.get(i).map(|c| c.width);
+                    let col_width = self.columns.get(i).map(|c| Length::px(c.width));
                     let height = ctx.compute_length(
                         child,
                         len_req.into(),
@@ -317,7 +317,9 @@ impl Widget for ResizableHeader {
                         axis,
                         col_width,
                     );
-                    max_height = max_height.max(height);
+                    if height.get() > max_height.get() {
+                        max_height = height;
+                    }
                 }
                 max_height
             }

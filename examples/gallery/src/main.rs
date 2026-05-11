@@ -28,7 +28,7 @@ mod chart_demo;
 mod progress_demo;
 mod stock_chart_demo;
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use masonry::theme::default_property_set;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
@@ -105,10 +105,10 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             .text_size(MENU_TEXT_SIZE)
             .color(TEXT_COLOR)
             .padding(Padding {
-                top: MENU_PADDING_V,
-                bottom: MENU_PADDING_V,
-                left: MENU_PADDING_H,
-                right: MENU_PADDING_H,
+                top: Length::px(MENU_PADDING_V),
+                bottom: Length::px(MENU_PADDING_V),
+                left: Length::px(MENU_PADDING_H),
+                right: Length::px(MENU_PADDING_H),
             })
     };
 
@@ -243,7 +243,7 @@ fn nav_button(
         label(text.to_string())
             .text_size(13.0)
             .color(theme.text())
-            .padding(8.0),
+            .padding(Length::px(8.0)),
         move |model: &mut AppModel| {
             model.page = page;
         },
@@ -314,7 +314,7 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(4.px())
-        .padding(12.0)
+        .padding(Length::px(12.0))
         .background_color(theme.nav_bg()),
 
         // Demo content

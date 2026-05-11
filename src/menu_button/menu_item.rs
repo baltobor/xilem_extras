@@ -22,7 +22,7 @@ use xilem::masonry::core::{
     Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
-use xilem::masonry::layout::{LayoutSize, LenReq, SizeDef};
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
@@ -142,8 +142,8 @@ impl Widget for PulldownMenuItem {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         match axis {
             Axis::Horizontal => {
                 let auto_length = len_req.into();
@@ -151,7 +151,7 @@ impl Widget for PulldownMenuItem {
                 let child_length =
                     ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
                 let checkmark_space = if self.checked.is_some() { CHECKMARK_WIDTH } else { 0.0 };
-                let natural = child_length + 2.0 * ITEM_PADDING_H + checkmark_space;
+                let natural = Length::px(child_length.get() + 2.0 * ITEM_PADDING_H + checkmark_space);
                 // Stretch to the dropdown width so the hover area
                 // covers the whole row, matching tree-view rows.
                 // The dropdown calls measure with `MinContent` /
@@ -159,12 +159,12 @@ impl Widget for PulldownMenuItem {
                 // `FitContent(width)` to lay out each item — only
                 // the second case should fill.
                 if let LenReq::FitContent(available) = len_req {
-                    available.max(natural)
+                    if available.get() > natural.get() { available } else { natural }
                 } else {
                     natural
                 }
             }
-            Axis::Vertical => DEFAULT_ITEM_HEIGHT,
+            Axis::Vertical => Length::px(DEFAULT_ITEM_HEIGHT),
         }
     }
 

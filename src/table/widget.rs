@@ -57,7 +57,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Point, Rect, RoundedRect, Size};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
 use xilem::masonry::properties::Background;
 
@@ -722,22 +722,22 @@ impl Widget for TableWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         match axis {
             Axis::Horizontal => {
                 // Table fills available width (columns scale to fit)
                 match len_req {
                     LenReq::FitContent(available) => available,
-                    LenReq::MinContent => 200.0, // Minimum reasonable table width
-                    LenReq::MaxContent => self.intrinsic_max_width(),
+                    LenReq::MinContent => Length::px(200.0), // Minimum reasonable table width
+                    LenReq::MaxContent => Length::px(self.intrinsic_max_width()),
                 }
             }
             Axis::Vertical => {
                 // Table takes available height (internal scrolling)
                 match len_req {
                     LenReq::FitContent(available) => available,
-                    LenReq::MinContent | LenReq::MaxContent => 400.0, // Default fallback
+                    LenReq::MinContent | LenReq::MaxContent => Length::px(400.0), // Default fallback
                 }
             }
         }

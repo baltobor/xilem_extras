@@ -21,7 +21,7 @@ use xilem::masonry::core::{
     Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
-use xilem::masonry::layout::{LayoutSize, LenReq};
+use xilem::masonry::layout::{LayoutSize, LenReq, Length};
 
 /// Default backdrop color (semi-transparent black).
 const BACKDROP_COLOR: Color = Color::from_rgba8(0x00, 0x00, 0x00, 0x80);
@@ -167,8 +167,8 @@ impl Widget for SheetWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         // Sheet fills available space (should be given full window)
         // Measure child to determine content size
         let auto_length = len_req.into();
@@ -179,10 +179,10 @@ impl Widget for SheetWidget {
         // Return available space (sheet fills parent)
         match len_req {
             LenReq::FitContent(space) => space,
-            LenReq::MinContent => self.padding * 2.0 + _child_len,
+            LenReq::MinContent => Length::px(self.padding * 2.0 + _child_len.get()),
             LenReq::MaxContent => match axis {
-                Axis::Horizontal => 800.0,
-                Axis::Vertical => 600.0,
+                Axis::Horizontal => Length::px(800.0),
+                Axis::Vertical => Length::px(600.0),
             },
         }
     }
@@ -196,7 +196,7 @@ impl Widget for SheetWidget {
         use xilem::masonry::layout::{LenDef, LayoutSize as LS, SizeDef};
         let size_def = SizeDef::new(LenDef::MinContent, LenDef::MinContent);
         // Don't tell the child about available space - force it to report true minimum
-        let context_size = LS::new(0.0, 0.0);
+        let context_size = LS::new(Length::ZERO, Length::ZERO);
 
         let child_size = ctx.compute_size(&mut self.child, size_def, context_size);
 

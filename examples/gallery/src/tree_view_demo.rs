@@ -11,7 +11,7 @@
 //! enter, F2), per-node icons via the Material Icons font, single selection.
 //! Wrapped in a `portal` for scrolling.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, label, CrossAxisAlignment};
@@ -130,11 +130,11 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
         flex_col((tree.boxed(),))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(0.px())
-            .padding(8.0),
+            .padding(Length::px(8.0)),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }
 

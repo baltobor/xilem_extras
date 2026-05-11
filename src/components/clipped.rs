@@ -22,7 +22,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Point, Rect, Size};
-use xilem::masonry::layout::{LenReq, LayoutSize, SizeDef};
+use xilem::masonry::layout::{LenReq, LayoutSize, Length, SizeDef};
 use xilem::{Pod, ViewCtx, WidgetView};
 use tracing::{trace_span, Span};
 
@@ -98,8 +98,8 @@ impl Widget for ClippedWidget {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        cross_length: Option<f64>,
-    ) -> f64 {
+        cross_length: Option<Length>,
+    ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
         ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length)

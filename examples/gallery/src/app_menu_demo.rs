@@ -7,7 +7,7 @@
 
 //! App Menu Bar demo showing the unified cross-platform menu API.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, label};
@@ -33,7 +33,7 @@ fn code_block(code: &str, theme: Theme) -> impl WidgetView<AppModel> + use<'_> {
     label(code.to_string())
         .text_size(11.0)
         .color(Color::from_rgb8(180, 220, 180))
-        .padding(12.0)
+        .padding(Length::px(12.0))
         .background_color(theme.section_bg())
 }
 
@@ -91,6 +91,6 @@ flex_row((
         )).gap(4.px()),
     ))
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

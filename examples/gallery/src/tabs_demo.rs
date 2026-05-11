@@ -7,7 +7,7 @@
 
 //! Tabs widget demo.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, portal};
 use xilem::WidgetView;
@@ -199,7 +199,7 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             .text_size(12.0)
             .color(theme.text_secondary()),
         tab_bar,
-        portal(flex_col((content,)).padding(16.0)),
+        portal(flex_col((content,)).padding(Length::px(16.0))),
         flex_row((
             button(label("Mark Dirty"), move |model: &mut AppModel| {
                 if let Some(tab) = model.demo_tabs.get_mut(model.demo_active_tab) {
@@ -220,7 +220,7 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         ))
         .gap(8.px()),
         // Separator
-        flex_row(()).padding(8.0),
+        flex_row(()).padding(Length::px(8.0)),
         // Navigation Tabs (NavTabBar)
         label("NavTabBar - Navigation Tabs")
             .text_size(16.0)
@@ -253,6 +253,6 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         .gap(8.px()),
     ))
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

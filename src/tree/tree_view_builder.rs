@@ -39,7 +39,7 @@
 
 use std::sync::Arc;
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use masonry::properties::Padding;
 use xilem::core::MessageResult;
 use xilem::masonry::peniko::Color;
@@ -184,10 +184,10 @@ where
         chevron_color: DEFAULT_CHEVRON_COLOR,
         text_size: 11.0,
         row_padding: Padding {
-            top: 2.0,
-            bottom: 2.0,
-            left: 4.0,
-            right: 4.0,
+            top: Length::px(2.0),
+            bottom: Length::px(2.0),
+            left: Length::px(4.0),
+            right: Length::px(4.0),
         },
         icon_for: None,
         label_for: None,

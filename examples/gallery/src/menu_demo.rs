@@ -7,7 +7,7 @@
 
 //! Menu button demo showing pulldown menus.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::style::{Style, Padding};
 use xilem::view::{flex_col, flex_row, label};
 use xilem::WidgetView;
@@ -28,10 +28,10 @@ fn menu_bar_button(text: &str, theme: Theme) -> impl WidgetView<AppModel> + use<
         .text_size(MENU_TEXT_SIZE)
         .color(theme.text())
         .padding(Padding {
-            top: MENU_PADDING_V,
-            bottom: MENU_PADDING_V,
-            left: MENU_PADDING_H,
-            right: MENU_PADDING_H,
+            top: Length::px(MENU_PADDING_V),
+            bottom: Length::px(MENU_PADDING_V),
+            left: Length::px(MENU_PADDING_H),
+            right: Length::px(MENU_PADDING_H),
         })
 }
 
@@ -202,7 +202,7 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             ),
         ))
         .gap(8.px())
-        .padding(16.0),
+        .padding(Length::px(16.0)),
 
         // Status area
         flex_col((
@@ -214,9 +214,9 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 .color(theme.text()),
         ))
         .gap(4.px())
-        .padding(16.0),
+        .padding(Length::px(16.0)),
     ))
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

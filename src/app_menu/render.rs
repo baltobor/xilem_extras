@@ -140,7 +140,7 @@ where
 
     flex_row(buttons)
         .gap(Length::px(gap))
-        .padding(padding)
+        .padding(Length::px(padding))
         .background_color(bg)
 }
 

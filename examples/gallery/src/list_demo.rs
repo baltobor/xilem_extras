@@ -7,7 +7,7 @@
 
 //! List widget demo - demonstrates the virtualized list view with keyboard navigation.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button};
@@ -54,7 +54,7 @@ fn contact_row(
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(8.px())
-    .padding(8.0)
+    .padding(Length::px(8.0))
     .background_color(row_bg)
 }
 
@@ -113,6 +113,6 @@ pub fn list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

@@ -7,7 +7,7 @@
 
 //! Tree widget demo using tree_group.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::properties::Padding;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
@@ -65,7 +65,7 @@ fn build_tree_row(
                 .color(text_color),
         ))
         .gap(4.px())
-        .padding(Padding::left(indent))
+        .padding(Padding::left(Length::px(indent)))
         .background_color(row_bg)
         .boxed()
     } else {
@@ -81,7 +81,7 @@ fn build_tree_row(
                     .color(text_color),
             ))
             .gap(4.px())
-            .padding(Padding::left(file_indent))
+            .padding(Padding::left(Length::px(file_indent)))
             .background_color(row_bg)
             .boxed()
         } else if node.name == "Cargo.toml" {
@@ -93,7 +93,7 @@ fn build_tree_row(
                     .color(text_color),
             ))
             .gap(4.px())
-            .padding(Padding::left(file_indent))
+            .padding(Padding::left(Length::px(file_indent)))
             .background_color(row_bg)
             .boxed()
         } else {
@@ -108,7 +108,7 @@ fn build_tree_row(
                     .color(text_color),
             ))
             .gap(4.px())
-            .padding(Padding::left(file_indent))
+            .padding(Padding::left(Length::px(file_indent)))
             .background_color(row_bg)
             .boxed()
         }
@@ -187,11 +187,11 @@ pub fn tree_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
             flex_col((tree_view,))
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .gap(0.px())
-                .padding(8.0),
+                .padding(Length::px(8.0)),
         ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.px())
-    .padding(16.0)
+    .padding(Length::px(16.0))
     .background_color(theme.page_bg())
 }

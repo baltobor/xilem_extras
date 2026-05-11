@@ -23,7 +23,7 @@ use xilem::masonry::core::{
     TextEvent, Update, UpdateCtx, Widget, WidgetId,
 };
 use xilem::masonry::kurbo::{Axis, Size};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 
 use super::widget::{SheetAction, SheetWidget};
 
@@ -137,14 +137,14 @@ impl Widget for SheetLayer {
         _props: &PropertiesRef<'_>,
         axis: Axis,
         len_req: LenReq,
-        _cross_length: Option<f64>,
-    ) -> f64 {
+        _cross_length: Option<Length>,
+    ) -> Length {
         // Sheet layer fills available space
         match len_req {
             LenReq::FitContent(space) => space,
             LenReq::MinContent | LenReq::MaxContent => match axis {
-                Axis::Horizontal => 800.0,
-                Axis::Vertical => 600.0,
+                Axis::Horizontal => Length::px(800.0),
+                Axis::Vertical => Length::px(600.0),
             },
         }
     }

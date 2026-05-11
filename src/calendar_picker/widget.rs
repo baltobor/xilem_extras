@@ -23,7 +23,7 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Affine, Axis, Point, Rect, RoundedRect, Size};
-use xilem::masonry::layout::LenReq;
+use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::parley::{Layout as ParleyLayout, StyleSet};
 use xilem::masonry::peniko::{Brush, Fill};
 use xilem::Color;
@@ -208,10 +208,10 @@ impl Widget for CalendarPickerWidget {
 
     fn update(&mut self, _: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, _: &Update) {}
 
-    fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<f64>) -> f64 {
+    fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<Length>) -> Length {
         match axis {
-            Axis::Horizontal => self.cell_size * NUM_COLS as f64,
-            Axis::Vertical => self.cell_size * (NUM_DAY_ROWS + 1) as f64,
+            Axis::Horizontal => Length::px(self.cell_size * NUM_COLS as f64),
+            Axis::Vertical => Length::px(self.cell_size * (NUM_DAY_ROWS + 1) as f64),
         }
     }
 

@@ -10,7 +10,7 @@
 //! The round progress bar is added in the next phase; this file
 //! grows to host it then.
 
-use masonry::layout::AsUnit;
+use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, flex_row, label, portal, CrossAxisAlignment};
@@ -228,7 +228,7 @@ pub fn progress_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
         flex_col((group_a(theme), group_b(theme), group_c(theme), group_d(theme)))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .gap(16.0_f64.px())
-            .padding(16.0)
+            .padding(Length::px(16.0))
             .background_color(theme.page_bg()),
     )
     .constrain_horizontal(true)
