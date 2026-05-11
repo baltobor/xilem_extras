@@ -325,35 +325,75 @@ impl Widget for ResizableHeader {
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         self.size = size;
 
-        // Lay out columns at their configured widths verbatim — no
-        // scale-to-fit. The old behaviour computed
-        // `scale = available_width / current_total` and multiplied
-        // every column by it, which kept the header tidily inside
-        // the table's allotted width but made the labels overlap
-        // whenever the column-sum exceeded the pane width (the
-        // exact case a horizontal-scroll host portal creates: the
-        // body lays out at column-sum width, the header's parent
-        // budget is still pane width, so the scale collapses every
-        // column to ~50% of its intended width and the labels
-        // crash into each other).
+        // Column sizing strategy splits into two cases by how the
+        // parent has constrained us, which lets the header match
+        // the row layout regardless of whether the table is
+        // embedded in a horizontal-scroll container or not:
         //
-        // The right thing here is to let the header overflow its
-        // allotted size — same as the body rows do. The surrounding
-        // `portal(...)` clips both and provides horizontal scroll
-        // over the union. Configured widths are the user's truth
-        // (`MIN_COLUMN_WIDTH` still applies as a floor for very
-        // narrow user-set values).
+        // 1. **`size.width >= column_sum`** — we have at least as
+        //    much horizontal room as the columns ask for. Two
+        //    sub-cases live here, both wanting the same answer:
+        //    - The host wrapped us in a horizontal-scroll portal,
+        //      so `MaxContent` returned us the column sum, and the
+        //      parent is now laying us out at exactly that width.
+        //    - The host gave us extra slack (`.flex(1.0)` inside a
+        //      pane wider than our columns), so we get more than
+        //      we need.
+        //    In both cases the right thing is to lay columns out
+        //    at their configured widths verbatim. Body rows do the
+        //    same (each `table_cell(label, w)` ignores its
+        //    parent's slack), so header and body stay aligned.
+        //
+        // 2. **`size.width < column_sum`** — the parent's budget
+        //    is narrower than what the columns want, AND there's
+        //    no outer horizontal scroll (otherwise case 1 would
+        //    apply via `MaxContent`). Best-effort behaviour: scale
+        //    every column to fit. This is the old default and
+        //    keeps the look-and-feel for hosts that don't wrap the
+        //    table in a scroll container — the headers stay inside
+        //    the pane but get squeezed.
+        //
+        // The old code unconditionally took case 2, which broke
+        // header/body alignment whenever the column sum exceeded
+        // the pane width (the visual symptom: headers overlapping
+        // while body cells laid out at their full configured
+        // widths and overflowed the right edge).
+        // Scale ONLY when columns wouldn't fit at their configured
+        // widths. Never scale up — the body rows lay out at
+        // configured widths regardless of slack, so if the header
+        // stretched the columns to fill extra room the labels
+        // would no longer sit above their cells.
+        let divider_count = self.column_widths.len().saturating_sub(1);
+        let divider_space = divider_count as f64 * DIVIDER_WIDTH;
+        let configured_total: f64 = self.column_widths.iter().sum();
+        let configured_with_dividers = configured_total + divider_space;
+        let available_width = size.width;
+        let use_configured = available_width + 0.5 >= configured_with_dividers;
+        // Scale-DOWN factor (always <= 1.0). Used only when the
+        // available width is genuinely smaller than the column
+        // sum — i.e. there is no surrounding horizontal scroll
+        // container and the user has resized columns past the
+        // pane width.
+        let scale = if !use_configured && configured_total > 0.0 {
+            ((available_width - divider_space) / configured_total).min(1.0)
+        } else {
+            1.0
+        };
+
         self.columns.clear();
         let mut x = 0.0;
         for (i, key) in self.column_keys.iter().enumerate() {
             let base_width = self.column_widths.get(i).copied().unwrap_or(100.0);
-            let column_width = base_width.max(MIN_COLUMN_WIDTH);
+            let column_width = if use_configured {
+                base_width.max(MIN_COLUMN_WIDTH)
+            } else {
+                (base_width * scale).max(MIN_COLUMN_WIDTH)
+            };
             self.columns.push(ColumnInfo {
                 key: key.clone(),
                 width: column_width,
                 x_offset: x,
             });
-            // Add divider gap after each column except the last
             if i < self.column_keys.len() - 1 {
                 x += column_width + DIVIDER_WIDTH;
             } else {
@@ -361,7 +401,6 @@ impl Widget for ResizableHeader {
             }
         }
 
-        // Layout children at their configured widths
         for (i, child) in self.children.iter_mut().enumerate() {
             if let Some(col) = self.columns.get(i) {
                 let child_size = Size::new(col.width, size.height);

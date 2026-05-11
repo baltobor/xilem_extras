@@ -432,31 +432,29 @@ where
     State: 'static,
     R: Identifiable,
 {
-    /// Compute scaled column widths to match header layout.
+    /// Compute column widths to match header layout exactly.
     ///
-    /// The header scales columns proportionally to fill available width,
-    /// accounting for divider space between columns. This method uses
-    /// the same formula so rows align with header columns.
+    /// Mirrors `ResizableHeader::layout`: use configured widths when they fit,
+    /// only scale down when available_width is narrower than the column sum.
     fn compute_scaled_widths(&self, available_width: f64) -> Vec<f64> {
         let column_count = self.column_widths.len();
         if column_count == 0 {
             return Vec::new();
         }
 
-        // Account for divider space (same as header)
         let divider_count = column_count.saturating_sub(1);
         let divider_space = divider_count as f64 * DIVIDER_WIDTH;
-        let content_width = available_width - divider_space;
+        let configured_total: f64 = self.column_widths.iter().sum();
+        let configured_with_dividers = configured_total + divider_space;
 
-        // Compute scale factor
-        let current_total: f64 = self.column_widths.iter().sum();
-        let scale = if current_total > 0.0 {
-            content_width / current_total
+        // Match header: scale only when columns don't fit, never scale up.
+        let use_configured = available_width + 0.5 >= configured_with_dividers;
+        let scale = if !use_configured && configured_total > 0.0 {
+            ((available_width - divider_space) / configured_total).min(1.0)
         } else {
             1.0
         };
 
-        // Scale each column
         self.column_widths
             .iter()
             .map(|&w| (w * scale).max(40.0)) // 40.0 is MIN_COLUMN_WIDTH
