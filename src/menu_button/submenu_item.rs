@@ -135,11 +135,15 @@ impl Widget for PulldownSubmenuItem {
     ) -> Length {
         match axis {
             Axis::Horizontal => {
+                let (len_req, min_result) = match len_req {
+                    LenReq::MinContent | LenReq::MaxContent => (len_req, Length::px(0.)),
+                    LenReq::FitContent(space) => (LenReq::MinContent, space),
+                };
                 let auto_length = len_req.into();
                 let context_size = LayoutSize::maybe(axis.cross(), cross_length);
                 let child_length =
                     ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
-                Length::px(child_length.get() + 2.0 * ITEM_PADDING_H + ARROW_WIDTH)
+                Length::px(min_result.get().max(child_length.get() + 2.0 * ITEM_PADDING_H + ARROW_WIDTH))
             }
             Axis::Vertical => Length::px(DEFAULT_ITEM_HEIGHT),
         }
