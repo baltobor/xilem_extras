@@ -40,6 +40,7 @@
 use std::marker::PhantomData;
 
 use masonry::core::ArcStr;
+use masonry::parley::FontFamily;
 use masonry::parley::style::FontWeight;
 use masonry::peniko::color::{AlphaColor, Srgb};
 use masonry::peniko::Color;
@@ -145,6 +146,11 @@ pub struct StyledTextInput<State, Action, F, E = ()> {
     placeholder: ArcStr,
     text_size: f32,
     weight: FontWeight,
+    /// Optional font family. When `None`, the inner `text_input`
+    /// keeps its default (`GenericFamily::SystemUi`). When `Some`,
+    /// it's passed through verbatim — including any fallback chain
+    /// the caller provides.
+    font: Option<FontFamily<'static>>,
     insert_newline: InsertNewline,
     text_alignment: TextAlign,
     disabled: bool,
@@ -176,6 +182,7 @@ where
             placeholder: ArcStr::default(),
             text_size: 13.0,
             weight: FontWeight::NORMAL,
+            font: None,
             insert_newline: InsertNewline::default(),
             text_alignment: TextAlign::default(),
             disabled: false,
@@ -260,6 +267,7 @@ where
             placeholder: self.placeholder,
             text_size: self.text_size,
             weight: self.weight,
+            font: self.font,
             insert_newline: self.insert_newline,
             text_alignment: self.text_alignment,
             disabled: self.disabled,
@@ -267,6 +275,20 @@ where
             secure: self.secure,
             _phantom: PhantomData,
         }
+    }
+
+    /// Set the font family used to render the text.
+    ///
+    /// Accepts anything that converts into a [`FontFamily`], so a
+    /// `GenericFamily::Monospace`, a named family, or a list with
+    /// fallbacks all work. When left unset, the inner `text_input`
+    /// keeps its default (`GenericFamily::SystemUi`), which on some
+    /// systems renders mixed digit/letter strings (hex keys, UUIDs)
+    /// with visibly inconsistent advance widths due to per-glyph
+    /// fallback. Setting an explicit family avoids that.
+    pub fn font(mut self, font: impl Into<FontFamily<'static>>) -> Self {
+        self.font = Some(font.into());
+        self
     }
 
     /// Render the field as a secure password input. The visible
@@ -320,6 +342,10 @@ where
             .text_alignment(self.text_alignment)
             .disabled(self.disabled)
             .clip(self.clip);
+
+        if let Some(font) = self.font {
+            input = input.font(font);
+        }
 
         if let Some(on_enter) = self.on_enter {
             // For secure inputs the displayed value passed to
