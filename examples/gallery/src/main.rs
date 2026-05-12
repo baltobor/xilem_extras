@@ -53,7 +53,7 @@ use xilem_material_icons::FONT_DATA;
 
 // Linux-only: menu_button imports for fallback menu bar
 #[cfg(target_os = "linux")]
-use xilem_extras::{menu_button, menu_item, separator, submenu};
+use xilem_extras::{group, menu_button, menu_item, separator, submenu};
 #[cfg(target_os = "linux")]
 use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
 
@@ -112,55 +112,59 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             })
     };
 
-    flex_row((
+    flex_col((
         // Examples menu - Navigate to different demos
         menu_button(
             menu_label("Examples"),
             (
-                menu_item("Tree Group", |model: &mut AppModel| {
-                    model.page = Page::Tree;
-                }),
-                menu_item("Tree View", |model: &mut AppModel| {
-                    model.page = Page::TreeView;
-                }),
-                menu_item("List View", |model: &mut AppModel| {
-                    model.page = Page::List;
-                }),
-                menu_item("Sectioned List", |model: &mut AppModel| {
-                    model.page = Page::SectionedList;
-                }),
-                menu_item("Table View", |model: &mut AppModel| {
-                    model.page = Page::Table;
-                }),
-                menu_item("Virtual Table (10k)", |model: &mut AppModel| {
-                    model.page = Page::VirtualTable;
-                }),
-                menu_item("Tabs", |model: &mut AppModel| {
-                    model.page = Page::Tabs;
-                }),
-                separator(),
-                menu_item("Pulldown Menus", |model: &mut AppModel| {
-                    model.page = Page::Menu;
-                }),
-                menu_item("App Menu Bar", |model: &mut AppModel| {
-                    model.page = Page::AppMenu;
-                }),
-                separator(),
-                menu_item("Calendar", |model: &mut AppModel| {
-                    model.page = Page::Calendar;
-                }),
-                menu_item("Widgets", |model: &mut AppModel| {
-                    model.page = Page::Widgets;
-                }),
-                menu_item("Progress", |model: &mut AppModel| {
-                    model.page = Page::Progress;
-                }),
-                menu_item("Chart", |model: &mut AppModel| {
-                    model.page = Page::Chart;
-                }),
-                menu_item("Stock Chart", |model: &mut AppModel| {
-                    model.page = Page::StockChart;
-                }),
+                group((
+                    menu_item("Tree Group", |model: &mut AppModel| {
+                        model.page = Page::Tree;
+                    }),
+                    menu_item("Tree View", |model: &mut AppModel| {
+                        model.page = Page::TreeView;
+                    }),
+                    menu_item("List View", |model: &mut AppModel| {
+                        model.page = Page::List;
+                    }),
+                    menu_item("Sectioned List", |model: &mut AppModel| {
+                        model.page = Page::SectionedList;
+                    }),
+                    menu_item("Table View", |model: &mut AppModel| {
+                        model.page = Page::Table;
+                    }),
+                    menu_item("Virtual Table (10k)", |model: &mut AppModel| {
+                        model.page = Page::VirtualTable;
+                    }),
+                    menu_item("Tabs", |model: &mut AppModel| {
+                        model.page = Page::Tabs;
+                    }),
+                    separator(),
+                )),
+                group((
+                    menu_item("Pulldown Menus", |model: &mut AppModel| {
+                        model.page = Page::Menu;
+                    }),
+                    menu_item("App Menu Bar", |model: &mut AppModel| {
+                        model.page = Page::AppMenu;
+                    }),
+                    separator(),
+                    menu_item("Calendar", |model: &mut AppModel| {
+                        model.page = Page::Calendar;
+                    }),
+                    menu_item("Widgets", |model: &mut AppModel| {
+                        model.page = Page::Widgets;
+                    }),
+                    menu_item("Progress", |model: &mut AppModel| {
+                        model.page = Page::Progress;
+                    }),
+                    menu_item("Chart", |model: &mut AppModel| {
+                        model.page = Page::Chart;
+                    }),
+                    menu_item("Stock Chart", |model: &mut AppModel| {
+                        model.page = Page::StockChart;
+                    }),
+                )),
             ),
         ),
         // Edit menu - Standard editing operations
