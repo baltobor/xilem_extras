@@ -388,7 +388,11 @@ impl Layer for MenuDropdown {
         let dismiss = match event {
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 let local_pos = ctx.local_position(state.position);
-                !ctx.border_box_size().to_rect().contains(local_pos)
+                let outside = !ctx.border_box_size().to_rect().contains(local_pos);
+                // Don't dismiss on Down when a submenu is open — the click may be
+                // inside the submenu (which is outside our bounds). The SubmenuDropdown
+                // handles its own capture_pointer_event and will close us if needed.
+                outside && self.submenu_layer_id.is_none()
             }
             PointerEvent::Cancel(..) => true,
             _ => false,
@@ -660,12 +664,18 @@ impl Layer for SubmenuDropdown {
                 // Dismiss if clicking outside the submenu area
                 let local_pos = ctx.local_position(state.position);
                 if !ctx.border_box_size().to_rect().contains(local_pos) {
-                    ctx.remove_layer(ctx.widget_id());
-                    // Clear submenu tracking in parent
-                    ctx.mutate_later(self.menu_dropdown_id, move |mut parent| {
-                        let parent = parent.downcast::<MenuDropdown>();
-                        parent.widget.submenu_layer_id = None;
-                        parent.widget.hovered_submenu_index = None;
+                    let self_id = ctx.widget_id();
+                    let menu_dropdown_id = self.menu_dropdown_id;
+                    let menu_button_id = self.menu_button_id;
+                    ctx.remove_layer(self_id);
+                    // Close the parent MenuDropdown too — the click is outside
+                    // the submenu, and MenuDropdown skipped its own dismiss because
+                    // this submenu was open.
+                    ctx.remove_layer(menu_dropdown_id);
+                    *super::widget::ACTIVE_MENU_BUTTON.lock().unwrap() = None;
+                    ctx.mutate_later(menu_button_id, move |mut menu_btn| {
+                        let menu_btn = menu_btn.downcast::<MenuButton>();
+                        menu_btn.widget.menu_layer_id = None;
                     });
                 }
             }
