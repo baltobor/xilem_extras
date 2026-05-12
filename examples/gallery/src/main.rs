@@ -33,7 +33,7 @@ use masonry::theme::default_property_set;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::core::fork;
-use xilem::view::{button, CrossAxisAlignment, split, flex_col, label, task_raw, zstack};
+use xilem::view::{button, CrossAxisAlignment, split, flex_col, flex_row, label, task_raw, zstack};
 use xilem::{window, EventLoop, WidgetView, WindowView, Xilem};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -112,7 +112,7 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             })
     };
 
-    flex_col((
+    flex_row((
         // Examples menu - Navigate to different demos
         menu_button(
             menu_label("Examples"),
