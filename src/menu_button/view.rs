@@ -191,7 +191,16 @@ where
                 Some(press) => {
                     // Execute the action from the stored entry
                     if let Some(entry) = view_state.entries.get(press.index) {
-                        if let Some(action) = entry.execute(app_state) {
+                        if let Some(child_index) = press.child_index {
+                            // Item is inside a submenu — dispatch to the child entry
+                            if let Some(children) = entry.submenu_items() {
+                                if let Some(child_entry) = children.get(child_index) {
+                                    if let Some(action) = child_entry.execute(app_state) {
+                                        return MessageResult::Action(action);
+                                    }
+                                }
+                            }
+                        } else if let Some(action) = entry.execute(app_state) {
                             return MessageResult::Action(action);
                         }
                     }

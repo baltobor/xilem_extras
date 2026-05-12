@@ -32,8 +32,11 @@ pub(crate) static ACTIVE_MENU_BUTTON: Mutex<Option<WidgetId>> = Mutex::new(None)
 /// Action emitted when a menu item inside a [`MenuButton`]'s dropdown is clicked.
 #[derive(PartialEq, Debug)]
 pub struct MenuButtonPress {
-    /// Index of the selected menu item.
+    /// Index of the selected menu item in the top-level entries list.
     pub index: usize,
+    /// If the clicked item is inside a submenu, this is its index within
+    /// that submenu's children. `None` for top-level items.
+    pub child_index: Option<usize>,
 }
 
 /// Data for a menu item, including support for submenus.

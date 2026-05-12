@@ -97,8 +97,17 @@ impl MenuDropdown {
     }
 
     /// Builds a child submenu dropdown from item data.
-    fn build_submenu(creator: WidgetId, items: &[MenuItemData]) -> SubmenuDropdown {
-        let mut menu = SubmenuDropdown::new(creator);
+    ///
+    /// - `menu_dropdown_id`: this `MenuDropdown`'s widget ID (the submenu registers with it)
+    /// - `menu_button_id`: the parent `MenuButton`'s widget ID (used to dispatch the action)
+    /// - `parent_index`: the index of this submenu in the `MenuButton`'s entries list
+    fn build_submenu(
+        menu_dropdown_id: WidgetId,
+        menu_button_id: WidgetId,
+        parent_index: usize,
+        items: &[MenuItemData],
+    ) -> SubmenuDropdown {
+        let mut menu = SubmenuDropdown::new(menu_dropdown_id, menu_button_id, parent_index);
         for item in items {
             match item {
                 MenuItemData::Separator => {
@@ -154,7 +163,7 @@ impl Widget for MenuDropdown {
                         let mut menu_btn = menu_btn.downcast::<MenuButton>();
                         menu_btn
                             .ctx
-                            .submit_action::<MenuButtonPress>(MenuButtonPress { index });
+                            .submit_action::<MenuButtonPress>(MenuButtonPress { index, child_index: None });
                         menu_btn.ctx.remove_layer(self_id);
                         menu_btn.widget.menu_layer_id = None;
                     });
@@ -191,7 +200,7 @@ impl Widget for MenuDropdown {
                     if let Some(idx) = new_hovered {
                         if let Some(Some(children)) = self.submenu_data.get(idx) {
                             if let Some((origin, _size)) = self.child_rects.get(idx) {
-                                let submenu = Self::build_submenu(ctx.widget_id(), children);
+                                let submenu = Self::build_submenu(ctx.widget_id(), self.creator, idx, children);
                                 let submenu_pos = ctx.window_origin() +
                                     Point::new(ctx.border_box_size().width + 4.0, origin.y).to_vec2();
 
@@ -413,16 +422,23 @@ impl MenuDropdown {
 /// A child dropdown shown when hovering over a submenu item.
 /// Simpler than MenuDropdown - no recursive submenu support.
 pub struct SubmenuDropdown {
-    creator: WidgetId,
+    /// The parent `MenuDropdown`'s widget ID (registers submenu_layer_id with it).
+    menu_dropdown_id: WidgetId,
+    /// The grandparent `MenuButton`'s widget ID (used to dispatch the action).
+    menu_button_id: WidgetId,
+    /// Index of this submenu in the `MenuButton`'s entries list.
+    parent_index: usize,
     children: Vec<WidgetPod<dyn Widget>>,
     bg_color: Color,
     border_color: Color,
 }
 
 impl SubmenuDropdown {
-    pub fn new(creator: WidgetId) -> Self {
+    pub fn new(menu_dropdown_id: WidgetId, menu_button_id: WidgetId, parent_index: usize) -> Self {
         Self {
-            creator,
+            menu_dropdown_id,
+            menu_button_id,
+            parent_index,
             children: Vec::new(),
             bg_color: BG_COLOR,
             border_color: BORDER_COLOR,
@@ -458,10 +474,22 @@ impl Widget for SubmenuDropdown {
                 .iter()
                 .position(|child| child.id() == clicked_id);
 
-            if let Some(_index) = index {
-                // TODO: Submit action through parent MenuDropdown
-                // For now, just close the submenu
-                ctx.remove_layer(self_id);
+            if let Some(child_index) = index {
+                let parent_index = self.parent_index;
+                let menu_dropdown_id = self.menu_dropdown_id;
+                *super::widget::ACTIVE_MENU_BUTTON.lock().unwrap() = None;
+                ctx.mutate_later(self.menu_button_id, move |mut menu_btn| {
+                    let mut menu_btn = menu_btn.downcast::<MenuButton>();
+                    menu_btn.ctx.submit_action::<MenuButtonPress>(MenuButtonPress {
+                        index: parent_index,
+                        child_index: Some(child_index),
+                    });
+                    // Close the submenu layer
+                    menu_btn.ctx.remove_layer(self_id);
+                    // Close the parent MenuDropdown layer
+                    menu_btn.ctx.remove_layer(menu_dropdown_id);
+                    menu_btn.widget.menu_layer_id = None;
+                });
             }
         }
     }
@@ -489,7 +517,7 @@ impl Widget for SubmenuDropdown {
         if let Update::WidgetAdded = event {
             // Register this submenu's ID with the parent MenuDropdown so it can close us
             let id = ctx.widget_id();
-            ctx.mutate_later(self.creator, move |mut parent| {
+            ctx.mutate_later(self.menu_dropdown_id, move |mut parent| {
                 let parent = parent.downcast::<MenuDropdown>();
                 parent.widget.submenu_layer_id = Some(id);
             });
@@ -634,7 +662,7 @@ impl Layer for SubmenuDropdown {
                 if !ctx.border_box_size().to_rect().contains(local_pos) {
                     ctx.remove_layer(ctx.widget_id());
                     // Clear submenu tracking in parent
-                    ctx.mutate_later(self.creator, move |mut parent| {
+                    ctx.mutate_later(self.menu_dropdown_id, move |mut parent| {
                         let parent = parent.downcast::<MenuDropdown>();
                         parent.widget.submenu_layer_id = None;
                         parent.widget.hovered_submenu_index = None;
