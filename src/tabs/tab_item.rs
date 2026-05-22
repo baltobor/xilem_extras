@@ -36,7 +36,22 @@
 /// [`TabBar`]: super::TabBar
 pub trait TabItem {
     /// Returns the display title for this tab.
+    ///
+    /// Return an empty string to render an icon-only tab (see
+    /// [`icon`](Self::icon)). A tab with both a non-empty title and an
+    /// icon renders as `[icon][text]`, like a SwiftUI tab item.
     fn title(&self) -> &str;
+
+    /// Returns an optional Material Symbols icon codepoint for this tab.
+    ///
+    /// The codepoint is the same `&'static str` glyph constant used by
+    /// `xilem_material_icons::icons` (e.g. `icons::FOLDER`). When `Some`,
+    /// the glyph is drawn ahead of the title; pair it with an empty
+    /// [`title`](Self::title) for an icon-only tab. Defaults to `None`,
+    /// in which case the tab renders text-only exactly as before.
+    fn icon(&self) -> Option<&'static str> {
+        None
+    }
 
     /// Returns whether this tab has unsaved changes.
     ///

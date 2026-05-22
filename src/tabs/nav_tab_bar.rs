@@ -83,6 +83,10 @@ pub struct NavTabBar<'a, State, Action, T, S> {
     nav_button_mode: NavButtonMode,
     corner_radius: f64,
     text_size: f32,
+    /// Size of the optional per-tab icon glyph. `None` falls back to
+    /// `text_size`, so an icon and its label share one size unless the
+    /// caller asks for a larger glyph (icon-only tabs usually want this).
+    icon_size: Option<f32>,
     on_select: Option<S>,
     // Use fn-pointer PhantomData so `NavTabBar` is unconditionally `Send + Sync`,
     // regardless of whether `State: Sync`. Required so consumers whose State holds
@@ -105,6 +109,7 @@ impl<'a, State, Action, T: TabItem> NavTabBar<'a, State, Action, T, ()> {
             nav_button_mode: NavButtonMode::Never,
             corner_radius: 4.0,
             text_size: 13.0,
+            icon_size: None,
             on_select: None,
             _phantom: PhantomData,
         }
@@ -166,6 +171,18 @@ impl<'a, State, Action, T: TabItem, S> NavTabBar<'a, State, Action, T, S> {
         self
     }
 
+    /// Sets the size of the per-tab icon glyph (see [`TabItem::icon`]).
+    ///
+    /// When unset, icons render at [`text_size`](Self::text_size). Set a
+    /// larger value for icon-only navigation strips where the glyph
+    /// shouldn't shrink to label size.
+    ///
+    /// [`TabItem::icon`]: super::TabItem::icon
+    pub fn icon_size(mut self, size: f32) -> Self {
+        self.icon_size = Some(size);
+        self
+    }
+
     /// Sets the callback for tab selection.
     ///
     /// Called when a tab is clicked.
@@ -180,6 +197,7 @@ impl<'a, State, Action, T: TabItem, S> NavTabBar<'a, State, Action, T, S> {
             nav_button_mode: self.nav_button_mode,
             corner_radius: self.corner_radius,
             text_size: self.text_size,
+            icon_size: self.icon_size,
             on_select: Some(callback),
             _phantom: PhantomData,
         }
@@ -226,12 +244,20 @@ impl<'a, State, Action, T: TabItem, S> NavTabBar<'a, State, Action, T, S> {
         let scale = self.text_size as f64 / 13.0; // Scale relative to default
         let char_width = AVG_CHAR_WIDTH * scale;
         let gap = 4.0; // Gap between tabs
+        let icon_size = self.icon_size.unwrap_or(self.text_size) as f64;
 
         self.tabs
             .iter()
             .map(|tab| {
                 let text_width = tab.title().len() as f64 * char_width;
-                text_width + pad_h * 2.0
+                // An icon occupies roughly one square em plus the inner
+                // gap to the label (only present when both are shown).
+                let icon_width = match tab.icon() {
+                    Some(_) if !tab.title().is_empty() => icon_size + gap,
+                    Some(_) => icon_size,
+                    None => 0.0,
+                };
+                text_width + icon_width + pad_h * 2.0
             })
             .sum::<f64>()
             + (self.tabs.len().saturating_sub(1)) as f64 * gap
@@ -266,6 +292,7 @@ where
         let show_nav = self.should_show_nav();
         let corner_radius = self.corner_radius;
         let text_size = self.text_size;
+        let icon_size = self.icon_size.unwrap_or(text_size);
 
         let (pad_h, pad_v) = Self::tab_padding();
         let tab_padding = Padding {
@@ -293,9 +320,30 @@ where
                     colors.text_secondary
                 };
 
+                // Tab content is `[icon?][text?]`, SwiftUI-style. With no
+                // icon we emit the bare label exactly as the text-only tab
+                // bar always has, so existing callers render unchanged.
+                let title = tab.title();
+                let content: Box<AnyWidgetView<State, Action>> = match tab.icon() {
+                    None => label(title).text_size(text_size).color(text_color).boxed(),
+                    Some(glyph) => {
+                        let glyph_view = icon(glyph).size(icon_size).color(text_color).build();
+                        if title.is_empty() {
+                            glyph_view
+                        } else {
+                            flex_row((
+                                glyph_view,
+                                label(title).text_size(text_size).color(text_color),
+                            ))
+                            .gap(4.px())
+                            .boxed()
+                        }
+                    }
+                };
+
                 let on_select = self.on_select.clone();
                 button(
-                    label(tab.title()).text_size(text_size).color(text_color),
+                    content,
                     move |state: &mut State| {
                         if let Some(ref cb) = on_select {
                             cb(state, i)
@@ -464,6 +512,46 @@ mod tests {
         let bar: NavTabBar<(), (), _, ()> = NavTabBar::new(&tabs, 0).auto_nav_buttons(200.0);
         // Five tabs with longer names should exceed 200px
         assert!(bar.should_show_nav());
+    }
+
+    /// A tab type that carries an icon, used to exercise the
+    /// `[icon][text]` path of `TabItem`.
+    struct IconTab {
+        title: &'static str,
+        icon: Option<&'static str>,
+    }
+
+    impl TabItem for IconTab {
+        fn title(&self) -> &str {
+            self.title
+        }
+        fn icon(&self) -> Option<&'static str> {
+            self.icon
+        }
+    }
+
+    #[test]
+    fn tab_item_icon_defaults_to_none() {
+        // The default trait method must keep existing text-only tabs
+        // unchanged.
+        assert_eq!(SimpleTab::new("Test").icon(), None);
+    }
+
+    #[test]
+    fn icon_widens_estimate_over_text_only() {
+        let text_only = vec![IconTab { title: "Tab", icon: None }];
+        let with_icon = vec![IconTab { title: "Tab", icon: Some("\u{e2c7}") }];
+        let bar_text: NavTabBar<(), (), _, ()> = NavTabBar::new(&text_only, 0);
+        let bar_icon: NavTabBar<(), (), _, ()> = NavTabBar::new(&with_icon, 0);
+        assert!(bar_icon.estimated_tabs_width() > bar_text.estimated_tabs_width());
+    }
+
+    #[test]
+    fn icon_only_tab_has_positive_width() {
+        // Empty title + icon (icon-only) still reserves glyph width.
+        let icon_only = vec![IconTab { title: "", icon: Some("\u{e2c7}") }];
+        let bar: NavTabBar<(), (), _, ()> = NavTabBar::new(&icon_only, 0);
+        assert!(bar.estimated_tabs_width() > 0.0);
     }
 
     #[test]
