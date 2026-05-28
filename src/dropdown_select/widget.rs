@@ -112,7 +112,7 @@ impl DropdownSelect {
 
         // Estimate dropdown height: ~28px per option + padding
         let estimated_dropdown_h = self.options.len() as f64 * 28.0 + 8.0;
-        let widget_origin = ctx.window_origin();
+        let widget_origin = ctx.to_window(Point::ORIGIN);
         let widget_h = ctx.border_box_size().height;
 
         // Open upward if the widget is in the lower portion of the screen

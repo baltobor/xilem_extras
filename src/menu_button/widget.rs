@@ -158,7 +158,7 @@ impl MenuButton {
         ctx.create_layer(
             LayerType::Other,
             NewWidget::new(menu),
-            ctx.window_origin() + Vec2::new(0., ctx.border_box_size().height),
+            ctx.to_window(Point::ORIGIN) + Vec2::new(0., ctx.border_box_size().height),
         );
 
         *ACTIVE_MENU_BUTTON.lock().unwrap() = Some(ctx.widget_id());

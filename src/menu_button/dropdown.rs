@@ -201,7 +201,7 @@ impl Widget for MenuDropdown {
                         if let Some(Some(children)) = self.submenu_data.get(idx) {
                             if let Some((origin, _size)) = self.child_rects.get(idx) {
                                 let submenu = Self::build_submenu(ctx.widget_id(), self.creator, idx, children);
-                                let submenu_pos = ctx.window_origin() +
+                                let submenu_pos = ctx.to_window(Point::ORIGIN) +
                                     Point::new(ctx.border_box_size().width + 4.0, origin.y).to_vec2();
 
                                 ctx.create_layer(
