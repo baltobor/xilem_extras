@@ -20,7 +20,7 @@ use xilem::masonry::core::{
     PaintCtx, PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx,
     TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
-use xilem::masonry::kurbo::{Axis, Size, Vec2};
+use xilem::masonry::kurbo::{Axis, Point, Size, Vec2};
 use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 
 use super::MenuDropdown;
