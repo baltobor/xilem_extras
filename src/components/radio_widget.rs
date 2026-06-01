@@ -177,7 +177,7 @@ impl Widget for RadioWidget {
         _props: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         let frame_x = (size.width - FRAME_W) / 2.0;
         let frame_y = (size.height - FRAME_H) / 2.0;
         let frame = Rect::new(

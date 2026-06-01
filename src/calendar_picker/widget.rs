@@ -222,7 +222,7 @@ impl Widget for CalendarPickerWidget {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         let font_size = (self.cell_size as f32 * 0.45).max(9.0).min(14.0);
 
         // Rebuild text layouts if font size changed

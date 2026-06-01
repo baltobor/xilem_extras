@@ -1058,7 +1058,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1965,7 +1965,8 @@ checksum = "09e54e57b4c48b40f7aec75635392b12b3421fa26fe8b4332e63138ed278459c"
 [[package]]
 name = "imaging"
 version = "0.0.1"
-source = "git+https://github.com/forest-rs/imaging.git?rev=79f02aedf5b65b4cd151ef45d8b40013d7289ee2#79f02aedf5b65b4cd151ef45d8b40013d7289ee2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39a5e8c7c22da30056963bac3deab021ce768df9e73a252d3c07f854f2664b4d"
 dependencies = [
  "kurbo",
  "peniko",
@@ -1974,7 +1975,8 @@ dependencies = [
 [[package]]
 name = "imaging_vello"
 version = "0.0.1"
-source = "git+https://github.com/forest-rs/imaging.git?rev=79f02aedf5b65b4cd151ef45d8b40013d7289ee2#79f02aedf5b65b4cd151ef45d8b40013d7289ee2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8c6dc0ab80d17378f6cc85331f79db2da3685a510014be77589ed07a346fa09"
 dependencies = [
  "imaging",
  "imaging_wgpu",
@@ -1986,7 +1988,8 @@ dependencies = [
 [[package]]
 name = "imaging_wgpu"
 version = "0.0.1"
-source = "git+https://github.com/forest-rs/imaging.git?rev=79f02aedf5b65b4cd151ef45d8b40013d7289ee2#79f02aedf5b65b4cd151ef45d8b40013d7289ee2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64f8d1c8e08790c1780c2c9d42992156372a8416775e08861b322dbef654eece"
 dependencies = [
  "imaging",
  "wgpu",
@@ -2130,12 +2133,13 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kurbo"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7564e90fe3c0d5771e1f0bc95322b21baaeaa0d9213fa6a0b61c99f8b17b3bfb"
+checksum = "4b60dfc32f652b926df6192e55525b16d186c69d47876c3ead4da5cc9f8450e2"
 dependencies = [
  "arrayvec",
  "euclid",
+ "polycool",
  "smallvec",
 ]
 
@@ -2216,7 +2220,7 @@ dependencies = [
 [[package]]
 name = "linebender_include_doc_path"
 version = "0.1.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2282,7 +2286,7 @@ dependencies = [
 [[package]]
 name = "masonry"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "accesskit",
  "linebender_include_doc_path",
@@ -2295,7 +2299,7 @@ dependencies = [
 [[package]]
 name = "masonry_core"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "accesskit",
  "anymap3",
@@ -2322,7 +2326,7 @@ dependencies = [
 [[package]]
 name = "masonry_imaging"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "imaging",
  "imaging_vello",
@@ -2335,7 +2339,7 @@ dependencies = [
 [[package]]
 name = "masonry_winit"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "accesskit_winit",
  "copypasta",
@@ -2500,7 +2504,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2535,7 +2539,7 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "680998035259dcfcafe653688bf2aa6d3e2dc05e98be6ab46afb089dc84f1df8"
 dependencies = [
- "proc-macro-crate 3.5.0",
+ "proc-macro-crate 1.3.1",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -2946,9 +2950,9 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "peniko"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a2b6aadb221872732e87d465213e9be5af2849b0e8cc5300a8ba98fffa2e00a"
+checksum = "839c8299360d2e998bdb106dc0a6cd71dcc5f4df51df1b620361bf50e283cca6"
 dependencies = [
  "color",
  "kurbo",
@@ -3111,6 +3115,15 @@ name = "pollster"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
+
+[[package]]
+name = "polycool"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50596ddc09eb5ad5f75cacd40209568e66df71baf86e1499a0e99c4cff12a5a6"
+dependencies = [
+ "arrayvec",
+]
 
 [[package]]
 name = "portable-atomic"
@@ -3456,7 +3469,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3758,7 +3771,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3868,7 +3881,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix 1.1.4",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4239,7 +4252,7 @@ dependencies = [
 [[package]]
 name = "tree_arena"
 version = "0.2.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "hashbrown 0.17.1",
 ]
@@ -4261,7 +4274,7 @@ checksum = "f2f6fb2847f6742cd76af783a2a2c49e9375d0a111c7bef6f71cd9e738c72d6e"
 dependencies = [
  "memoffset",
  "tempfile",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -4929,7 +4942,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -5520,7 +5533,7 @@ checksum = "bec9e4a500ca8864c5b47b8b482a73d62e4237670e5b5f1d6b9e3cae50f28f2b"
 [[package]]
 name = "xilem"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "masonry",
  "masonry_winit",
@@ -5534,7 +5547,7 @@ dependencies = [
 [[package]]
 name = "xilem_core"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "anymore",
  "hashbrown 0.17.1",
@@ -5560,7 +5573,7 @@ dependencies = [
 [[package]]
 name = "xilem_masonry"
 version = "0.4.0"
-source = "git+https://github.com/linebender/xilem?branch=main#7ed6fb39b3a32f4fccd1b82338618acf7848c32b"
+source = "git+https://github.com/linebender/xilem?branch=main#8648e0cefeefaad805dd40ac67beffd23baa738e"
 dependencies = [
  "masonry",
  "smallvec",

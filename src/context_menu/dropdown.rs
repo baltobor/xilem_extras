@@ -220,7 +220,7 @@ impl Widget for ContextMenuDropdown {
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
-        let size = ctx.border_box_size();
+        let size = ctx.border_box().size();
         let padding = 6.0;
         let rect = Rect::new(
             -padding,
@@ -265,7 +265,7 @@ impl Layer for ContextMenuDropdown {
         let dismiss = match event {
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 let local_pos = ctx.local_position(state.position);
-                !ctx.border_box_size().to_rect().contains(local_pos)
+                !ctx.border_box().size().to_rect().contains(local_pos)
             }
             PointerEvent::Cancel(..) => true,
             _ => false,

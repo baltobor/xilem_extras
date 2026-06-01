@@ -244,7 +244,7 @@ impl Widget for ChartWidget {
 
     fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<Length>) -> Length {
         // Return minimum sizes - flex(1.0) will expand to fill available space
-        // paint() uses ctx.content_box_size() so it adapts to actual size
+        // paint() uses ctx.content_box().size() so it adapts to actual size
         match axis {
             Axis::Horizontal => Length::px(100.0),
             Axis::Vertical => Length::px(80.0),
@@ -256,7 +256,7 @@ impl Widget for ChartWidget {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         let font_size = (size.height as f32 * 0.07).max(9.0).min(13.0);
 
         // Rebuild text layouts if needed

@@ -202,7 +202,7 @@ impl Widget for MenuDropdown {
                             if let Some((origin, _size)) = self.child_rects.get(idx) {
                                 let submenu = Self::build_submenu(ctx.widget_id(), self.creator, idx, children);
                                 let submenu_pos = ctx.to_window(Point::ORIGIN) +
-                                    Point::new(ctx.border_box_size().width + 4.0, origin.y).to_vec2();
+                                    Point::new(ctx.border_box().size().width + 4.0, origin.y).to_vec2();
 
                                 ctx.create_layer(
                                     LayerType::Other,
@@ -339,7 +339,7 @@ impl Widget for MenuDropdown {
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
-        let size = ctx.border_box_size();
+        let size = ctx.border_box().size();
         let padding = 6.0;
         let rect = Rect::new(
             -padding,
@@ -388,7 +388,7 @@ impl Layer for MenuDropdown {
         let dismiss = match event {
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 let local_pos = ctx.local_position(state.position);
-                let outside = !ctx.border_box_size().to_rect().contains(local_pos);
+                let outside = !ctx.border_box().size().to_rect().contains(local_pos);
                 // Don't dismiss on Down when a submenu is open — the click may be
                 // inside the submenu (which is outside our bounds). The SubmenuDropdown
                 // handles its own capture_pointer_event and will close us if needed.
@@ -610,7 +610,7 @@ impl Widget for SubmenuDropdown {
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
-        let size = ctx.border_box_size();
+        let size = ctx.border_box().size();
         let padding = 6.0;
         let rect = Rect::new(
             -padding,
@@ -663,7 +663,7 @@ impl Layer for SubmenuDropdown {
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 // Dismiss if clicking outside the submenu area
                 let local_pos = ctx.local_position(state.position);
-                if !ctx.border_box_size().to_rect().contains(local_pos) {
+                if !ctx.border_box().size().to_rect().contains(local_pos) {
                     let self_id = ctx.widget_id();
                     let menu_dropdown_id = self.menu_dropdown_id;
                     let menu_button_id = self.menu_button_id;

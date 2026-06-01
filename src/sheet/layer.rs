@@ -169,7 +169,7 @@ impl Widget for SheetLayer {
         _props: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        let size = ctx.border_box_size();
+        let size = ctx.border_box().size();
 
         // Draw semi-transparent backdrop
         let backdrop_rect = Rect::new(0.0, 0.0, size.width, size.height);

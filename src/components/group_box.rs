@@ -339,7 +339,7 @@ impl Widget for GroupBox {
         _props: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         let rect = Rect::from_origin_size(Point::ZERO, size);
         let rr = RoundedRect::from_rect(rect, CORNER_RADIUS);
 

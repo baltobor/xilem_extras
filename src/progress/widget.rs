@@ -274,7 +274,7 @@ impl Widget for ProgressBarWidget {
         _: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         let norm = self.normalized();
 
         // Background — same dark fill regardless of style.

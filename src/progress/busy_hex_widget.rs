@@ -268,7 +268,7 @@ impl Widget for BusyHexWidget {
             return;
         }
 
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         let cx = size.width / 2.0;
         let cy = size.height / 2.0;
         let r = self.size.cell_radius();

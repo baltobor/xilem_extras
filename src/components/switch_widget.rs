@@ -171,7 +171,7 @@ impl Widget for SwitchWidget {
         _props: &PropertiesRef<'_>,
         painter: &mut Painter<'_>,
     ) {
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         // Centre the track inside whatever space we got.
         let track_x = (size.width - TRACK_W) / 2.0;
         let track_y = (size.height - TRACK_H) / 2.0;

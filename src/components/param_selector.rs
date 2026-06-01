@@ -220,7 +220,7 @@ impl Widget for ParamSelectorWidget {
         }
         if let PointerEvent::Up(PointerButtonEvent { state, .. }) = event {
             let pos = ctx.local_position(state.position);
-            if let Some(idx) = self.hit_test(pos, ctx.content_box_size()) {
+            if let Some(idx) = self.hit_test(pos, ctx.content_box().size()) {
                 if self.selected != idx {
                     self.selected = idx;
                     ctx.submit_action::<usize>(idx);
@@ -292,7 +292,7 @@ impl Widget for ParamSelectorWidget {
     }
 
     fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
-        let size = ctx.content_box_size();
+        let size = ctx.content_box().size();
         let dot_col_w = Self::dot_col_w();
 
         // Capsule frame placement:
