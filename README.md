@@ -2,7 +2,7 @@
 
 High-level widget library for [Xilem](https://github.com/linebender/xilem) providing Tree, List, Table, and Menu widgets with SwiftUI-inspired APIs.
 
-***This crate is highly experimental and a sandbox project for me and not for productive use. The API may break anytime. Use it at your own risk. It is used to try ideas and concepts. Also AI may be used to create sketches. It's marked then in the commit message.***
+***This crate is highly experimental and a sandbox project for me and not for productive use. The API may break anytime. Use it at your own risk. It is used to try ideas and concepts. Also AI may be used to create sketches. It's marked then in the commit message. This project is not related to xilem or the team, even though the name includes "xilem." The purpose of this playground is to explore xilem so that well-balanced and refined concepts can later be submitted as single pull requests to the original xilem repository. If you create a xilem project, please use the original xilem reposity. Participation is optional. However, please do not consider this repository an official extension of xilem.***
 
 
 ## Overview
@@ -365,12 +365,37 @@ But we mustn’t fool ourselves. GitHub is owned by Microsoft, the world’s lar
 
 Instead, let’s talk about what we’ve learned from our projects and the level of quality we’ve achieved. You can also turn the whole issue on its head. If we think AI has robbed us, we can also look at it the other way around and interpret every piece of code made available as open source as a way of giving back to the community. Open source is the great global project, the global commons. And AI providers are the opposite: they centralize it and pass it off as their own. Anyone who has studied computer science knows that exponential algorithms have no future. And that exponential growth eventually collapses. And anyone with any sense knows that today’s AI companies will eventually collapse in one form or another. This is a transitional phase. 
 
-But open source is here to stay! And that’s what I want to reflect on here. If anyone submits a pull request, I won’t try to figure out whether it was created using AI or not. Because I don’t care about that. I care about the bigger picture. The quality. Whether it works and whether it’s understandable. Anyone who has a serious problem with AI shouldn’t be on GitHub. They should go to Codeberg or other places and shouldn’t use Windows, MacOS or Google at all. As a developer with decades of experience, I was thrown into this world of AI. I neither asked for it nor came up with it. It was simply forced upon me. 
+But open source is here to stay! And that’s what I want to reflect on here. If anyone submits a pull request, I won’t try to figure out whether it was created using AI or not. Because I don’t care about that. I care about the bigger picture. The quality. Whether it works and whether it’s understandable. Anyone who has a serious problem with AI shouldn’t be on GitHub. They should go to Codeberg or other places and shouldn’t use Windows, MacOS or Google at all. As a developer with decades of experience, I was thrown into this world of AI. I neither asked for it nor came up with it. It was simply forced upon me.
 
 And now, like everyone else, I’m feeling this tension—the pressure to suddenly have to be faster than everyone else, which is complete nonsense. From the business side, there’s this constant demand to use more and more AI tools. But as soon as I find myself in an IT-savvy crowd, everyone starts tearing each other apart and creating a stigma. *And I’m finally sick and tired of that.* We need to stop tearing each other down. *It’s others who have unleashed this disaster upon the world. And if we now attack each other for using these tools in the opposite way, then we haven’t learned a thing.* Every computer scientist knows that this will eventually collapse. And since AI is actually simply everywhere, we cannot pretend everthing was created without AI tools nowadays. A little bit of AI 
 is everywhere. Even if it's just spell-check. That's why I wish for peace.
 
-After that all is said now, I hope we must not talk about it anymore.
+After that all is said now, I hope we must not talk about it anymore. *This is a safe space. You can do it however you want to. And you can be whatever you are. You are welcome.* I just care about the quality of the contributions. Since *this project* is a sketch pad, the code quality might apprear messy sometimes.
+
+## Coding Style
+
+I try to conform to SOLID and DRY.
+- DRY = Don't Repeat Yourself. Try to reuse code.
+- SOLID
+    - SRP: Single Responsibility Principle
+    - OCP: Open Closed Principle
+    - LSP: Liskov Substitution Principle
+    - ISP: Interface Segregation Principle
+    - DIP: Dependency Inversion Principle
+
+Also code smells should be avoided:
+- Avoid files containing more than 1000 lines of code. These are almost impossible to read.
+- Try to keep functions brief so that they fit entirely on one screen
+- Try to avoid indentation and deep nesting. To me, clean code is code that looks as though it’s been neatly aligned to the left with a ruler.
+- I know that complexity plays a key role in computer science. And of course, that’s the top priority. But I also want programmers to develop a feel for the CPU. Even on a small scale, when processing small amounts of data, you can still write efficient code. I hate waste. I started learning IT on a Commodore 16. I just can’t help myself. I always feel sorry for the CPU.
+- Try to write tests as if they were a document. Tests are also a form of documentation. They should therefore be readable as such.
+- Avoid god objects. Objects which contain everything. Stable code is distributed. If god objects appear then probably the "Single Responsibility Principle" was violated somewhere else.
+- Delete dead code. We work with git. It can be revived later.
+- Avoid signatures with long parameter lists
+
+I refer to "Refactoring. Improving the Design of Existing Code. Second Edition",  Martin Fowler,  Kent Beck, 2018.
+
+
 
 ## Author
 
