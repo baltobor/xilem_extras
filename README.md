@@ -2,7 +2,8 @@
 
 High-level widget library for [Xilem](https://github.com/linebender/xilem) providing Tree, List, Table, and Menu widgets with SwiftUI-inspired APIs.
 
-***This crate is highly experimental and a sanbox project for me and not for productive use. The API may break anytime. Use it at your own risk. It is used to try ideas and concepts. And also AI may be used to create sketches.***
+***This crate is highly experimental and a sandbox project for me and not for productive use. The API may break anytime. Use it at your own risk. It is used to try ideas and concepts. Also AI may be used to create sketches. It's marked then in the commit message.***
+
 
 ## Overview
 
@@ -349,6 +350,29 @@ just doc     # Generate documentation
 just test    # Run tests
 just lint    # Run clippy
 ```
+
+## My statement about AI usage. 
+
+Software development is not about code alone. It's about digging into it. Playing around with concepts. Making errors. Learning from it. Sometimes you feel like giving up. There are days when you feel like a fool. Because it seems like you can’t get anything right. And then it hits you: software development is a constant learning process. And those catastrophic mistakes. In the end, those impossible bugs teach you to always keep the upper hand and become a good developer who is always able to navigate their code. To find a way, even when all doors seem closed. Especially when other developers give up and AI cannot help you.
+
+I understand the criticism of AI that is being voiced everywhere today—both from a technical and a political perspective. And I’m not an AI advocate who endorses its use. I, too, view it with a critical eye. But I’m also a realist. I haven’t seen a single development office in the last year that doesn’t use AI. *That’s why I assume AI is being used everywhere.* That’s the realistic perspective. That’s why it doesn’t matter to me whether AI was used or not. What matters to me is the end result. That the code is highly readable by humans. That the concepts still make sense and everything remains manageable. *Software development is friction. Not code.* That’s where I see the biggest misunderstanding right now. If a person understands what they’re dealing with, and the project has a structure, the task is accomplished. 
+
+AI enables wrong turns, wrong paths. And AI generates slob. But I’ve also worked with beginners who have programmed epic slob as well. I would never clain that humans are better programmers per se. *That is why my focus here and now is on how we interact with one another.* Some people, the ones who give out assignments, insist on using AI these days. Others react to AI as if it were the plague. As a developer with years of experience I think, *this dynamic is the real problem.* It’s no longer about the project or the program. These days, a political statement lurks behind every corner. And day-to-day work has become a negative tautology. Because when you work for yourself, *you’re forced* to use AI to be faster and keep up with the competition on the one hand. And yet, at the same time, you feel ashamed if you’ve used AI. *That means no matter what you do, you can only lose. Ironically, I don’t know anyone today who hasn’t used AI at least once.* And I think we need to break the taboo surrounding it and talk about it openly. Anyone who has ever worked on large-scale projects *knows that AI isn't capable of handling that*. And yes, every day I wish the AI world would just go back to where it came from. Because this sense of unease that surrounds us all—and the daily paranoia about whether it's a human or a machine that's around us—is just annoying. 
+
+*Anyone who has ever worked on large-scale projects knows that AI isn't capable of handling that.*
+
+And yes, every day I wish the AI world would just go back to where it came from. Because this sense of unease that surrounds us all—and the daily paranoia about whether it's a human or a machine that's around us—is just annoying. 
+
+But we mustn’t fool ourselves. GitHub is owned by Microsoft, the world’s largest AI company. Anyone who edits the README.md file on GitHub automatically triggers Copilot to generate the commit message. AI is everywhere. Microsoft and Google sponsor open-source conferences and NGO events. Microsoft was supporter of the RustWeek 2026. Google as well. The Rust based ZED Code editor has rich AI functinality. I find this self-lie and denial worse than the use of AI itself. That’s why, for this project, I’d generally prefer not to talk about AI anymore. Frankly, I don’t care whether someone used AI or coded everything themselves. Software development involves “friction.” And in the end, it’s the quality that counts. And that’s what I want to focus on. I hope we can agree that from now on, we won’t talk about AI anymore. If AI was used, you will see it in the commit message.
+
+Instead, let’s talk about what we’ve learned from our projects and the level of quality we’ve achieved. You can also turn the whole issue on its head. If we think AI has robbed us, we can also look at it the other way around and interpret every piece of code made available as open source as a way of giving back to the community. Open source is the great global project, the global commons. And AI providers are the opposite: they centralize it and pass it off as their own. Anyone who has studied computer science knows that exponential algorithms have no future. And that exponential growth eventually collapses. And anyone with any sense knows that today’s AI companies will eventually collapse in one form or another. This is a transitional phase. 
+
+But open source is here to stay! And that’s what I want to reflect on here. If anyone submits a pull request, I won’t try to figure out whether it was created using AI or not. Because I don’t care about that. I care about the bigger picture. The quality. Whether it works and whether it’s understandable. Anyone who has a serious problem with AI shouldn’t be on GitHub. They should go to Codeberg or other places and shouldn’t use Windows, MacOS or Google at all. As a developer with decades of experience, I was thrown into this world of AI. I neither asked for it nor came up with it. It was simply forced upon me. 
+
+And now, like everyone else, I’m feeling this tension—the pressure to suddenly have to be faster than everyone else, which is complete nonsense. From the business side, there’s this constant demand to use more and more AI tools. But as soon as I find myself in an IT-savvy crowd, everyone starts tearing each other apart and creating a stigma. *And I’m finally sick and tired of that.* We need to stop tearing each other down. *It’s others who have unleashed this disaster upon the world. And if we now attack each other for using these tools in the opposite way, then we haven’t learned a thing.* Every computer scientist knows that this will eventually collapse. And since AI is actually simply everywhere, we cannot pretend everthing was created without AI tools nowadays. A little bit of AI 
+is everywhere. Even if it's just spell-check. That's why I wish for peace.
+
+After that all is said now, I hope we must not talk about it anymore.
 
 ## Author
 
