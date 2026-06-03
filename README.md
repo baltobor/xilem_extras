@@ -2,7 +2,7 @@
 
 High-level widget library for [Xilem](https://github.com/linebender/xilem) providing Tree, List, Table, and Menu widgets with SwiftUI-inspired APIs.
 
-***This crate is highly experimental and not for productive use. The API may break anytime. use it at your own risk.***
+***This crate is highly experimental and a sanbox project for me and not for productive use. The API may break anytime. Use it at your own risk. It is used to try ideas and concepts. And also AI may be used to create sketches.***
 
 ## Overview
 
