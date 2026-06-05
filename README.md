@@ -10,6 +10,12 @@ High-level widget library for [Xilem](https://github.com/linebender/xilem) provi
 This library extends Xilem with common UI patterns for building desktop applications. It provides composable, trait-based widgets that integrate seamlessly with Xilem's reactive architecture. It is still experimental. But you can already use it to build Applications. This is no official xilem package. 
 But I try to keep it up to date and compatible to Xilem.
 
+## Design approach 
+
+Software is usually programmed *inductively*. You start by creating a structure. You begin with the core and add elements bit by bit until the whole thing comes together. The Xilem team at Liebender does this very well. I had the idea to experiment with higher-level controls. After several attempts, however, I failed. Then it occurred to me that you can’t just build tree views or tables based on an idea alone. What struck me more was that these controls could be developed based on a real-world application—to discover, through practical experience, the application itself, and "day-to-day work," which features and parameter lists are needed. 
+
+That’s why I decided to build this sandbox project. So the approach is *deductively*. I start at the high level and work *quick and dirty* at the beginning so that I can get into the real application very quickly. As I work with my own applications on a daily basis, I find myself needing to adapt the xilem layer for my needs. I start by working backward. Once I’ve fully understood everything, I try to dig deeper and write a foundation in Masonry. This crate works. And you can already use it to program real applications. However, *the project is primarily intended as a lab*. Feel free to use it for real applications. But let me be very clear: *this is not intended to be a final product*. Rather, it is meant to help understanding design patterns so that one can finally create a clean Rust interface for Xilem and Masonry.
+
 ## Available Widgets
 
 - **Tree Group** - Hierarchical data group for DIY groups.
