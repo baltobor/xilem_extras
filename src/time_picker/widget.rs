@@ -9,12 +9,12 @@
 
 use std::any::TypeId;
 
-use tracing::{trace_span, Span};
+use tracing::{Span, trace_span};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent,
-    Update, UpdateCtx, Widget, WidgetId, WidgetMut,
+    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update,
+    UpdateCtx, Widget, WidgetId, WidgetMut,
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, BezPath, Point, Rect, RoundedRect, Size, Stroke};
@@ -100,8 +100,12 @@ impl TimePickerWidget {
         }
 
         // Minute up (right side, top)
-        let minute_up_rect =
-            Rect::new(half_width, top_row_y, self.size.width, top_row_y + STEPPER_SIZE);
+        let minute_up_rect = Rect::new(
+            half_width,
+            top_row_y,
+            self.size.width,
+            top_row_y + STEPPER_SIZE,
+        );
         if minute_up_rect.contains(pos) {
             return HitArea::MinuteUp;
         }
@@ -272,15 +276,40 @@ impl Widget for TimePickerWidget {
             .fill(RoundedRect::from_rect(bg_rect, 6.0), BG_COLOR)
             .draw();
         painter
-            .stroke(RoundedRect::from_rect(bg_rect, 6.0), &Stroke::new(1.0), BORDER_COLOR)
+            .stroke(
+                RoundedRect::from_rect(bg_rect, 6.0),
+                &Stroke::new(1.0),
+                BORDER_COLOR,
+            )
             .draw();
 
         // Draw stepper buttons (up arrows at top, down arrows at bottom)
         let stepper_areas = [
             (0.0, 0.0, half_width, STEPPER_SIZE, HitArea::HourUp, true),
-            (0.0, height - STEPPER_SIZE, half_width, height, HitArea::HourDown, false),
-            (half_width, 0.0, width, STEPPER_SIZE, HitArea::MinuteUp, true),
-            (half_width, height - STEPPER_SIZE, width, height, HitArea::MinuteDown, false),
+            (
+                0.0,
+                height - STEPPER_SIZE,
+                half_width,
+                height,
+                HitArea::HourDown,
+                false,
+            ),
+            (
+                half_width,
+                0.0,
+                width,
+                STEPPER_SIZE,
+                HitArea::MinuteUp,
+                true,
+            ),
+            (
+                half_width,
+                height - STEPPER_SIZE,
+                width,
+                height,
+                HitArea::MinuteDown,
+                false,
+            ),
         ];
 
         for (x1, y1, x2, y2, area, is_up) in stepper_areas {

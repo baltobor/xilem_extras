@@ -7,6 +7,11 @@
 
 use std::hash::Hash;
 
+// TODO: Identifiable is what SwiftUI is uing.
+// TODO: I am pretty sure rust already has this kind
+// TODO: of identity trait.
+// TODO: Replace with the best practice trait of rust or xilem!
+
 /// Provides a stable identity for items in collections.
 ///
 /// This trait enables efficient diffing and reconciliation of collection items

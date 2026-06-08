@@ -17,8 +17,8 @@ use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
 use xilem::masonry::accesskit::{self, Node, Role, Toggled};
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent,
-    Update, UpdateCtx, Widget, WidgetId, WidgetMut,
+    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update,
+    UpdateCtx, Widget, WidgetId, WidgetMut,
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Circle, Point, Rect, RoundedRect, Size, Stroke};
@@ -179,7 +179,10 @@ impl Widget for SwitchWidget {
         let pill = RoundedRect::from_rect(track, TRACK_H / 2.0);
 
         let track_fill = if self.on { ON_TRACK } else { OFF_TRACK };
-        painter.fill(pill, track_fill).fill_rule(Fill::NonZero).draw();
+        painter
+            .fill(pill, track_fill)
+            .fill_rule(Fill::NonZero)
+            .draw();
         painter.stroke(pill, &Stroke::new(0.5), TRACK_BORDER).draw();
 
         // Thumb position — left when off, right when on.
@@ -191,7 +194,10 @@ impl Widget for SwitchWidget {
         };
         let thumb_color = if self.on { THUMB_ON } else { THUMB_OFF };
         let thumb = Circle::new(Point::new(thumb_x, thumb_y), THUMB_R);
-        painter.fill(thumb, thumb_color).fill_rule(Fill::NonZero).draw();
+        painter
+            .fill(thumb, thumb_color)
+            .fill_rule(Fill::NonZero)
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {
@@ -204,7 +210,11 @@ impl Widget for SwitchWidget {
         _props: &PropertiesRef<'_>,
         node: &mut Node,
     ) {
-        node.set_toggled(if self.on { Toggled::True } else { Toggled::False });
+        node.set_toggled(if self.on {
+            Toggled::True
+        } else {
+            Toggled::False
+        });
         node.add_action(accesskit::Action::Click);
     }
 

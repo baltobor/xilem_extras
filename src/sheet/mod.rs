@@ -47,12 +47,12 @@
 //! }
 //! ```
 
-mod widget;
 mod view;
+mod widget;
 
-pub use widget::{SheetWidget, SheetAction};
-pub use view::{sheet, SheetView};
+pub use view::{SheetView, sheet};
+pub use widget::{SheetAction, SheetWidget};
 
 // Layer is kept for backward compatibility but not actively used
 mod layer;
-pub use layer::SheetLayer;
+// pub use layer::SheetLayer;

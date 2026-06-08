@@ -14,12 +14,16 @@
 //!
 //! This is pure xilem composition — no masonry widget, no type erasure.
 
+// TODO: Does it make sense to add this in the masonry layer as well?
+// TODO: Else developers who want create their GUI entirely in masonry
+// TODO: would be locked out.
+
 use masonry::layout::{AsUnit, Length};
 use masonry::properties::Padding;
+use xilem::AnyWidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_row, label, sized_box, CrossAxisAlignment};
-use xilem::AnyWidgetView;
+use xilem::view::{CrossAxisAlignment, flex_row, label, sized_box};
 
 use crate::components::{disclosure, row_button};
 

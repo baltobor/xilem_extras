@@ -11,6 +11,8 @@
 //! without a separate layer. This module is kept for potential future use
 //! or alternative implementations.
 
+/*
+
 use tracing::{Span, trace_span};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
@@ -231,3 +233,4 @@ impl Layer for SheetLayer {
         }
     }
 }
+*/

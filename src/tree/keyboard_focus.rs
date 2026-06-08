@@ -51,9 +51,13 @@
 //! rebuilds flow through xilem's normal lifecycle — no `replace_child`
 //! workaround.
 
+// TODO: Do we really have no construction like this in xilem yet?
+// TODO: Wow is masonry handling the Tab-Key in order to switch focus?
+// TODO: Check from time to time what was added to xilem to replace this.
+
 use std::any::TypeId;
 use std::marker::PhantomData;
-use tracing::{trace_span, Span};
+use tracing::{Span, trace_span};
 
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
@@ -191,7 +195,13 @@ impl Widget for KeyHandler {
     ) {
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, _event: &Update) {}
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        _event: &Update,
+    ) {
+    }
 
     fn property_changed(&mut self, _ctx: &mut UpdateCtx<'_>, _property_type: TypeId) {}
 
@@ -209,7 +219,13 @@ impl Widget for KeyHandler {
     ) -> Length {
         let auto_length = len_req.into();
         let context_size = xilem::masonry::layout::LayoutSize::maybe(axis.cross(), cross_length);
-        ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length)
+        ctx.compute_length(
+            &mut self.child,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        )
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
@@ -322,7 +338,9 @@ where
         // which for us means a `KeyAction` from `KeyHandler::on_text_event`.
         if !message.remaining_path().is_empty() {
             let mut child = KeyHandler::child_mut(&mut element);
-            return self.inner.message(view_state, message, child.downcast(), app_state);
+            return self
+                .inner
+                .message(view_state, message, child.downcast(), app_state);
         }
 
         match message.take_message::<KeyAction>() {

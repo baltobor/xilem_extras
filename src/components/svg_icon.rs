@@ -21,20 +21,19 @@ pub enum ScaleMode {
     AspectFit,
 }
 
-use xilem::core::{MessageCtx, Mut, View, ViewMarker, MessageResult};
-use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx,
-    PaintCtx, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent,
-    Update, UpdateCtx, Widget, WidgetId,
-};
-use xilem::masonry::accesskit::{Node, Role};
-use xilem::masonry::imaging::Painter;
-use xilem::masonry::layout::{LenReq, Length};
-use xilem::masonry::kurbo::{Affine, BezPath, Size, Stroke};
-use xilem::masonry::peniko::Color;
-use xilem::masonry::kurbo::Axis;
-use xilem::{Pod, ViewCtx};
 use tracing::{Span, trace_span};
+use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
+use xilem::masonry::accesskit::{Node, Role};
+use xilem::masonry::core::{
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId,
+};
+use xilem::masonry::imaging::Painter;
+use xilem::masonry::kurbo::Axis;
+use xilem::masonry::kurbo::{Affine, BezPath, Size, Stroke};
+use xilem::masonry::layout::{LenReq, Length};
+use xilem::masonry::peniko::Color;
+use xilem::{Pod, ViewCtx};
 
 /// An SVG icon defined by a BezPath.
 ///
@@ -144,6 +143,7 @@ impl SvgIcon {
     }
 }
 
+// --- MARK: MASONRY
 /// Widget that renders an SVG icon.
 pub struct SvgIconWidget {
     icon: SvgIcon,
@@ -171,23 +171,32 @@ impl Widget for SvgIconWidget {
         _ctx: &mut EventCtx<'_>,
         _props: &mut PropertiesMut<'_>,
         _event: &PointerEvent,
-    ) {}
+    ) {
+    }
 
     fn on_text_event(
         &mut self,
         _ctx: &mut EventCtx<'_>,
         _props: &mut PropertiesMut<'_>,
         _event: &TextEvent,
-    ) {}
+    ) {
+    }
 
     fn on_access_event(
         &mut self,
         _ctx: &mut EventCtx<'_>,
         _props: &mut PropertiesMut<'_>,
         _event: &AccessEvent,
-    ) {}
+    ) {
+    }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, _event: &Update) {}
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        _event: &Update,
+    ) {
+    }
 
     fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {}
 
@@ -209,10 +218,17 @@ impl Widget for SvgIconWidget {
 
     fn layout(&mut self, _ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, _size: Size) {}
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        _ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let path = self.icon.scaled_path();
         if let Some(stroke_width) = self.icon.scaled_stroke_width() {
-            painter.stroke(&path, &Stroke::new(stroke_width), self.icon.color).draw();
+            painter
+                .stroke(&path, &Stroke::new(stroke_width), self.icon.color)
+                .draw();
         } else {
             painter.fill(&path, self.icon.color).draw();
         }
@@ -222,7 +238,12 @@ impl Widget for SvgIconWidget {
         Role::Image
     }
 
-    fn accessibility(&mut self, _ctx: &mut AccessCtx<'_>, _props: &PropertiesRef<'_>, node: &mut Node) {
+    fn accessibility(
+        &mut self,
+        _ctx: &mut AccessCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        node: &mut Node,
+    ) {
         node.set_label("icon");
     }
 
@@ -243,6 +264,7 @@ impl Widget for SvgIconWidget {
     }
 }
 
+// --- MARK: XILEM
 /// Xilem view for an SVG icon.
 pub struct SvgIconView {
     icon: SvgIcon,
@@ -281,8 +303,8 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for SvgIconVi
             || self.icon.path != prev.icon.path;
 
         // Check if only appearance changed (paint only)
-        let appearance_changed = self.icon.color != prev.icon.color
-            || self.icon.stroke_width != prev.icon.stroke_width;
+        let appearance_changed =
+            self.icon.color != prev.icon.color || self.icon.stroke_width != prev.icon.stroke_width;
 
         if dimensions_changed {
             element.widget.set_icon(self.icon.clone());
@@ -298,7 +320,8 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for SvgIconVi
         _view_state: &mut Self::ViewState,
         _ctx: &mut ViewCtx,
         _element: Mut<'_, Self::Element>,
-    ) {}
+    ) {
+    }
 
     fn message(
         &self,

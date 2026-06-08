@@ -46,339 +46,209 @@
 //! }
 //! ```
 
-mod traits;
-mod selection;
+pub mod app_menu;
+pub mod calendar_picker;
+pub mod chart;
 pub mod components;
-mod tree;
-mod list;
-mod table;
-pub mod menu_button;
+pub mod context_menu;
 pub mod dropdown_select;
+pub mod form;
+mod list;
+pub mod locale;
+pub mod menu_button;
+pub mod menu_items;
+pub mod progress;
+mod selection;
+pub mod sheet;
+pub mod stock_chart;
+mod table;
 pub mod tabs;
 pub mod theme;
-pub mod context_menu;
-pub mod menu_items;
-pub mod app_menu;
-pub mod sheet;
-pub mod calendar_picker;
 pub mod time_picker;
-pub mod locale;
-pub mod chart;
-pub mod progress;
-pub mod stock_chart;
-pub mod form;
+mod traits;
+mod tree;
 
 pub use traits::{
-    Identifiable,
-    TreeNode,
-    ListItem,
-    TableRow,
-    CellValue,
-    SelectionState,
-    SelectionModifiers,
+    CellValue, Identifiable, ListItem, SelectionModifiers, SelectionState, TableRow, TreeNode,
 };
 
-pub use selection::{
-    SingleSelection,
-    MultiSelection,
-};
+pub use selection::{MultiSelection, SingleSelection};
 
 pub use components::{
-    row_button,
-    row_button_with_clicks,
-    row_button_with_modifiers,
-    row_button_with_press,
-    RowButtonView,
-    RowButtonPress,
-    disclosure,
-    Disclosure,
-    SvgIcon,
-    SvgIconView,
-    SvgIconWidget,
-    svg_icon,
-    ScaleMode,
-    click_interceptor,
-    ClickInterceptorView,
-    ClickInterceptorWidget,
-    clipped,
-    ClippedView,
-    ClippedWidget,
-    styled_text_input,
-    styled_text_input_with_placeholder,
-    styled_text_input_colored,
-    styled_secure_text_input,
-    TextInputColors,
-    StyledTextInput,
-    styled_checkbox,
-    styled_checkbox_colored,
-    styled_switch,
-    styled_switch_colored,
-    styled_radio,
-    styled_radio_colored,
-    styled_check,
-    styled_check_colored,
-    CheckboxColors,
-    CheckboxStyle,
-    group_box,
-    GroupBox,
-    GroupBoxView,
-    inverse_contrast_color,
+    CheckboxColors, CheckboxStyle, ClickInterceptorView, ClickInterceptorWidget, ClippedView,
+    ClippedWidget, Disclosure, GroupBox, GroupBoxView, LabelAlign, ParamSelectorView,
+    ParamSelectorWidget, RadioToggled, RadioWidget, RowButtonPress, RowButtonView, ScaleMode,
+    StyledTextInput, SvgIcon, SvgIconView, SvgIconWidget, SwitchToggled, SwitchWidget, SynthRadio,
+    SynthSwitch, TextInputColors, click_interceptor, clipped, disclosure, group_box,
+    inverse_contrast_color, param_selector, row_button, row_button_with_clicks,
+    row_button_with_modifiers, row_button_with_press, styled_check, styled_check_colored,
+    styled_checkbox, styled_checkbox_colored, styled_radio, styled_radio_colored,
+    styled_secure_text_input, styled_switch, styled_switch_colored, styled_text_input,
+    styled_text_input_colored, styled_text_input_with_placeholder, svg_icon, synth_radio,
     synth_switch,
-    SwitchWidget,
-    SwitchToggled,
-    SynthSwitch,
-    synth_radio,
-    RadioWidget,
-    RadioToggled,
-    SynthRadio,
-    param_selector,
-    LabelAlign,
-    ParamSelectorWidget,
-    ParamSelectorView,
 };
 
 pub use form::{
-    form,
-    form_section,
-    form_row,
-    form_toggle,
-    form_radio,
-    form_checkbox,
-    form_themed,
-    form_section_themed,
-    form_row_themed,
+    form, form_checkbox, form_checkbox_themed, form_radio, form_radio_themed, form_row,
+    form_row_themed, form_section, form_section_themed, form_themed, form_toggle,
     form_toggle_themed,
-    form_radio_themed,
-    form_checkbox_themed,
 };
 
 pub use theme::Theme;
 
 #[cfg(feature = "rust-logos")]
-pub use components::{
-    rust_logo,
-    rust_gear,
-    rust_logo_complete,
-    ferris,
-};
+pub use components::{ferris, rust_gear, rust_logo, rust_logo_complete};
 
 pub use tree::{
+    DEFAULT_CHEVRON_COLOR,
+    DEFAULT_SELECTED_BG,
+    DEFAULT_TEXT_COLOR,
+    ExpansionState,
+    // Tree primitives (used by tree_view internally; exposed for power users)
+    FlattenedNode,
+    HighlightFill,
+    KeyAction,
+    KeyHandler,
+    KeyboardFocus,
+    TreeAction,
+    TreeStyle,
+    TreeView,
+    disclosure_row,
+    flatten_forest,
+    flatten_forest_with_parents,
+    flatten_tree,
+    flatten_tree_with_parents,
+    keyboard_focus,
     tree,
+    tree_forest,
+    tree_forest_styled,
+    tree_forest_view,
+    tree_forest_with_context_menu,
     tree_group,
     tree_group_styled,
     tree_group_with_context_menu,
     tree_group_with_context_menu_editable,
-    tree_forest,
-    tree_forest_styled,
-    tree_forest_with_context_menu,
     tree_view,
-    tree_forest_view,
-    HighlightFill,
-    TreeAction,
-    TreeStyle,
-    TreeView,
-    ExpansionState,
-    DEFAULT_SELECTED_BG,
-    DEFAULT_TEXT_COLOR,
-    DEFAULT_CHEVRON_COLOR,
-    flatten_tree,
-    flatten_forest,
-    // Tree primitives (used by tree_view internally; exposed for power users)
-    FlattenedNode,
-    flatten_tree_with_parents,
-    flatten_forest_with_parents,
-    disclosure_row,
-    keyboard_focus,
-    KeyAction,
-    KeyHandler,
-    KeyboardFocus,
 };
 
 pub use list::{
-    list,
-    list_styled,
     ListAction,
+    ListNavigableView,
+    ListRangeAction,
+    ListRowAction,
+    ListScrollState,
+    ListSection,
     ListStyle,
+    ListView,
+    ListViewAction,
+    ListViewState,
+    ListViewStyle,
     // Widget-level (keyboard navigation, sections)
     ListWidget,
     ListWidgetAction,
     ListWidgetStyle,
-    ListScrollState,
-    ListSection,
-    ListRangeAction,
-    ListRowAction,
-    // Virtualized list view (full-featured)
-    list_view,
-    list_view_styled,
-    ListView,
-    ListViewState,
-    ListViewAction,
-    ListViewStyle,
-    // Sectioned list view
-    list_view_sectioned,
     SectionDef,
-    SectionedRowInfo,
     SectionedListView,
     SectionedListViewState,
+    SectionedRowInfo,
+    list,
     // Navigable list view (simple API)
     list_navigable,
-    ListNavigableView,
+    list_styled,
+    // Virtualized list view (full-featured)
+    list_view,
+    // Sectioned list view
+    list_view_sectioned,
+    list_view_styled,
 };
 
 pub use table::{
-    // Column definitions
-    column,
+    Alignment,
     ColumnBuilder,
     ColumnDef,
+    ColumnResizeAction,
     ColumnWidth,
     ColumnWidths,
-    Alignment,
+    LegacyTableAction,
+    ResizableHeader,
+    ResizableHeaderView,
+    SortDescriptor,
+    SortDirection,
     // Sorting
     SortOrder,
-    SortDirection,
-    SortDescriptor,
-    // Resizable header
-    resizable_header,
-    ResizableHeaderView,
-    ResizableHeader,
-    ColumnResizeAction,
-    // Widget-level
-    TableScrollState,
-    TableWidget,
-    TableWidgetAction,
+    TableAction,
+    TableHeaderClickAction,
     TableRangeAction,
     TableRowClickAction,
-    TableHeaderClickAction,
-    // Main table API (virtualized, high-performance)
-    table,
-    table_styled,
-    table_cell,
-    TableAction,
+    // Widget-level
+    TableScrollState,
+    TableStyle,
     TableView,
     TableViewState,
+    TableWidget,
+    TableWidgetAction,
+    // Column definitions
+    column,
     // Legacy table API (non-virtualized)
     legacy_table,
     legacy_table_styled,
-    LegacyTableAction,
-    TableStyle,
+    // Resizable header
+    resizable_header,
+    // Main table API (virtualized, high-performance)
+    table,
+    table_cell,
+    table_styled,
 };
 
-pub use tabs::{
-    TabItem,
-    SimpleTab,
-    TabBar,
-    TabBarColors,
-    NavTabBar,
-    NavButtonMode,
-};
+pub use tabs::{NavButtonMode, NavTabBar, SimpleTab, TabBar, TabBarColors, TabItem};
 
 pub use menu_button::{
-    menu_button,
-    MenuButtonView,
-    MenuButton,
-    MenuButtonPress,
-    MenuDropdown,
-    PulldownMenuItem,
-    PulldownSubmenuItem,
+    MenuButton, MenuButtonPress, MenuButtonView, MenuDropdown, PulldownMenuItem,
+    PulldownSubmenuItem, menu_button,
 };
 
 pub use dropdown_select::{
+    DropdownSelect, DropdownSelectAction, DropdownSelectView, SelectDropdown, SelectOptionItem,
     dropdown_select,
-    DropdownSelectView,
-    DropdownSelect,
-    DropdownSelectAction,
-    SelectDropdown,
-    SelectOptionItem,
 };
 
 pub use context_menu::{
-    context_menu,
-    ContextMenuView,
-    ContextMenuWidget,
-    ContextMenuAction,
-    ContextMenuDropdown,
+    ContextMenuAction, ContextMenuDropdown, ContextMenuView, ContextMenuWidget, context_menu,
 };
 
 pub use menu_items::{
-    MenuEntry,
-    BoxedMenuEntry,
-    MenuItem,
-    menu_item,
-    MenuItems,
-    IntoMenuEntries,
-    Group,
-    group,
-    separator,
-    Submenu,
-    submenu,
+    BoxedMenuEntry, Group, IntoMenuEntries, MenuEntry, MenuItem, MenuItems, Submenu, group,
+    menu_item, separator, submenu,
 };
 
 pub use app_menu::{
-    app_menu_bar,
-    with_app_menu,
-    menu_bar_label,
-    AppMenuBarView,
-    MenuBarBuilder,
-    MenuBuilder,
-    MenuItemBuilder,
-    MenuItemChain,
-    pulldown_menu_bar,
-    PulldownMenuBarStyle,
-    Key,
-    Modifiers,
-    Shortcut,
-    CMD,
-    SHIFT,
-    ALT,
-    CTRL,
+    ALT, AppMenuBarView, CMD, CTRL, Key, MenuBarBuilder, MenuBuilder, MenuItemBuilder,
+    MenuItemChain, Modifiers, PulldownMenuBarStyle, SHIFT, Shortcut, app_menu_bar, menu_bar_label,
+    pulldown_menu_bar, with_app_menu,
 };
 
 pub use sheet::{
-    sheet,
+    //    SheetLayer,
+    SheetAction,
     SheetView,
     SheetWidget,
-    SheetLayer,
-    SheetAction,
+    sheet,
 };
 
 pub use calendar_picker::{
-    calendar_picker,
-    CalendarPickerView,
-    CalendarPickerWidget,
-    CalendarAction,
+    CalendarAction, CalendarPickerView, CalendarPickerWidget, calendar_picker,
 };
 
-pub use time_picker::{
-    time_picker,
-    TimePickerView,
-    TimePickerWidget,
-    TimeAction,
-};
+pub use time_picker::{TimeAction, TimePickerView, TimePickerWidget, time_picker};
 
 pub use locale::CalendarLocale;
 
-pub use chart::{
-    chart,
-    ChartView,
-    ChartWidget,
-    ChartAction,
-    ChartMode,
-};
+pub use chart::{ChartAction, ChartMode, ChartView, ChartWidget, chart};
 
 pub use progress::{
-    progress_bar,
-    round_progress,
-    busy_hex,
-    BusyHexSize,
-    BusyHexView,
-    BusyHexWidget,
-    ProgressBarView,
-    ProgressBarWidget,
-    ProgressOrientation,
-    ProgressStyle,
-    RoundProgressSize,
-    RoundProgressView,
-    RoundProgressWidget,
+    BusyHexSize, BusyHexView, BusyHexWidget, ProgressBarView, ProgressBarWidget,
+    ProgressOrientation, ProgressStyle, RoundProgressSize, RoundProgressView, RoundProgressWidget,
+    busy_hex, progress_bar, round_progress,
 };
 
 pub use xilem;

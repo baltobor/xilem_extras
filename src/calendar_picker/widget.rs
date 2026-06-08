@@ -14,19 +14,26 @@
 //! Month navigation and date/KW display should be composed
 //! around it using xilem views.
 
+// TODO: Shouldn't we implement it exclusively in masonry? And then just use it from xilem?
+
+// TODO: What is with other countries?
+// TODO: How do we treat arabic calendar?
+// TODO: I assume the order of the weekdays
+// TODO: then will be arranged from right to left?
+
 use chrono::{Datelike, Duration, Local, NaiveDate};
+use xilem::Color;
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
-    AccessCtx, BrushIndex, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
-    PointerButtonEvent, PropertiesMut, PropertiesRef, RegisterCtx, StyleProperty,
-    Update, UpdateCtx, Widget, WidgetMut, render_text, ChildrenIds,
+    AccessCtx, BrushIndex, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
+    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, StyleProperty,
+    Update, UpdateCtx, Widget, WidgetMut, render_text,
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Affine, Axis, Point, Rect, RoundedRect, Size};
 use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::parley::{Layout as ParleyLayout, StyleSet};
 use xilem::masonry::peniko::{Brush, Fill};
-use xilem::Color;
 
 use crate::CalendarLocale;
 
@@ -94,7 +101,11 @@ impl CalendarPickerWidget {
         widget
     }
 
-    pub fn set_state(this: &mut WidgetMut<'_, Self>, displayed_month: NaiveDate, selected: Option<NaiveDate>) {
+    pub fn set_state(
+        this: &mut WidgetMut<'_, Self>,
+        displayed_month: NaiveDate,
+        selected: Option<NaiveDate>,
+    ) {
         this.widget.displayed_month = displayed_month;
         this.widget.selected = selected;
         this.widget.today = Local::now().date_naive();
@@ -119,7 +130,10 @@ impl CalendarPickerWidget {
     }
 
     fn grid_start(&self) -> NaiveDate {
-        let month_start = self.displayed_month.with_day(1).unwrap_or(self.displayed_month);
+        let month_start = self
+            .displayed_month
+            .with_day(1)
+            .unwrap_or(self.displayed_month);
         let wd = month_start.weekday().num_days_from_monday() as i64;
         month_start - Duration::days(wd)
     }
@@ -183,7 +197,12 @@ impl CalendarPickerWidget {
 impl Widget for CalendarPickerWidget {
     type Action = CalendarAction;
 
-    fn on_pointer_event(&mut self, ctx: &mut EventCtx<'_>, _: &mut PropertiesMut<'_>, event: &PointerEvent) {
+    fn on_pointer_event(
+        &mut self,
+        ctx: &mut EventCtx<'_>,
+        _: &mut PropertiesMut<'_>,
+        event: &PointerEvent,
+    ) {
         match event {
             PointerEvent::Down(_) => {
                 ctx.capture_pointer();
@@ -201,14 +220,25 @@ impl Widget for CalendarPickerWidget {
         }
     }
 
-    fn accepts_pointer_interaction(&self) -> bool { true }
-    fn accepts_focus(&self) -> bool { false }
+    fn accepts_pointer_interaction(&self) -> bool {
+        true
+    }
+    fn accepts_focus(&self) -> bool {
+        false
+    }
 
     fn register_children(&mut self, _: &mut RegisterCtx<'_>) {}
 
     fn update(&mut self, _: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, _: &Update) {}
 
-    fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<Length>) -> Length {
+    fn measure(
+        &mut self,
+        _: &mut MeasureCtx<'_>,
+        _: &PropertiesRef<'_>,
+        axis: Axis,
+        _len_req: LenReq,
+        _cross: Option<Length>,
+    ) -> Length {
         match axis {
             Axis::Horizontal => Length::px(self.cell_size * NUM_COLS as f64),
             Axis::Vertical => Length::px(self.cell_size * (NUM_DAY_ROWS + 1) as f64),
@@ -232,7 +262,10 @@ impl Widget for CalendarPickerWidget {
 
         // Background
         let bg_rect = Rect::new(0.0, 0.0, size.width, size.height);
-        painter.fill(&bg_rect, BG_COLOR).fill_rule(Fill::NonZero).draw();
+        painter
+            .fill(&bg_rect, BG_COLOR)
+            .fill_rule(Fill::NonZero)
+            .draw();
 
         let displayed_month = self.displayed_month.month();
         let displayed_year = self.displayed_month.year();
@@ -267,7 +300,12 @@ impl Widget for CalendarPickerWidget {
                 let is_weekend = col >= 5;
 
                 // Background - squared with rounded corners (not circle)
-                let cell_rect = Rect::new(x + 2.0, y + 2.0, x + self.cell_size - 2.0, y + self.cell_size - 2.0);
+                let cell_rect = Rect::new(
+                    x + 2.0,
+                    y + 2.0,
+                    x + self.cell_size - 2.0,
+                    y + self.cell_size - 2.0,
+                );
                 let bg = if is_today {
                     TODAY_BG
                 } else if is_selected {
@@ -307,7 +345,9 @@ impl Widget for CalendarPickerWidget {
         }
     }
 
-    fn accessibility_role(&self) -> Role { Role::Grid }
+    fn accessibility_role(&self) -> Role {
+        Role::Grid
+    }
     fn accessibility(&mut self, _: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, _: &mut Node) {}
 
     fn children_ids(&self) -> ChildrenIds {
