@@ -69,10 +69,7 @@ pub struct ContextMenuView<State, Action, V, I> {
 ///     ),
 /// )
 /// ```
-pub fn context_menu<State, Action, V, I>(
-    child: V,
-    items: I,
-) -> ContextMenuView<State, Action, V, I>
+pub fn context_menu<State, Action, V, I>(child: V, items: I) -> ContextMenuView<State, Action, V, I>
 where
     State: 'static,
     Action: 'static,
@@ -104,11 +101,7 @@ where
     type Element = Pod<ContextMenuWidget>;
     type ViewState = ContextMenuViewState<State, Action, V>;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let entries: Vec<BoxedMenuEntry<State, Action>> = self.items.clone().collect_entries();
 
         // Build labels for the widget
@@ -117,9 +110,8 @@ where
             .map(|e| e.label().unwrap_or("---").to_string())
             .collect();
 
-        let (child, child_state) = ctx.with_id(CHILD_VIEW_ID, |ctx| {
-            self.child.build(ctx, app_state)
-        });
+        let (child, child_state) =
+            ctx.with_id(CHILD_VIEW_ID, |ctx| self.child.build(ctx, app_state));
 
         let pod = ctx.with_action_widget(|ctx| {
             ctx.create_pod(ContextMenuWidget::new(child.new_widget, labels))
@@ -148,7 +140,8 @@ where
             .map(|e| e.label().unwrap_or("---").to_string())
             .collect();
 
-        let prev_labels: Vec<String> = view_state.entries
+        let prev_labels: Vec<String> = view_state
+            .entries
             .iter()
             .map(|e| e.label().unwrap_or("---").to_string())
             .collect();

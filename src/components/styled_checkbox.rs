@@ -15,16 +15,16 @@
 //! a settings/inspector form can pick "Switch" for some rows and
 //! "Radio" for others without changing the call shape.
 
-use xilem::view::{checkbox, flex_row, label, CrossAxisAlignment};
+use xilem::view::{CrossAxisAlignment, checkbox, flex_row, label};
 
-use super::switch_widget::synth_switch;
 use super::radio_widget::synth_radio;
+use super::switch_widget::synth_switch;
+use masonry::layout::AsUnit;
+use masonry::peniko::Color;
+use masonry::peniko::color::{AlphaColor, Srgb};
+use masonry::properties::{Background, BorderColor, CheckmarkColor};
 use xilem::style::Style;
 use xilem::{AnyWidgetView, WidgetView};
-use masonry::layout::AsUnit;
-use masonry::peniko::color::{AlphaColor, Srgb};
-use masonry::peniko::Color;
-use masonry::properties::{Background, BorderColor, CheckmarkColor};
 
 /// Visual style applied to a boolean control. Lets callers reuse
 /// the same code path while presenting checkmarks, switches, or
@@ -58,9 +58,9 @@ pub struct CheckboxColors {
 impl Default for CheckboxColors {
     fn default() -> Self {
         Self {
-            background: AlphaColor::new([1.0, 1.0, 1.0, 1.0]),      // white
-            border: AlphaColor::new([0.4, 0.4, 0.4, 1.0]),          // dark gray
-            checkmark: AlphaColor::new([0.0, 0.0, 0.0, 1.0]),       // black
+            background: AlphaColor::new([1.0, 1.0, 1.0, 1.0]), // white
+            border: AlphaColor::new([0.4, 0.4, 0.4, 1.0]),     // dark gray
+            checkmark: AlphaColor::new([0.0, 0.0, 0.0, 1.0]),  // black
             label: Color::BLACK,
         }
     }
@@ -75,9 +75,9 @@ impl CheckboxColors {
     /// Create colors for dark mode (dark background, light checkmark)
     pub fn dark() -> Self {
         Self {
-            background: AlphaColor::new([0.2, 0.2, 0.2, 1.0]),      // dark gray
-            border: AlphaColor::new([0.5, 0.5, 0.5, 1.0]),          // medium gray
-            checkmark: AlphaColor::new([1.0, 1.0, 1.0, 1.0]),       // white
+            background: AlphaColor::new([0.2, 0.2, 0.2, 1.0]), // dark gray
+            border: AlphaColor::new([0.5, 0.5, 0.5, 1.0]),     // medium gray
+            checkmark: AlphaColor::new([1.0, 1.0, 1.0, 1.0]),  // white
             label: Color::WHITE,
         }
     }
@@ -131,8 +131,12 @@ where
     flex_row((
         checkbox("", checked, on_toggle)
             .prop(Background::Color(colors.background))
-            .prop(BorderColor { color: colors.border })
-            .prop(CheckmarkColor { color: colors.checkmark }),
+            .prop(BorderColor {
+                color: colors.border,
+            })
+            .prop(CheckmarkColor {
+                color: colors.checkmark,
+            }),
         label(label_text).text_size(12.0).color(label_color),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
@@ -274,14 +278,20 @@ where
     let label_text = label_text.into();
     let label_color = colors.label;
     match style {
-        CheckboxStyle::Classic => {
-            Box::new(styled_checkbox_colored(label_text, checked, colors, on_toggle))
-        }
-        CheckboxStyle::Switch => {
-            Box::new(styled_switch_colored(label_text, checked, label_color, on_toggle))
-        }
-        CheckboxStyle::Radio => {
-            Box::new(styled_radio_colored(label_text, checked, label_color, on_toggle))
-        }
+        CheckboxStyle::Classic => Box::new(styled_checkbox_colored(
+            label_text, checked, colors, on_toggle,
+        )),
+        CheckboxStyle::Switch => Box::new(styled_switch_colored(
+            label_text,
+            checked,
+            label_color,
+            on_toggle,
+        )),
+        CheckboxStyle::Radio => Box::new(styled_radio_colored(
+            label_text,
+            checked,
+            label_color,
+            on_toggle,
+        )),
     }
 }

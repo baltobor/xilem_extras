@@ -9,11 +9,11 @@
 
 use chrono::{Datelike, Duration, Local, NaiveDate};
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{button, flex_col, flex_row, label, CrossAxisAlignment, MainAxisAlignment};
-use xilem::{WidgetView};
-use xilem_extras::{calendar_picker, CalendarLocale, Theme};
+use xilem::view::{CrossAxisAlignment, MainAxisAlignment, button, flex_col, flex_row, label};
+use xilem_extras::{CalendarLocale, Theme, calendar_picker};
 
 use crate::app_model::AppModel;
 
@@ -48,8 +48,12 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
 
     // Navigation dates
     let month_start = displayed_month.with_day(1).unwrap_or(displayed_month);
-    let prev = (month_start - Duration::days(15)).with_day(1).unwrap_or(month_start);
-    let next = (month_start + Duration::days(35)).with_day(1).unwrap_or(month_start);
+    let prev = (month_start - Duration::days(15))
+        .with_day(1)
+        .unwrap_or(month_start);
+    let next = (month_start + Duration::days(35))
+        .with_day(1)
+        .unwrap_or(month_start);
 
     let months = LOCALE.months();
     let month_name = months[(month_start.month() - 1) as usize];
@@ -60,24 +64,22 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
             .color(theme.text()),
-
         // Selected date display
-        label(selected_text)
-            .text_size(12.0)
-            .color(theme.text()),
-
+        label(selected_text).text_size(12.0).color(theme.text()),
         flex_row((
             // Calendar section
             flex_col((
                 // Header with navigation
                 flex_row((
                     arrow_btn("<", prev),
-                    label(header).text_size(12.0).weight(xilem::FontWeight::MEDIUM).color(CAL_TEXT),
+                    label(header)
+                        .text_size(12.0)
+                        .weight(xilem::FontWeight::MEDIUM)
+                        .color(CAL_TEXT),
                     arrow_btn(">", next),
                 ))
                 .main_axis_alignment(MainAxisAlignment::SpaceBetween)
                 .width(((CELL * 7.0) as i32).px()),
-
                 // Grid-based calendar (using xilem_extras reusable widget)
                 calendar_picker(
                     displayed_month,
@@ -87,13 +89,15 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
                         () // Return unit action to trigger rebuild
                     },
                 ),
-
                 // Date, week display, and today button
                 flex_row((
                     flex_row((
-                        label(date_text).text_size(10.0).color(theme.text_secondary()),
+                        label(date_text)
+                            .text_size(10.0)
+                            .color(theme.text_secondary()),
                         label(kw_text).text_size(10.0).color(theme.text_secondary()),
-                    )).gap(8.0_f64.px()),
+                    ))
+                    .gap(8.0_f64.px()),
                     today_btn(),
                 ))
                 .main_axis_alignment(MainAxisAlignment::SpaceBetween)
@@ -103,11 +107,12 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
             .padding(Length::px(6.0))
             .background_color(CAL_BG)
             .corner_radius(Length::px(6.0)),
-
             // Time picker section
             flex_col((
                 build_time_picker(model.calendar_hour, model.calendar_minute),
-                label(time_text).text_size(10.0).color(theme.text_secondary()),
+                label(time_text)
+                    .text_size(10.0)
+                    .color(theme.text_secondary()),
             ))
             .cross_axis_alignment(CrossAxisAlignment::Center)
             .gap(4.0_f64.px()),
@@ -124,7 +129,9 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
 fn arrow_btn(text: &'static str, target: NaiveDate) -> impl WidgetView<AppModel> {
     button(
         label(text).text_size(11.0).color(CAL_ARROW),
-        move |m: &mut AppModel| { m.calendar_selected_date = Some(target); },
+        move |m: &mut AppModel| {
+            m.calendar_selected_date = Some(target);
+        },
     )
     .background_color(Color::TRANSPARENT)
     .border_color(Color::TRANSPARENT)
@@ -145,7 +152,9 @@ fn build_time_picker(hour: u8, minute: u8) -> impl WidgetView<AppModel> {
     flex_row((
         flex_col((
             time_btn("^", true, true),
-            label(format!("{:02}", hour)).text_size(13.0).color(TIME_TEXT),
+            label(format!("{:02}", hour))
+                .text_size(13.0)
+                .color(TIME_TEXT),
             time_btn("v", true, false),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
@@ -153,7 +162,9 @@ fn build_time_picker(hour: u8, minute: u8) -> impl WidgetView<AppModel> {
         label(":").text_size(13.0).color(TIME_TEXT),
         flex_col((
             time_btn("^", false, true),
-            label(format!("{:02}", minute)).text_size(13.0).color(TIME_TEXT),
+            label(format!("{:02}", minute))
+                .text_size(13.0)
+                .color(TIME_TEXT),
             time_btn("v", false, false),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Center)
@@ -171,11 +182,25 @@ fn time_btn(text: &'static str, is_hour: bool, is_up: bool) -> impl WidgetView<A
         label(text).text_size(8.0).color(TIME_ARROW),
         move |m: &mut AppModel| {
             if is_hour {
-                if is_up { m.calendar_hour = (m.calendar_hour + 1) % 24; }
-                else { m.calendar_hour = if m.calendar_hour == 0 { 23 } else { m.calendar_hour - 1 }; }
+                if is_up {
+                    m.calendar_hour = (m.calendar_hour + 1) % 24;
+                } else {
+                    m.calendar_hour = if m.calendar_hour == 0 {
+                        23
+                    } else {
+                        m.calendar_hour - 1
+                    };
+                }
             } else {
-                if is_up { m.calendar_minute = (m.calendar_minute + 5) % 60; }
-                else { m.calendar_minute = if m.calendar_minute < 5 { 55 } else { m.calendar_minute - 5 }; }
+                if is_up {
+                    m.calendar_minute = (m.calendar_minute + 5) % 60;
+                } else {
+                    m.calendar_minute = if m.calendar_minute < 5 {
+                        55
+                    } else {
+                        m.calendar_minute - 5
+                    };
+                }
             }
         },
     )

@@ -107,11 +107,20 @@ mod tests {
         assert_eq!(TreeAction::Toggle, TreeAction::Toggle);
         assert_ne!(TreeAction::Toggle, TreeAction::Select);
         assert_ne!(TreeAction::Select, TreeAction::DoubleClick);
-        assert_ne!(TreeAction::DoubleClick, TreeAction::ContextMenu(Point::ZERO));
+        assert_ne!(
+            TreeAction::DoubleClick,
+            TreeAction::ContextMenu(Point::ZERO)
+        );
         assert_eq!(TreeAction::StartEdit, TreeAction::StartEdit);
         assert_ne!(TreeAction::StartEdit, TreeAction::Select);
-        assert_eq!(TreeAction::CommitEdit("test".to_string()), TreeAction::CommitEdit("test".to_string()));
-        assert_ne!(TreeAction::CommitEdit("a".to_string()), TreeAction::CommitEdit("b".to_string()));
+        assert_eq!(
+            TreeAction::CommitEdit("test".to_string()),
+            TreeAction::CommitEdit("test".to_string())
+        );
+        assert_ne!(
+            TreeAction::CommitEdit("a".to_string()),
+            TreeAction::CommitEdit("b".to_string())
+        );
         assert_eq!(TreeAction::CancelEdit, TreeAction::CancelEdit);
     }
 

@@ -24,6 +24,7 @@
 //! caller's domain (e.g. SOLID score 0..1, file count 0..N) as
 //! the value range directly.
 
+use xilem::Color;
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent, PropertiesMut,
@@ -33,7 +34,6 @@ use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Rect, Size};
 use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Fill;
-use xilem::Color;
 
 use smallvec::SmallVec;
 use tracing::trace_span;
@@ -212,7 +212,11 @@ impl ProgressBarWidget {
             lerp_color(GREEN, ORANGE, t)
         } else if n <= ZONE_HIGH {
             let span = ZONE_HIGH - ZONE_LOW;
-            let t = if span > 0.0 { (n - ZONE_LOW) / span } else { 1.0 };
+            let t = if span > 0.0 {
+                (n - ZONE_LOW) / span
+            } else {
+                1.0
+            };
             lerp_color(ORANGE, RED, t)
         } else {
             RED
@@ -268,18 +272,16 @@ impl Widget for ProgressBarWidget {
 
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
 
-    fn paint(
-        &mut self,
-        ctx: &mut PaintCtx<'_>,
-        _: &PropertiesRef<'_>,
-        painter: &mut Painter<'_>,
-    ) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let size = ctx.content_box().size();
         let norm = self.normalized();
 
         // Background — same dark fill regardless of style.
         let bg_rect = Rect::new(0.0, 0.0, size.width, size.height);
-        painter.fill(&bg_rect, BG_COLOR).fill_rule(Fill::NonZero).draw();
+        painter
+            .fill(&bg_rect, BG_COLOR)
+            .fill_rule(Fill::NonZero)
+            .draw();
 
         if norm < 0.001 {
             return;
@@ -368,11 +370,7 @@ fn paint_gradient_zones(
             (1.0, GREEN),
         ]
     } else {
-        [
-            (ZONE_LOW, GREEN),
-            (ZONE_HIGH, ORANGE),
-            (1.0, RED),
-        ]
+        [(ZONE_LOW, GREEN), (ZONE_HIGH, ORANGE), (1.0, RED)]
     };
 
     match orientation {

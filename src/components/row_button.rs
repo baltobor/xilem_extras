@@ -7,24 +7,24 @@
 
 use std::any::TypeId;
 
-use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
+use tracing::{Span, trace_span};
 use xilem::core::MessageResult;
-use xilem::masonry::core::keyboard::{Key, NamedKey};
-use xilem::masonry::core::PointerButton;
+use xilem::core::{MessageCtx, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::accesskit::{self, Node, Role};
+use xilem::masonry::core::PointerButton;
+use xilem::masonry::core::keyboard::{Key, NamedKey};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Point, Rect, Size};
 use xilem::masonry::peniko::Color;
-use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, Modifiers, NewWidget,
     PaintCtx, PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx,
     TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
-use xilem::masonry::layout::{LenReq, LayoutSize, Length, SizeDef};
-use xilem::masonry::properties::Background;
 use xilem::masonry::kurbo::Axis;
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
+use xilem::masonry::properties::Background;
 use xilem::{Pod, ViewCtx, WidgetView};
 
 const CHILD_VIEW_ID: ViewId = ViewId::new(0);
@@ -217,7 +217,12 @@ impl Widget for RowButton {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
         let use_hover = ctx.is_hovered() && !ctx.is_disabled();
 
@@ -287,11 +292,9 @@ pub fn row_button<State: 'static, Action: 'static, V: WidgetView<State, Action>>
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, press: &RowButtonPress| {
-            match press.button {
-                None | Some(PointerButton::Primary) => MessageResult::Action(callback(state)),
-                _ => MessageResult::Nop,
-            }
+        callback: move |state: &mut State, press: &RowButtonPress| match press.button {
+            None | Some(PointerButton::Primary) => MessageResult::Action(callback(state)),
+            _ => MessageResult::Nop,
         },
         hover_bg: Color::TRANSPARENT,
         disabled: false,
@@ -308,13 +311,11 @@ pub fn row_button_with_clicks<State: 'static, Action: 'static, V: WidgetView<Sta
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, press: &RowButtonPress| {
-            match press.button {
-                None | Some(PointerButton::Primary) => {
-                    MessageResult::Action(callback(state, press.click_count))
-                }
-                _ => MessageResult::Nop,
+        callback: move |state: &mut State, press: &RowButtonPress| match press.button {
+            None | Some(PointerButton::Primary) => {
+                MessageResult::Action(callback(state, press.click_count))
             }
+            _ => MessageResult::Nop,
         },
         hover_bg: Color::TRANSPARENT,
         disabled: false,
@@ -336,13 +337,11 @@ pub fn row_button_with_modifiers<State: 'static, Action: 'static, V: WidgetView<
 > {
     RowButtonView {
         child,
-        callback: move |state: &mut State, press: &RowButtonPress| {
-            match press.button {
-                None | Some(PointerButton::Primary) => {
-                    MessageResult::Action(callback(state, press.modifiers))
-                }
-                _ => MessageResult::Nop,
+        callback: move |state: &mut State, press: &RowButtonPress| match press.button {
+            None | Some(PointerButton::Primary) => {
+                MessageResult::Action(callback(state, press.modifiers))
             }
+            _ => MessageResult::Nop,
         },
         hover_bg: Color::TRANSPARENT,
         disabled: false,
@@ -396,14 +395,9 @@ where
     type Element = Pod<RowButton>;
     type ViewState = V::ViewState;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
-        let (child_pod, child_state) = ctx.with_id(CHILD_VIEW_ID, |ctx| {
-            self.child.build(ctx, app_state)
-        });
+    fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
+        let (child_pod, child_state) =
+            ctx.with_id(CHILD_VIEW_ID, |ctx| self.child.build(ctx, app_state));
         let pod = ctx.with_action_widget(|ctx| {
             let widget = RowButton::new(child_pod.new_widget).with_hover_bg(self.hover_bg);
             let mut pod = ctx.create_pod(widget);

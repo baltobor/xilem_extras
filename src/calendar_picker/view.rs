@@ -87,16 +87,10 @@ where
     type Element = Pod<CalendarPickerWidget>;
     type ViewState = CalendarPickerViewState;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        _app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, _app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let widget = CalendarPickerWidget::new(self.selected_date);
         // Set displayed month explicitly
-        let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(widget)
-        });
+        let pod = ctx.with_action_widget(|ctx| ctx.create_pod(widget));
         let state = CalendarPickerViewState {
             displayed_month: self.displayed_month,
             selected: self.selected_date,
@@ -142,9 +136,7 @@ where
                 CalendarAction::DateSelected(date) => {
                     MessageResult::Action((self.callback)(app_state, date))
                 }
-                CalendarAction::MonthChanged(_) => {
-                    MessageResult::Nop
-                }
+                CalendarAction::MonthChanged(_) => MessageResult::Nop,
             },
             None => MessageResult::Stale,
         }

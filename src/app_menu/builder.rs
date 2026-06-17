@@ -11,8 +11,8 @@
 
 use std::sync::Arc;
 
-use super::shortcut::Shortcut;
 use super::action_trait::MenuActionTrait;
+use super::shortcut::Shortcut;
 
 /// Builder for the application menu bar.
 pub struct MenuBarBuilder<State, Action> {
@@ -217,9 +217,13 @@ impl<State, Action> MenuItemBuilder<State, Action> {
     /// Check if this item is enabled based on state.
     pub fn is_enabled(&self, state: &State) -> bool {
         match self {
-            MenuItemBuilder::Action { enabled: Some(f), .. } => f(state),
+            MenuItemBuilder::Action {
+                enabled: Some(f), ..
+            } => f(state),
             MenuItemBuilder::Action { enabled: None, .. } => true,
-            MenuItemBuilder::ActionEnum { enabled: Some(f), .. } => f(state),
+            MenuItemBuilder::ActionEnum {
+                enabled: Some(f), ..
+            } => f(state),
             MenuItemBuilder::ActionEnum { enabled: None, .. } => true,
             MenuItemBuilder::Submenu { .. } => true,
             MenuItemBuilder::Separator => true,
@@ -230,8 +234,12 @@ impl<State, Action> MenuItemBuilder<State, Action> {
     /// Check if this item is checked based on state.
     pub fn is_checked(&self, state: &State) -> bool {
         match self {
-            MenuItemBuilder::Action { checked: Some(f), .. } => f(state),
-            MenuItemBuilder::ActionEnum { checked: Some(f), .. } => f(state),
+            MenuItemBuilder::Action {
+                checked: Some(f), ..
+            } => f(state),
+            MenuItemBuilder::ActionEnum {
+                checked: Some(f), ..
+            } => f(state),
             _ => false,
         }
     }
@@ -248,9 +256,7 @@ impl<State, Action> MenuItemBuilder<State, Action> {
     /// Get the action value as a typed reference (for ActionEnum items).
     pub fn action_value<A: 'static>(&self) -> Option<&A> {
         match self {
-            MenuItemBuilder::ActionEnum { action_value, .. } => {
-                action_value.downcast_ref::<A>()
-            }
+            MenuItemBuilder::ActionEnum { action_value, .. } => action_value.downcast_ref::<A>(),
             _ => None,
         }
     }
@@ -266,13 +272,20 @@ pub struct MenuItemChain<Parent, State, Action> {
 
 impl<State, Action> MenuItemChain<MenuBuilder<State, Action>, State, Action> {
     /// Create a new chain.
-    pub(crate) fn new(parent: MenuBuilder<State, Action>, item: MenuItemBuilder<State, Action>) -> Self {
+    pub(crate) fn new(
+        parent: MenuBuilder<State, Action>,
+        item: MenuItemBuilder<State, Action>,
+    ) -> Self {
         Self { parent, item }
     }
 
     /// Set the keyboard shortcut for this item.
     pub fn shortcut(mut self, shortcut: Shortcut) -> Self {
-        if let MenuItemBuilder::Action { shortcut: ref mut s, .. } = self.item {
+        if let MenuItemBuilder::Action {
+            shortcut: ref mut s,
+            ..
+        } = self.item
+        {
             *s = Some(shortcut);
         }
         self
@@ -283,7 +296,10 @@ impl<State, Action> MenuItemChain<MenuBuilder<State, Action>, State, Action> {
     where
         F: Fn(&State) -> bool + Send + Sync + 'static,
     {
-        if let MenuItemBuilder::Action { enabled: ref mut e, .. } = self.item {
+        if let MenuItemBuilder::Action {
+            enabled: ref mut e, ..
+        } = self.item
+        {
             *e = Some(Arc::new(f));
         }
         self
@@ -294,7 +310,10 @@ impl<State, Action> MenuItemChain<MenuBuilder<State, Action>, State, Action> {
     where
         F: Fn(&State) -> bool + Send + Sync + 'static,
     {
-        if let MenuItemBuilder::Action { checked: ref mut c, .. } = self.item {
+        if let MenuItemBuilder::Action {
+            checked: ref mut c, ..
+        } = self.item
+        {
             *c = Some(Arc::new(f));
         }
         self
@@ -307,7 +326,11 @@ impl<State, Action> MenuItemChain<MenuBuilder<State, Action>, State, Action> {
     }
 
     /// Add another item after this one.
-    pub fn item<L, F>(self, label: L, action: F) -> MenuItemChain<MenuBuilder<State, Action>, State, Action>
+    pub fn item<L, F>(
+        self,
+        label: L,
+        action: F,
+    ) -> MenuItemChain<MenuBuilder<State, Action>, State, Action>
     where
         L: Into<String>,
         F: Fn(&mut State) + Send + Sync + 'static,
@@ -317,7 +340,11 @@ impl<State, Action> MenuItemChain<MenuBuilder<State, Action>, State, Action> {
     }
 
     /// Add another item that returns an Action.
-    pub fn item_with_action<L, F>(self, label: L, action: F) -> MenuItemChain<MenuBuilder<State, Action>, State, Action>
+    pub fn item_with_action<L, F>(
+        self,
+        label: L,
+        action: F,
+    ) -> MenuItemChain<MenuBuilder<State, Action>, State, Action>
     where
         L: Into<String>,
         F: Fn(&mut State) -> Action + Send + Sync + 'static,
@@ -357,7 +384,9 @@ impl<State, Action> MenuItemChain<MenuBuilder<State, Action>, State, Action> {
 }
 
 // Allow MenuItemChain to be used as the final return type
-impl<State, Action> From<MenuItemChain<MenuBuilder<State, Action>, State, Action>> for MenuBuilder<State, Action> {
+impl<State, Action> From<MenuItemChain<MenuBuilder<State, Action>, State, Action>>
+    for MenuBuilder<State, Action>
+{
     fn from(chain: MenuItemChain<MenuBuilder<State, Action>, State, Action>) -> Self {
         chain.finalize()
     }

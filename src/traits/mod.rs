@@ -6,13 +6,13 @@
 //! (compatible with the Xilem licence).
 
 mod identifiable;
-mod tree_node;
 mod list_item;
-mod table_row;
 mod selectable;
+mod table_row;
+mod tree_node;
 
 pub use identifiable::Identifiable;
-pub use tree_node::TreeNode;
 pub use list_item::ListItem;
-pub use table_row::{TableRow, CellValue};
-pub use selectable::{SelectionState, SelectionModifiers};
+pub use selectable::{SelectionModifiers, SelectionState};
+pub use table_row::{CellValue, TableRow};
+pub use tree_node::TreeNode;

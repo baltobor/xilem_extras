@@ -10,20 +10,20 @@
 use std::any::TypeId;
 use std::sync::Arc;
 
-use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{self, Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Rect, RoundedRect};
 use xilem::masonry::peniko::Color;
 
+use xilem::masonry::core::StyleProperty;
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
-    Widget, WidgetId, WidgetMut, WidgetPod,
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId,
+    WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
-use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
 /// Default hover background color.
@@ -152,10 +152,23 @@ impl Widget for PulldownMenuItem {
                 };
                 let auto_length = len_req.into();
                 let context_size = LayoutSize::maybe(axis.cross(), cross_length);
-                let child_length =
-                    ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
-                let checkmark_space = if self.checked.is_some() { CHECKMARK_WIDTH } else { 0.0 };
-                Length::px(min_result.get().max(child_length.get() + 2.0 * ITEM_PADDING_H + checkmark_space))
+                let child_length = ctx.compute_length(
+                    &mut self.child,
+                    auto_length,
+                    context_size,
+                    axis,
+                    cross_length,
+                );
+                let checkmark_space = if self.checked.is_some() {
+                    CHECKMARK_WIDTH
+                } else {
+                    0.0
+                };
+                Length::px(
+                    min_result
+                        .get()
+                        .max(child_length.get() + 2.0 * ITEM_PADDING_H + checkmark_space),
+                )
             }
             Axis::Vertical => Length::px(DEFAULT_ITEM_HEIGHT),
         }
@@ -163,7 +176,11 @@ impl Widget for PulldownMenuItem {
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         self.size = size;
-        let checkmark_space = if self.checked.is_some() { CHECKMARK_WIDTH } else { 0.0 };
+        let checkmark_space = if self.checked.is_some() {
+            CHECKMARK_WIDTH
+        } else {
+            0.0
+        };
         let inner = Size::new(
             (size.width - 2.0 * ITEM_PADDING_H - checkmark_space).max(0.0),
             size.height,
@@ -178,7 +195,12 @@ impl Widget for PulldownMenuItem {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         if ctx.is_hovered() {
             let rect = Rect::from_origin_size(Point::ZERO, self.size);
             let rounded = RoundedRect::from_rect(rect, 3.0);
@@ -199,7 +221,9 @@ impl Widget for PulldownMenuItem {
             path.line_to((check_x + 12.0, check_y - 4.0));
 
             let stroke_color = Color::from_rgba8(0xE0, 0xE0, 0xE0, 0xFF);
-            painter.stroke(&path, &Stroke::new(2.0), stroke_color).draw();
+            painter
+                .stroke(&path, &Stroke::new(2.0), stroke_color)
+                .draw();
         }
     }
 

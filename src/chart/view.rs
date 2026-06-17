@@ -9,11 +9,11 @@
 
 use std::marker::PhantomData;
 
-use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
 use xilem::Pod;
 use xilem::ViewCtx;
+use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
 
-use super::widget::{ChartWidget, ChartAction, ChartMode};
+use super::widget::{ChartAction, ChartMode, ChartWidget};
 
 /// Creates a chart view.
 ///
@@ -84,20 +84,15 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for ChartView
     type Element = Pod<ChartWidget>;
     type ViewState = ChartViewState;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        _app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, _app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let widget = ChartWidget::new(
             self.title.clone(),
             self.values.clone(),
             self.labels.clone(),
             self.mode,
-        ).with_show_values(self.show_values);
-        let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(widget)
-        });
+        )
+        .with_show_values(self.show_values);
+        let pod = ctx.with_action_widget(|ctx| ctx.create_pod(widget));
         let state = ChartViewState {
             values: self.values.clone(),
             labels: self.labels.clone(),

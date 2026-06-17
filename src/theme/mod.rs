@@ -5,8 +5,8 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-mod tokens;
 mod color_scheme;
+mod tokens;
 
-pub use tokens::*;
 pub use color_scheme::Theme;
+pub use tokens::*;

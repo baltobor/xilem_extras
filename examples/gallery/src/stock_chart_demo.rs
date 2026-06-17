@@ -8,11 +8,11 @@
 //! Stock chart demo for the gallery.
 
 use masonry::layout::{AsUnit, Length};
-use xilem::style::Style;
-use xilem::view::{button, flex_col, flex_row, label, CrossAxisAlignment};
 use xilem::WidgetView;
-use xilem_extras::stock_chart::{stock_chart, StockBar, StockChartMode};
+use xilem::style::Style;
+use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label};
 use xilem_extras::Theme;
+use xilem_extras::stock_chart::{StockBar, StockChartMode, stock_chart};
 
 use crate::app_model::AppModel;
 
@@ -82,28 +82,22 @@ pub fn stock_chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use
         label("OHLCV financial data visualization")
             .text_size(12.0)
             .color(theme.text_secondary()),
-
         // Mode selector buttons
         flex_row((
-            button(
-                label("Candlestick").text_size(11.0),
-                |m: &mut AppModel| m.stock_chart_mode = 0,
-            ),
-            button(
-                label("OHLC Bar").text_size(11.0),
-                |m: &mut AppModel| m.stock_chart_mode = 1,
-            ),
-            button(
-                label("Line").text_size(11.0),
-                |m: &mut AppModel| m.stock_chart_mode = 2,
-            ),
-            button(
-                label("Area").text_size(11.0),
-                |m: &mut AppModel| m.stock_chart_mode = 3,
-            ),
+            button(label("Candlestick").text_size(11.0), |m: &mut AppModel| {
+                m.stock_chart_mode = 0
+            }),
+            button(label("OHLC Bar").text_size(11.0), |m: &mut AppModel| {
+                m.stock_chart_mode = 1
+            }),
+            button(label("Line").text_size(11.0), |m: &mut AppModel| {
+                m.stock_chart_mode = 2
+            }),
+            button(label("Area").text_size(11.0), |m: &mut AppModel| {
+                m.stock_chart_mode = 3
+            }),
         ))
         .gap(8.px()),
-
         // Current mode and hover info
         flex_row((
             label(format!("Mode: {}", mode_name(model.stock_chart_mode)))
@@ -114,7 +108,6 @@ pub fn stock_chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use
                 .color(theme.text_secondary()),
         ))
         .gap(20.px()),
-
         // The stock chart
         stock_chart(bars, mode, |m: &mut AppModel, hover| {
             m.stock_chart_hover = hover.map(|h| (h.label, h.close));

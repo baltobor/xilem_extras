@@ -31,8 +31,8 @@
 //! })
 //! ```
 
-mod widget;
 mod view;
+mod widget;
 
-pub use widget::{StockChartWidget, StockBar, StockChartMode, StockChartStyle};
-pub use view::{stock_chart, StockChartView};
+pub use view::{StockChartView, stock_chart};
+pub use widget::{StockBar, StockChartMode, StockChartStyle, StockChartWidget};

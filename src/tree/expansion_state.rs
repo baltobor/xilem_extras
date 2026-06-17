@@ -184,12 +184,10 @@ mod tests {
                 },
                 TestNode {
                     id: "b".into(),
-                    children: vec![
-                        TestNode {
-                            id: "b1".into(),
-                            children: vec![],
-                        },
-                    ],
+                    children: vec![TestNode {
+                        id: "b1".into(),
+                        children: vec![],
+                    }],
                 },
             ],
         }
@@ -304,7 +302,8 @@ mod tests {
 
     #[test]
     fn count_returns_correct_value() {
-        let state = ExpansionState::with_expanded(["a".to_string(), "b".to_string(), "c".to_string()]);
+        let state =
+            ExpansionState::with_expanded(["a".to_string(), "b".to_string(), "c".to_string()]);
         assert_eq!(state.count(), 3);
     }
 

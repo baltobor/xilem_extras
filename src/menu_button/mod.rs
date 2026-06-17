@@ -28,16 +28,16 @@
 //! )
 //! ```
 
-mod widget;
 mod dropdown;
 mod menu_item;
-mod submenu_item;
 mod separator;
+mod submenu_item;
 mod view;
+mod widget;
 
-pub use widget::{MenuButton, MenuButtonPress, MenuItemData};
 pub use dropdown::{MenuDropdown, SubmenuDropdown};
-pub use menu_item::{PulldownMenuItem, DEFAULT_ITEM_HEIGHT};
-pub use submenu_item::PulldownSubmenuItem;
+pub use menu_item::{DEFAULT_ITEM_HEIGHT, PulldownMenuItem};
 pub use separator::MenuSeparator;
-pub use view::{menu_button, MenuButtonView};
+pub use submenu_item::PulldownSubmenuItem;
+pub use view::{MenuButtonView, menu_button};
+pub use widget::{MenuButton, MenuButtonPress, MenuItemData};

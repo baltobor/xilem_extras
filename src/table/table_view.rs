@@ -88,9 +88,9 @@ use xilem::style::Style;
 use xilem::view::label;
 use xilem::{Pod, ViewCtx, WidgetView};
 
+use super::resizable_header::{ColumnResizeAction, ResizableHeader};
 use super::widget::{TableRangeAction, TableWidget, TableWidgetAction};
 use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder, TableStyle};
-use super::resizable_header::{ResizableHeader, ColumnResizeAction};
 use crate::traits::{Identifiable, SelectionModifiers, SelectionState, TableRow};
 
 /// Actions that can occur on virtual table rows or columns.
@@ -259,7 +259,11 @@ where
                     if let Some(mut child_state) = view_state.children.remove(&idx) {
                         ctx.with_id(view_id_for_row(idx), |ctx| {
                             if let Some(mut row_mut) = TableWidget::row_mut(&mut element, idx) {
-                                child_state.view.teardown(&mut child_state.state, ctx, row_mut.downcast());
+                                child_state.view.teardown(
+                                    &mut child_state.state,
+                                    ctx,
+                                    row_mut.downcast(),
+                                );
                             }
                             TableWidget::remove_row(&mut element, idx);
                         });
@@ -270,13 +274,23 @@ where
             // Build/rebuild rows in target range
             for visual_idx in pending_action.target_range.clone() {
                 // Map visual index to data index using sorted indices
-                let data_idx = self.sorted_indices.get(visual_idx).copied().unwrap_or(visual_idx);
+                let data_idx = self
+                    .sorted_indices
+                    .get(visual_idx)
+                    .copied()
+                    .unwrap_or(visual_idx);
                 let is_selected = (self.selection_fn)(visual_idx);
                 let is_striped = self.style.striped && visual_idx % 2 == 1;
 
                 if let Some(child) = view_state.children.get_mut(&visual_idx) {
                     // Rebuild existing row (pass data_idx and scaled_widths to row_builder)
-                    let next_view = (self.row_builder)(app_state, data_idx, is_selected, is_striped, &scaled_widths);
+                    let next_view = (self.row_builder)(
+                        app_state,
+                        data_idx,
+                        is_selected,
+                        is_striped,
+                        &scaled_widths,
+                    );
                     ctx.with_id(view_id_for_row(visual_idx), |ctx| {
                         if let Some(mut row_mut) = TableWidget::row_mut(&mut element, visual_idx) {
                             next_view.rebuild(
@@ -291,10 +305,20 @@ where
                     });
                 } else {
                     // Build new row (pass data_idx and scaled_widths to row_builder)
-                    let new_view = (self.row_builder)(app_state, data_idx, is_selected, is_striped, &scaled_widths);
+                    let new_view = (self.row_builder)(
+                        app_state,
+                        data_idx,
+                        is_selected,
+                        is_striped,
+                        &scaled_widths,
+                    );
                     ctx.with_id(view_id_for_row(visual_idx), |ctx| {
                         let (new_element, child_state) = new_view.build(ctx, app_state);
-                        TableWidget::add_row(&mut element, visual_idx, new_element.new_widget.erased());
+                        TableWidget::add_row(
+                            &mut element,
+                            visual_idx,
+                            new_element.new_widget.erased(),
+                        );
                         view_state.children.insert(
                             visual_idx,
                             ChildState {
@@ -311,10 +335,20 @@ where
             // No action, just rebuild existing rows with current scaled widths
             for (&visual_idx, child) in &mut view_state.children {
                 // Map visual index to data index using sorted indices
-                let data_idx = self.sorted_indices.get(visual_idx).copied().unwrap_or(visual_idx);
+                let data_idx = self
+                    .sorted_indices
+                    .get(visual_idx)
+                    .copied()
+                    .unwrap_or(visual_idx);
                 let is_selected = (self.selection_fn)(visual_idx);
                 let is_striped = self.style.striped && visual_idx % 2 == 1;
-                let next_view = (self.row_builder)(app_state, data_idx, is_selected, is_striped, &scaled_widths);
+                let next_view = (self.row_builder)(
+                    app_state,
+                    data_idx,
+                    is_selected,
+                    is_striped,
+                    &scaled_widths,
+                );
                 ctx.with_id(view_id_for_row(visual_idx), |ctx| {
                     if let Some(mut row_mut) = TableWidget::row_mut(&mut element, visual_idx) {
                         next_view.rebuild(
@@ -340,7 +374,9 @@ where
         for (&idx, child) in &mut view_state.children {
             ctx.with_id(view_id_for_row(idx), |ctx| {
                 if let Some(mut row_mut) = TableWidget::row_mut(&mut element, idx) {
-                    child.view.teardown(&mut child.state, ctx, row_mut.downcast());
+                    child
+                        .view
+                        .teardown(&mut child.state, ctx, row_mut.downcast());
                 }
             });
         }
@@ -401,7 +437,11 @@ where
                 }
                 TableWidgetAction::HeaderClick(header_click) => {
                     // Find the column and determine new sort direction
-                    if let Some(col) = self.columns.iter().find(|c| c.key == header_click.column_key) {
+                    if let Some(col) = self
+                        .columns
+                        .iter()
+                        .find(|c| c.key == header_click.column_key)
+                    {
                         if col.sortable {
                             let current_dir = self.sort_order.direction_for(&col.key);
                             let new_dir = current_dir
@@ -420,7 +460,10 @@ where
         if let Some(resize_action) = message.take_message::<ColumnResizeAction>() {
             (self.handler)(
                 app_state,
-                TableAction::ColumnResized(resize_action.column_key.clone(), resize_action.new_width),
+                TableAction::ColumnResized(
+                    resize_action.column_key.clone(),
+                    resize_action.new_width,
+                ),
             );
             return MessageResult::Action(());
         }
@@ -478,12 +521,14 @@ where
 
         for col in self.columns.iter() {
             // Add sort indicator to title
-            let sort_indicator = self.sort_order.direction_for(&col.key).map(|dir| {
-                match dir {
+            let sort_indicator = self
+                .sort_order
+                .direction_for(&col.key)
+                .map(|dir| match dir {
                     SortDirection::Ascending => " ▲",
                     SortDirection::Descending => " ▼",
-                }
-            }).unwrap_or("");
+                })
+                .unwrap_or("");
             let title = format!("{}{}", col.title, sort_indicator);
 
             // Build the label widget
@@ -570,7 +615,16 @@ where
     F: Fn(&mut State, usize, bool, bool, &[f64]) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, TableAction<R::Id>) + Clone + Send + Sync + 'static,
 {
-    table_styled(data, columns, column_widths, selection, sort_order, TableStyle::default(), row_builder, handler)
+    table_styled(
+        data,
+        columns,
+        column_widths,
+        selection,
+        sort_order,
+        TableStyle::default(),
+        row_builder,
+        handler,
+    )
 }
 
 /// Creates a high-performance virtualized table view with custom styling.

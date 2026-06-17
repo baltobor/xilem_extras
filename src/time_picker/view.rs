@@ -72,11 +72,7 @@ where
     type Element = Pod<TimePickerWidget>;
     type ViewState = ();
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        _app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, _app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let pod = ctx.with_action_widget(|ctx| {
             ctx.create_pod(TimePickerWidget::new(self.hour, self.minute))
         });

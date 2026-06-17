@@ -79,7 +79,7 @@ impl_menu_items_for_tuple!(0 T0, 1 T1, 2 T2, 3 T3, 4 T4, 5 T5, 6 T6, 7 T7, 8 T8,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::menu_items::{menu_item, separator, group};
+    use crate::menu_items::{group, menu_item, separator};
 
     struct TestState {
         called: String,
@@ -119,14 +119,14 @@ mod tests {
 
     #[test]
     fn execute_action() {
-        let items = (
-            menu_item("Test", |s: &mut TestState| {
-                s.called = "test".to_string();
-            }),
-        );
+        let items = (menu_item("Test", |s: &mut TestState| {
+            s.called = "test".to_string();
+        }),);
 
         let entries = items.collect_entries();
-        let mut state = TestState { called: String::new() };
+        let mut state = TestState {
+            called: String::new(),
+        };
 
         entries[0].execute(&mut state);
         assert_eq!(state.called, "test");
@@ -176,13 +176,11 @@ mod tests {
 
     #[test]
     fn group_with_separator() {
-        let items = (
-            group((
-                menu_item("Cut", |_: &mut TestState| {}),
-                separator(),
-                menu_item("Paste", |_: &mut TestState| {}),
-            )),
-        );
+        let items = (group((
+            menu_item("Cut", |_: &mut TestState| {}),
+            separator(),
+            menu_item("Paste", |_: &mut TestState| {}),
+        )),);
 
         let entries = items.collect_entries();
         assert_eq!(entries.len(), 3);

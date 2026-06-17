@@ -8,17 +8,19 @@
 //! Simple bar/line chart demo for the gallery.
 
 use masonry::layout::{AsUnit, Length};
-use xilem::style::Style;
-use xilem::view::{button, checkbox, flex_col, flex_row, label, CrossAxisAlignment, FlexExt};
 use xilem::WidgetView;
-use xilem_extras::chart::{chart, ChartMode};
+use xilem::style::Style;
+use xilem::view::{CrossAxisAlignment, FlexExt, button, checkbox, flex_col, flex_row, label};
 use xilem_extras::Theme;
+use xilem_extras::chart::{ChartMode, chart};
 
 use crate::app_model::AppModel;
 
 /// Sample monthly sales data.
 fn sample_monthly_data() -> (Vec<f64>, Vec<String>) {
-    let values = vec![12.0, 19.0, 15.0, 25.0, 22.0, 30.0, 28.0, 35.0, 32.0, 40.0, 38.0, 45.0];
+    let values = vec![
+        12.0, 19.0, 15.0, 25.0, 22.0, 30.0, 28.0, 35.0, 32.0, 40.0, 38.0, 45.0,
+    ];
     let labels = vec!["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"]
         .into_iter()
         .map(String::from)
@@ -80,39 +82,32 @@ pub fn chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         label("Simple bar and line charts for data visualization")
             .text_size(12.0)
             .color(theme.text_secondary()),
-
         // Controls row
         flex_row((
-            button(
-                label("Bar").text_size(11.0),
-                |m: &mut AppModel| m.chart_mode = 0,
-            ),
-            button(
-                label("Line").text_size(11.0),
-                |m: &mut AppModel| m.chart_mode = 1,
-            ),
-            checkbox("Show Values", model.chart_show_values, |m: &mut AppModel, checked| {
-                m.chart_show_values = checked;
+            button(label("Bar").text_size(11.0), |m: &mut AppModel| {
+                m.chart_mode = 0
             }),
+            button(label("Line").text_size(11.0), |m: &mut AppModel| {
+                m.chart_mode = 1
+            }),
+            checkbox(
+                "Show Values",
+                model.chart_show_values,
+                |m: &mut AppModel, checked| {
+                    m.chart_show_values = checked;
+                },
+            ),
         ))
         .gap(8.px()),
-
         // Mode indicator
         label(format!("Mode: {}", mode_name(model.chart_mode)))
             .text_size(12.0)
             .color(theme.text_secondary()),
-
         // Charts grid - 3 charts showing different data
         flex_row((
-            chart::<AppModel, ()>(
-                "Monthly Sales",
-                &monthly_values,
-                monthly_labels,
-                mode,
-            )
-            .show_values(show_values)
-            .flex(1.0),
-
+            chart::<AppModel, ()>("Monthly Sales", &monthly_values, monthly_labels, mode)
+                .show_values(show_values)
+                .flex(1.0),
             chart::<AppModel, ()>(
                 "Quarterly Revenue",
                 &quarterly_values,
@@ -121,15 +116,9 @@ pub fn chart_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             )
             .show_values(show_values)
             .flex(1.0),
-
-            chart::<AppModel, ()>(
-                "Yearly Growth",
-                &yearly_values,
-                yearly_labels,
-                mode,
-            )
-            .show_values(show_values)
-            .flex(1.0),
+            chart::<AppModel, ()>("Yearly Growth", &yearly_values, yearly_labels, mode)
+                .show_values(show_values)
+                .flex(1.0),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .gap(8.px())

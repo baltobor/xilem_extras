@@ -26,16 +26,16 @@
 
 use std::f64::consts::{PI, TAU};
 
+use xilem::Color;
 use xilem::masonry::accesskit::{Node, Role};
+use xilem::masonry::core::Update;
 use xilem::masonry::core::{
     AccessCtx, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent, PropertiesMut,
     PropertiesRef, RegisterCtx, UpdateCtx, Widget, WidgetId, WidgetMut,
 };
-use xilem::masonry::core::Update;
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Arc, Axis, Cap, Point, Size, Stroke, Vec2};
 use xilem::masonry::layout::{LenReq, Length};
-use xilem::Color;
 
 use smallvec::SmallVec;
 use tracing::trace_span;
@@ -210,7 +210,11 @@ impl RoundProgressWidget {
             lerp_color(GREEN, ORANGE, t)
         } else if n <= ZONE_HIGH {
             let span = ZONE_HIGH - ZONE_LOW;
-            let t = if span > 0.0 { (n - ZONE_LOW) / span } else { 1.0 };
+            let t = if span > 0.0 {
+                (n - ZONE_LOW) / span
+            } else {
+                1.0
+            };
             lerp_color(ORANGE, RED, t)
         } else {
             RED
@@ -247,13 +251,7 @@ impl Widget for RoundProgressWidget {
     }
     fn register_children(&mut self, _: &mut RegisterCtx<'_>) {}
 
-    fn update(
-        &mut self,
-        _: &mut UpdateCtx<'_>,
-        _: &mut PropertiesMut<'_>,
-        _event: &Update,
-    ) {
-    }
+    fn update(&mut self, _: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, _event: &Update) {}
 
     fn measure(
         &mut self,
@@ -268,12 +266,7 @@ impl Widget for RoundProgressWidget {
 
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
 
-    fn paint(
-        &mut self,
-        ctx: &mut PaintCtx<'_>,
-        _: &PropertiesRef<'_>,
-        painter: &mut Painter<'_>,
-    ) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         let size = ctx.content_box().size();
         let cx = size.width / 2.0;
         let cy = size.height / 2.0;
@@ -281,10 +274,19 @@ impl Widget for RoundProgressWidget {
         let ring_w = self.size.ring_w();
 
         // Track — full ring at the chosen radius.
-        let track =
-            Arc::new(Point::new(cx, cy), Vec2::new(r, r), ARC_START, ARC_SWEEP_FULL, 0.0);
+        let track = Arc::new(
+            Point::new(cx, cy),
+            Vec2::new(r, r),
+            ARC_START,
+            ARC_SWEEP_FULL,
+            0.0,
+        );
         painter
-            .stroke(track, &Stroke::new(ring_w).with_caps(Cap::Round), TRACK_COLOR)
+            .stroke(
+                track,
+                &Stroke::new(ring_w).with_caps(Cap::Round),
+                TRACK_COLOR,
+            )
             .draw();
 
         let norm = self.normalized();

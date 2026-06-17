@@ -96,7 +96,10 @@ where
             MenuItemBuilder::Separator => {
                 result.push(FallbackMenuItemData::Separator);
             }
-            MenuItemBuilder::Submenu { label, items: sub_items } => {
+            MenuItemBuilder::Submenu {
+                label,
+                items: sub_items,
+            } => {
                 let children = convert_items_to_fallback(sub_items, state);
                 result.push(FallbackMenuItemData::Submenu {
                     label: label.clone(),

@@ -10,12 +10,13 @@
 use std::any::TypeId;
 use std::sync::Arc;
 
-use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{self, Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Rect, RoundedRect, Stroke};
 use xilem::masonry::peniko::Color;
 
+use xilem::masonry::core::StyleProperty;
 use xilem::masonry::core::keyboard::{Key, NamedKey};
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayerType, LayoutCtx, MeasureCtx, NewWidget,
@@ -24,7 +25,6 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::kurbo::{Axis, Point, Size, Vec2};
 use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
-use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
 use super::SelectDropdown;
@@ -75,12 +75,9 @@ impl DropdownSelect {
     /// - `options`: the list of selectable option labels.
     /// - `selected_index`: index of the initially selected option.
     pub fn new(options: Vec<String>, selected_index: usize) -> Self {
-        let selected_text = options.get(selected_index)
-            .cloned()
-            .unwrap_or_default();
+        let selected_text = options.get(selected_index).cloned().unwrap_or_default();
 
-        let label = Label::new(selected_text)
-            .with_style(StyleProperty::FontSize(TEXT_SIZE));
+        let label = Label::new(selected_text).with_style(StyleProperty::FontSize(TEXT_SIZE));
 
         Self {
             label: WidgetPod::new(label),
@@ -145,7 +142,10 @@ impl DropdownSelect {
     /// Updates the selected index and label text.
     pub fn set_selected_index(this: &mut WidgetMut<'_, Self>, index: usize) {
         this.widget.selected_index = index;
-        let text: Arc<str> = this.widget.options.get(index)
+        let text: Arc<str> = this
+            .widget
+            .options
+            .get(index)
             .cloned()
             .unwrap_or_default()
             .into();
@@ -235,7 +235,13 @@ impl Widget for DropdownSelect {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
 
-        let label_len = ctx.compute_length(&mut self.label, auto_length, context_size, axis, cross_length);
+        let label_len = ctx.compute_length(
+            &mut self.label,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        );
 
         match axis {
             Axis::Horizontal => Length::px(label_len.get() + 2.0 * PADDING_H),
@@ -261,7 +267,12 @@ impl Widget for DropdownSelect {
         ctx.derive_baselines(&self.label);
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
         let rounded = RoundedRect::from_rect(rect, 4.0);
 
@@ -272,7 +283,9 @@ impl Widget for DropdownSelect {
         };
 
         painter.fill(rounded, bg).draw();
-        painter.stroke(rounded, &Stroke::new(1.0), self.border_color).draw();
+        painter
+            .stroke(rounded, &Stroke::new(1.0), self.border_color)
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {

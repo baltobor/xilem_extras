@@ -15,9 +15,9 @@
 //! 2. [`tree_group`] / `tree_group_styled` / `tree_forest` etc. — older,
 //!    keyboard-less helpers kept as **legacy reference**. Do not extend.
 
+mod disclosure_row;
 mod expansion_state;
 mod flatten;
-mod disclosure_row;
 mod keyboard_focus;
 mod scroll_focus;
 mod tree_view;
@@ -33,10 +33,9 @@ pub use types::{TreeAction, TreeStyle};
 
 // Legacy: tree_group family (no keyboard navigation).
 pub use tree_view::{
-    tree, tree_group, tree_group_styled, tree_group_with_context_menu,
+    flatten_forest, flatten_tree, tree, tree_forest, tree_forest_styled,
+    tree_forest_with_context_menu, tree_group, tree_group_styled, tree_group_with_context_menu,
     tree_group_with_context_menu_editable,
-    tree_forest, tree_forest_styled, tree_forest_with_context_menu,
-    flatten_tree, flatten_forest,
 };
 
 // Canonical tree view. `tree_view` is the single-root constructor;
@@ -44,12 +43,12 @@ pub use tree_view::{
 // as their builder type so every opt-in (selection, icon_for, …)
 // works identically across the two.
 pub use tree_view_builder::{
-    tree_forest_view, tree_view, HighlightFill, TreeView, DEFAULT_SELECTED_BG,
-    DEFAULT_TEXT_COLOR, DEFAULT_CHEVRON_COLOR,
+    DEFAULT_CHEVRON_COLOR, DEFAULT_SELECTED_BG, DEFAULT_TEXT_COLOR, HighlightFill, TreeView,
+    tree_forest_view, tree_view,
 };
 
 // Primitives — exposed for power users building custom tree-like views.
 pub use disclosure_row::disclosure_row;
-pub use flatten::{flatten_tree_with_parents, flatten_forest_with_parents, FlattenedNode};
-pub use keyboard_focus::{keyboard_focus, KeyAction, KeyHandler, KeyboardFocus};
-pub use scroll_focus::{scroll_focus, ScrollFocus, DEFAULT_ROW_HEIGHT_HINT};
+pub use flatten::{FlattenedNode, flatten_forest_with_parents, flatten_tree_with_parents};
+pub use keyboard_focus::{KeyAction, KeyHandler, KeyboardFocus, keyboard_focus};
+pub use scroll_focus::{DEFAULT_ROW_HEIGHT_HINT, ScrollFocus, scroll_focus};

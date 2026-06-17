@@ -65,16 +65,18 @@ pub trait TreeNode: Identifiable + Sized {
 
     /// Returns an iterator that yields all nodes in the tree in pre-order.
     fn iter_preorder(&self) -> PreorderIterator<'_, Self> {
-        PreorderIterator {
-            stack: vec![self],
-        }
+        PreorderIterator { stack: vec![self] }
     }
 
     /// Returns the depth of this node (root = 0).
     ///
     /// This requires traversing from root, so use sparingly.
     fn depth_in(&self, root: &Self) -> Option<usize> {
-        fn find_depth<T: TreeNode>(node: &T, target_id: &T::Id, current_depth: usize) -> Option<usize> {
+        fn find_depth<T: TreeNode>(
+            node: &T,
+            target_id: &T::Id,
+            current_depth: usize,
+        ) -> Option<usize> {
             if node.id() == *target_id {
                 return Some(current_depth);
             }

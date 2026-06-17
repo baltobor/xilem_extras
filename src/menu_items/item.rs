@@ -172,10 +172,7 @@ where
 /// menu_item("Open", |state: &mut AppState| state.open())
 /// menu_item("Save", |state| state.save())
 /// ```
-pub fn menu_item<State, Action, F>(
-    label: impl Into<String>,
-    action: F,
-) -> MenuItem<State, Action>
+pub fn menu_item<State, Action, F>(label: impl Into<String>, action: F) -> MenuItem<State, Action>
 where
     F: Fn(&mut State) -> Action + Send + Sync + 'static,
 {

@@ -8,17 +8,17 @@
 //! Tree widget demo using tree_group.
 
 use masonry::layout::{AsUnit, Length};
-use xilem::masonry::properties::Padding;
 use xilem::masonry::peniko::Color;
+use xilem::masonry::properties::Padding;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
-use xilem::{WidgetView, AnyWidgetView};
+use xilem::{AnyWidgetView, WidgetView};
 
 use xilem_extras::{
-    tree_group_with_context_menu, TreeAction, TreeStyle, svg_icon, rust_gear, ferris,
-    menu_item, separator, Theme,
+    Theme, TreeAction, TreeStyle, ferris, menu_item, rust_gear, separator, svg_icon,
+    tree_group_with_context_menu,
 };
-use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
+use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;
 use crate::mock_data::FileNode;
@@ -34,7 +34,11 @@ fn build_tree_row(
     theme: Theme,
 ) -> Box<AnyWidgetView<AppModel, ()>> {
     let indent = (depth * 16) as f64;
-    let row_bg = if is_selected { theme.active_bg() } else { Color::TRANSPARENT };
+    let row_bg = if is_selected {
+        theme.active_bg()
+    } else {
+        Color::TRANSPARENT
+    };
     let text_color = theme.text();
 
     if node.is_dir {
@@ -60,9 +64,7 @@ fn build_tree_row(
                 .font(FONT_FAMILY)
                 .text_size(ICON_SIZE_SM)
                 .color(FOLDER_COLOR),
-            label(node.name.clone())
-                .text_size(15.0)
-                .color(text_color),
+            label(node.name.clone()).text_size(15.0).color(text_color),
         ))
         .gap(4.px())
         .padding(Padding::left(Length::px(indent)))
@@ -76,9 +78,7 @@ fn build_tree_row(
             // Rust file with gear icon (13px to match text size)
             flex_row((
                 svg_icon(rust_gear().size(13.0).color(RUST_COLOR)),
-                label(node.name.clone())
-                    .text_size(15.0)
-                    .color(text_color),
+                label(node.name.clone()).text_size(15.0).color(text_color),
             ))
             .gap(4.px())
             .padding(Padding::left(Length::px(file_indent)))
@@ -88,9 +88,7 @@ fn build_tree_row(
             // Cargo.toml with Ferris crab (13px to match text size)
             flex_row((
                 svg_icon(ferris().size(13.0).color(RUST_COLOR)),
-                label(node.name.clone())
-                    .text_size(15.0)
-                    .color(text_color),
+                label(node.name.clone()).text_size(15.0).color(text_color),
             ))
             .gap(4.px())
             .padding(Padding::left(Length::px(file_indent)))
@@ -103,9 +101,7 @@ fn build_tree_row(
                     .font(FONT_FAMILY)
                     .text_size(ICON_SIZE_SM)
                     .color(text_color),
-                label(node.name.clone())
-                    .text_size(15.0)
-                    .color(text_color),
+                label(node.name.clone()).text_size(15.0).color(text_color),
             ))
             .gap(4.px())
             .padding(Padding::left(Length::px(file_indent)))

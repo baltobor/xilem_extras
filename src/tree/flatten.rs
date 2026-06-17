@@ -120,7 +120,14 @@ fn collect_tree<'a, N: TreeNode>(
 
     if is_expanded {
         for child in node.children() {
-            collect_tree(child, expansion, depth + 1, Some(current_index), nodes, flat);
+            collect_tree(
+                child,
+                expansion,
+                depth + 1,
+                Some(current_index),
+                nodes,
+                flat,
+            );
         }
     }
 }
@@ -153,7 +160,10 @@ mod tests {
     }
 
     fn n(id: &str, children: Vec<Node>) -> Node {
-        Node { id: id.into(), children }
+        Node {
+            id: id.into(),
+            children,
+        }
     }
 
     #[test]

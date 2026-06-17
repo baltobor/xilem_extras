@@ -18,8 +18,8 @@
 
 use std::any::TypeId;
 
-use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
 use xilem::core::MessageResult;
+use xilem::core::{MessageCtx, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, BrushIndex, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget, PaintCtx,
@@ -57,7 +57,11 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (f64, f64, f64) {
     if s == 0.0 {
         return (l, l, l);
     }
-    let q = if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
+    let q = if l < 0.5 {
+        l * (1.0 + s)
+    } else {
+        l + s - l * s
+    };
     let p = 2.0 * l - q;
     let hue_to_rgb = |t: f64| {
         let t = ((t % 1.0) + 1.0) % 1.0;
@@ -71,7 +75,11 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (f64, f64, f64) {
             p
         }
     };
-    (hue_to_rgb(h + 1.0 / 3.0), hue_to_rgb(h), hue_to_rgb(h - 1.0 / 3.0))
+    (
+        hue_to_rgb(h + 1.0 / 3.0),
+        hue_to_rgb(h),
+        hue_to_rgb(h - 1.0 / 3.0),
+    )
 }
 
 fn srgb_to_y(r: u8, g: u8, b: u8) -> f64 {
@@ -97,17 +105,35 @@ fn apca_contrast(txt_y: f64, bg_y: f64) -> f64 {
     const DELTA_Y_MIN: f64 = 0.0005;
     const LO_CLIP: f64 = 0.1;
 
-    let ty = if txt_y > BLK_THRS { txt_y } else { txt_y + (BLK_THRS - txt_y).powf(BLK_CLMP) };
-    let by = if bg_y > BLK_THRS { bg_y } else { bg_y + (BLK_THRS - bg_y).powf(BLK_CLMP) };
+    let ty = if txt_y > BLK_THRS {
+        txt_y
+    } else {
+        txt_y + (BLK_THRS - txt_y).powf(BLK_CLMP)
+    };
+    let by = if bg_y > BLK_THRS {
+        bg_y
+    } else {
+        bg_y + (BLK_THRS - bg_y).powf(BLK_CLMP)
+    };
 
-    if (by - ty).abs() < DELTA_Y_MIN { return 0.0; }
+    if (by - ty).abs() < DELTA_Y_MIN {
+        return 0.0;
+    }
 
     if by > ty {
         let sapc = (by.powf(NORM_BG) - ty.powf(NORM_TXT)) * SCALE_BOW;
-        if sapc < LO_CLIP { 0.0 } else { (sapc - LO_BOW_OFFSET) * 100.0 }
+        if sapc < LO_CLIP {
+            0.0
+        } else {
+            (sapc - LO_BOW_OFFSET) * 100.0
+        }
     } else {
         let sapc = (by.powf(REV_BG) - ty.powf(REV_TXT)) * SCALE_WOB;
-        if sapc > -LO_CLIP { 0.0 } else { (sapc + LO_WOB_OFFSET) * 100.0 }
+        if sapc > -LO_CLIP {
+            0.0
+        } else {
+            (sapc + LO_WOB_OFFSET) * 100.0
+        }
     }
 }
 
@@ -151,7 +177,9 @@ pub fn inverse_contrast_color(bg: Color) -> Color {
     let mut l2 = (l * (1.0 - contrast)) / (contrast + 1.0);
     if l < 0.382 && (l - l2).abs() < 0.382 {
         l2 = 1.0 - l2;
-        if l2 < 0.5 { l2 = 0.5; }
+        if l2 < 0.5 {
+            l2 = 0.5;
+        }
     }
     l2 = l2.min(0.55);
 
@@ -261,8 +289,7 @@ impl GroupBox {
         ),
     ) {
         if self.needs_layout {
-            let mut builder =
-                layout_ctx.ranged_builder(font_ctx, &self.label, 1.0, true);
+            let mut builder = layout_ctx.ranged_builder(font_ctx, &self.label, 1.0, true);
             builder.push_default(StyleProperty::FontSize(LABEL_FONT_SIZE));
             builder.push_default(StyleProperty::Brush(BrushIndex(0)));
             builder.build_into(&mut self.text_layout, &self.label);
@@ -343,8 +370,13 @@ impl Widget for GroupBox {
         let rect = Rect::from_origin_size(Point::ZERO, size);
         let rr = RoundedRect::from_rect(rect, CORNER_RADIUS);
 
-        painter.fill(rr, self.bg_color).fill_rule(Fill::NonZero).draw();
-        painter.stroke(rr, &Stroke::new(BORDER_WIDTH), self.border_color).draw();
+        painter
+            .fill(rr, self.bg_color)
+            .fill_rule(Fill::NonZero)
+            .draw();
+        painter
+            .stroke(rr, &Stroke::new(BORDER_WIDTH), self.border_color)
+            .draw();
 
         let label_color = inverse_contrast_color(self.bg_color);
         let text_h = self.text_layout.height() as f64;
@@ -401,10 +433,7 @@ pub struct GroupBoxView<V> {
 ///
 /// group_box("Notifications", flex_col((row1, row2, row3)))
 /// ```
-pub fn group_box<State, Action, V>(
-    label: impl Into<String>,
-    child: V,
-) -> GroupBoxView<V>
+pub fn group_box<State, Action, V>(label: impl Into<String>, child: V) -> GroupBoxView<V>
 where
     State: 'static,
     Action: 'static,
@@ -437,14 +466,9 @@ where
     type Element = Pod<GroupBox>;
     type ViewState = V::ViewState;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
-        let (child_pod, child_state) = ctx.with_id(CHILD_VIEW_ID, |ctx| {
-            self.child.build(ctx, app_state)
-        });
+    fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
+        let (child_pod, child_state) =
+            ctx.with_id(CHILD_VIEW_ID, |ctx| self.child.build(ctx, app_state));
         let pod = ctx.with_action_widget(|ctx| {
             let mut widget = GroupBox::new(self.label.clone(), child_pod.new_widget);
             if let Some(tint) = self.tint {

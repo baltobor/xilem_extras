@@ -12,11 +12,11 @@ use std::marker::PhantomData;
 use xilem::masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::{Padding, Style};
-use xilem::view::{button, flex_row, label, portal, FlexExt};
+use xilem::view::{FlexExt, button, flex_row, label, portal};
 use xilem::{AnyWidgetView, WidgetView};
 
 use super::TabItem;
-use xilem_material_icons::{icon, icons, ICON_SIZE_SM};
+use xilem_material_icons::{ICON_SIZE_SM, icon, icons};
 
 /// Golden ratio for proportional spacing.
 const PHI: f64 = 1.618;
@@ -240,7 +240,10 @@ where
 
                 let on_close = self.on_close.clone();
                 let close_btn = button(
-                    icon(icons::CLOSE).size(12.0).color(colors.text_secondary).build(),
+                    icon(icons::CLOSE)
+                        .size(12.0)
+                        .color(colors.text_secondary)
+                        .build(),
                     move |state: &mut State| {
                         if let Some(ref cb) = on_close {
                             cb(state, i)
@@ -288,7 +291,10 @@ where
                 colors.text_secondary
             };
             let prev_btn = button(
-                icon(icons::CHEVRON_LEFT).size(ICON_SIZE_SM).color(prev_color).build(),
+                icon(icons::CHEVRON_LEFT)
+                    .size(ICON_SIZE_SM)
+                    .color(prev_color)
+                    .build(),
                 move |state: &mut State| {
                     if can_prev {
                         if let Some(ref cb) = on_select_prev {
@@ -313,7 +319,10 @@ where
                 colors.text_secondary
             };
             let next_btn = button(
-                icon(icons::CHEVRON_RIGHT).size(ICON_SIZE_SM).color(next_color).build(),
+                icon(icons::CHEVRON_RIGHT)
+                    .size(ICON_SIZE_SM)
+                    .color(next_color)
+                    .build(),
                 move |state: &mut State| {
                     if can_next {
                         if let Some(ref cb) = on_select_next {

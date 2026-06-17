@@ -12,20 +12,20 @@
 use std::any::TypeId;
 use std::sync::Arc;
 
-use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{self, Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{BezPath, Rect, RoundedRect, Stroke};
 use xilem::masonry::peniko::Color;
 
+use xilem::masonry::core::StyleProperty;
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
-    Widget, WidgetId, WidgetMut, WidgetPod,
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId,
+    WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
-use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
 use super::menu_item::DEFAULT_ITEM_HEIGHT;
@@ -141,9 +141,18 @@ impl Widget for PulldownSubmenuItem {
                 };
                 let auto_length = len_req.into();
                 let context_size = LayoutSize::maybe(axis.cross(), cross_length);
-                let child_length =
-                    ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
-                Length::px(min_result.get().max(child_length.get() + 2.0 * ITEM_PADDING_H + ARROW_WIDTH))
+                let child_length = ctx.compute_length(
+                    &mut self.child,
+                    auto_length,
+                    context_size,
+                    axis,
+                    cross_length,
+                );
+                Length::px(
+                    min_result
+                        .get()
+                        .max(child_length.get() + 2.0 * ITEM_PADDING_H + ARROW_WIDTH),
+                )
             }
             Axis::Vertical => Length::px(DEFAULT_ITEM_HEIGHT),
         }
@@ -165,7 +174,12 @@ impl Widget for PulldownSubmenuItem {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         if ctx.is_hovered() {
             let rect = Rect::from_origin_size(Point::ZERO, self.size);
             let rounded = RoundedRect::from_rect(rect, 3.0);

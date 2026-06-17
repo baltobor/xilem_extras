@@ -10,23 +10,23 @@
 use std::any::TypeId;
 use std::sync::Arc;
 
-use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
+use tracing::{Span, trace_span};
 use xilem::core::MessageResult;
+use xilem::core::{MessageCtx, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Point, Rect, Size};
 use xilem::masonry::peniko::Color;
-use tracing::{Span, trace_span};
 
+use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, CursorIcon, EventCtx, LayoutCtx, MeasureCtx, NewWidget,
     PaintCtx, PointerButtonEvent, PointerEvent, PointerUpdate, PropertiesMut, PropertiesRef,
     QueryCtx, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
-use xilem::masonry::layout::{LenReq, LayoutSize, Length};
-use xilem::masonry::properties::Background;
 use xilem::masonry::kurbo::Axis;
+use xilem::masonry::layout::{LayoutSize, LenReq, Length};
+use xilem::masonry::properties::Background;
 use xilem::{Pod, ViewCtx, WidgetView};
-use xilem::masonry::accesskit::{Node, Role};
 
 const DIVIDER_HIT_AREA: f64 = 8.0;
 const MIN_COLUMN_WIDTH: f64 = 40.0;
@@ -143,8 +143,14 @@ impl ResizableHeader {
     }
 
     /// Returns a mutable reference to a child widget.
-    pub fn child_mut<'t>(this: &'t mut WidgetMut<'_, Self>, index: usize) -> Option<WidgetMut<'t, dyn Widget>> {
-        this.widget.children.get_mut(index).map(|child| this.ctx.get_mut(child))
+    pub fn child_mut<'t>(
+        this: &'t mut WidgetMut<'_, Self>,
+        index: usize,
+    ) -> Option<WidgetMut<'t, dyn Widget>> {
+        this.widget
+            .children
+            .get_mut(index)
+            .map(|child| this.ctx.get_mut(child))
     }
 }
 
@@ -167,7 +173,8 @@ impl Widget for ResizableHeader {
                     self.drag_start_x = pos.x;
                     self.drag_start_width = self.columns[divider_idx].width;
                     // Store adjacent column width for Apple-style resize
-                    self.drag_start_adjacent_width = self.columns
+                    self.drag_start_adjacent_width = self
+                        .columns
                         .get(divider_idx + 1)
                         .map(|c| c.width)
                         .unwrap_or(0.0);
@@ -184,7 +191,8 @@ impl Widget for ResizableHeader {
                         // Apple-style: redistribute space between adjacent columns
                         // Left column gets +delta, right column gets -delta
                         let new_left_width = (self.drag_start_width + delta).max(MIN_COLUMN_WIDTH);
-                        let new_right_width = (self.drag_start_adjacent_width - delta).max(MIN_COLUMN_WIDTH);
+                        let new_right_width =
+                            (self.drag_start_adjacent_width - delta).max(MIN_COLUMN_WIDTH);
 
                         // Clamp delta to respect both minimum widths
                         let actual_left_delta = new_left_width - self.drag_start_width;
@@ -303,9 +311,7 @@ impl Widget for ResizableHeader {
         self.update_column_layout();
 
         match axis {
-            Axis::Horizontal => {
-                Length::px(self.columns.iter().map(|c| c.width).sum())
-            }
+            Axis::Horizontal => Length::px(self.columns.iter().map(|c| c.width).sum()),
             Axis::Vertical => {
                 let mut max_height = Length::ZERO;
                 for (i, child) in self.children.iter_mut().enumerate() {
@@ -414,7 +420,12 @@ impl Widget for ResizableHeader {
         }
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
 
         {
@@ -534,18 +545,13 @@ where
     type Element = Pod<ResizableHeader>;
     type ViewState = Vec<V::ViewState>;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let mut child_pods = Vec::new();
         let mut child_states = Vec::new();
 
         for (i, child) in self.children.iter().enumerate() {
-            let (pod, state) = ctx.with_id(ViewId::new(i as u64), |ctx| {
-                child.build(ctx, app_state)
-            });
+            let (pod, state) =
+                ctx.with_id(ViewId::new(i as u64), |ctx| child.build(ctx, app_state));
             child_pods.push(pod.new_widget.erased());
             child_states.push(state);
         }
@@ -612,7 +618,9 @@ where
         match message.take_first() {
             Some(id) => {
                 let idx = id.routing_id() as usize;
-                if let (Some(child), Some(state)) = (self.children.get(idx), view_state.get_mut(idx)) {
+                if let (Some(child), Some(state)) =
+                    (self.children.get(idx), view_state.get_mut(idx))
+                {
                     if let Some(mut child_element) = ResizableHeader::child_mut(&mut element, idx) {
                         return child.message(state, message, child_element.downcast(), app_state);
                     }
@@ -620,9 +628,11 @@ where
                 MessageResult::Stale
             }
             None => match message.take_message::<ColumnResizeAction>() {
-                Some(action) => {
-                    MessageResult::Action((self.callback)(app_state, action.column_key, action.new_width))
-                }
+                Some(action) => MessageResult::Action((self.callback)(
+                    app_state,
+                    action.column_key,
+                    action.new_width,
+                )),
                 None => MessageResult::Stale,
             },
         }

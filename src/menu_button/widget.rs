@@ -10,8 +10,8 @@
 use std::any::TypeId;
 use std::sync::Mutex;
 
-use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{self, Node, Role};
 use xilem::masonry::imaging::Painter;
 
 use xilem::masonry::core::keyboard::{Key, NamedKey};
@@ -43,22 +43,34 @@ pub struct MenuButtonPress {
 #[derive(Clone, Debug)]
 pub enum MenuItemData {
     /// A clickable action item with a label.
-    Action { label: String, checked: Option<bool> },
+    Action {
+        label: String,
+        checked: Option<bool>,
+    },
     /// A visual separator.
     Separator,
     /// A submenu with nested items.
-    Submenu { label: String, children: Vec<MenuItemData> },
+    Submenu {
+        label: String,
+        children: Vec<MenuItemData>,
+    },
 }
 
 impl MenuItemData {
     /// Creates an action item.
     pub fn action(label: impl Into<String>) -> Self {
-        Self::Action { label: label.into(), checked: None }
+        Self::Action {
+            label: label.into(),
+            checked: None,
+        }
     }
 
     /// Creates an action item with checked state.
     pub fn action_checked(label: impl Into<String>, checked: bool) -> Self {
-        Self::Action { label: label.into(), checked: Some(checked) }
+        Self::Action {
+            label: label.into(),
+            checked: Some(checked),
+        }
     }
 
     /// Creates a separator.
@@ -68,7 +80,10 @@ impl MenuItemData {
 
     /// Creates a submenu.
     pub fn submenu(label: impl Into<String>, children: Vec<MenuItemData>) -> Self {
-        Self::Submenu { label: label.into(), children }
+        Self::Submenu {
+            label: label.into(),
+            children,
+        }
     }
 
     /// Returns the display label, or None for separators.
@@ -108,13 +123,19 @@ impl MenuButton {
     /// - `items`: the list of dropdown menu item labels.
     pub fn new(child: NewWidget<impl Widget + ?Sized>, items: Vec<String>) -> Self {
         // Convert legacy string-based items to MenuItemData
-        let items = items.into_iter().map(|label| {
-            if label == "---" {
-                MenuItemData::Separator
-            } else {
-                MenuItemData::Action { label, checked: None }
-            }
-        }).collect();
+        let items = items
+            .into_iter()
+            .map(|label| {
+                if label == "---" {
+                    MenuItemData::Separator
+                } else {
+                    MenuItemData::Action {
+                        label,
+                        checked: None,
+                    }
+                }
+            })
+            .collect();
 
         Self {
             child: child.erased().to_pod(),
@@ -181,10 +202,7 @@ impl MenuButton {
                 }
                 MenuItemData::Submenu { label, children } => {
                     let submenu_widget = super::PulldownSubmenuItem::new(label.clone());
-                    menu = menu.with_submenu_item(
-                        NewWidget::new(submenu_widget),
-                        children.clone(),
-                    );
+                    menu = menu.with_submenu_item(NewWidget::new(submenu_widget), children.clone());
                 }
             }
         }
@@ -200,13 +218,19 @@ impl MenuButton {
 
     /// Replaces the dropdown item labels (legacy API).
     pub fn set_items(this: &mut WidgetMut<'_, Self>, items: Vec<String>) {
-        this.widget.items = items.into_iter().map(|label| {
-            if label == "---" {
-                MenuItemData::Separator
-            } else {
-                MenuItemData::Action { label, checked: None }
-            }
-        }).collect();
+        this.widget.items = items
+            .into_iter()
+            .map(|label| {
+                if label == "---" {
+                    MenuItemData::Separator
+                } else {
+                    MenuItemData::Action {
+                        label,
+                        checked: None,
+                    }
+                }
+            })
+            .collect();
     }
 
     /// Replaces the dropdown items with full menu data.
@@ -297,7 +321,13 @@ impl Widget for MenuButton {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
 
-        ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length)
+        ctx.compute_length(
+            &mut self.child,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        )
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
@@ -309,7 +339,13 @@ impl Widget for MenuButton {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _painter: &mut Painter<'_>) {}
+    fn paint(
+        &mut self,
+        _ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        _painter: &mut Painter<'_>,
+    ) {
+    }
 
     fn accessibility_role(&self) -> Role {
         Role::Button

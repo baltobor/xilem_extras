@@ -8,16 +8,16 @@
 use masonry::layout::AsUnit;
 use xilem::style::Style;
 use xilem::view::flex_col;
-use xilem::{WidgetView, AnyWidgetView};
+use xilem::{AnyWidgetView, WidgetView};
 
 use xilem::masonry::core::PointerButton;
 
-use crate::traits::{SelectionState, TreeNode};
-use crate::components::{row_button_with_press, row_button_with_clicks, RowButtonPress};
-use crate::context_menu::context_menu;
-use crate::menu_items::MenuItems;
 use super::ExpansionState;
 pub use super::types::{TreeAction, TreeStyle};
+use crate::components::{RowButtonPress, row_button_with_clicks, row_button_with_press};
+use crate::context_menu::context_menu;
+use crate::menu_items::MenuItems;
+use crate::traits::{SelectionState, TreeNode};
 
 /// Collects visible tree nodes into a flat list for rendering.
 pub fn flatten_tree<'a, N: TreeNode>(
@@ -92,7 +92,14 @@ where
     H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
     Sel: SelectionState<N::Id> + 'a,
 {
-    tree_group_styled(root, expansion, selection, TreeStyle::default(), row_builder, handler)
+    tree_group_styled(
+        root,
+        expansion,
+        selection,
+        TreeStyle::default(),
+        row_builder,
+        handler,
+    )
 }
 
 /// Creates a tree group with custom styling.
@@ -144,22 +151,25 @@ where
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
 
-            let btn = row_button_with_press(row_view, move |state: &mut State, press: &RowButtonPress| {
-                let action = match press.button {
-                    Some(PointerButton::Secondary) => TreeAction::ContextMenu(press.position),
-                    None | Some(PointerButton::Primary) => {
-                        if press.click_count >= 2 {
-                            TreeAction::DoubleClick
-                        } else if is_expandable {
-                            TreeAction::Toggle
-                        } else {
-                            TreeAction::Select
+            let btn = row_button_with_press(
+                row_view,
+                move |state: &mut State, press: &RowButtonPress| {
+                    let action = match press.button {
+                        Some(PointerButton::Secondary) => TreeAction::ContextMenu(press.position),
+                        None | Some(PointerButton::Primary) => {
+                            if press.click_count >= 2 {
+                                TreeAction::DoubleClick
+                            } else if is_expandable {
+                                TreeAction::Toggle
+                            } else {
+                                TreeAction::Select
+                            }
                         }
-                    }
-                    _ => return,
-                };
-                handler(state, &node_id, action);
-            })
+                        _ => return,
+                    };
+                    handler(state, &node_id, action);
+                },
+            )
             .hover_bg(hover_bg);
 
             btn.boxed()
@@ -246,17 +256,18 @@ where
             let menu_items = context_menu_items_fn(&node_id);
 
             // Wrap row in row_button for click handling
-            let btn = row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
-                let action = if click_count >= 2 {
-                    TreeAction::DoubleClick
-                } else if is_expandable {
-                    TreeAction::Toggle
-                } else {
-                    TreeAction::Select
-                };
-                handler(state, &node_id, action);
-            })
-            .hover_bg(hover_bg);
+            let btn =
+                row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                    let action = if click_count >= 2 {
+                        TreeAction::DoubleClick
+                    } else if is_expandable {
+                        TreeAction::Toggle
+                    } else {
+                        TreeAction::Select
+                    };
+                    handler(state, &node_id, action);
+                })
+                .hover_bg(hover_bg);
 
             // Wrap in context menu
             let with_menu = context_menu(btn, menu_items);
@@ -362,21 +373,22 @@ where
             let menu_items = context_menu_items_fn(&node_id);
 
             // Wrap row in row_button for click handling
-            let btn = row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
-                // Skip all click actions while editing
-                if is_any_editing {
-                    return;
-                }
-                let action = if click_count >= 2 {
-                    TreeAction::DoubleClick
-                } else if is_expandable {
-                    TreeAction::Toggle
-                } else {
-                    TreeAction::Select
-                };
-                handler(state, &node_id, action);
-            })
-            .hover_bg(hover_bg);
+            let btn =
+                row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                    // Skip all click actions while editing
+                    if is_any_editing {
+                        return;
+                    }
+                    let action = if click_count >= 2 {
+                        TreeAction::DoubleClick
+                    } else if is_expandable {
+                        TreeAction::Toggle
+                    } else {
+                        TreeAction::Select
+                    };
+                    handler(state, &node_id, action);
+                })
+                .hover_bg(hover_bg);
 
             // Wrap in context menu
             let with_menu = context_menu(btn, menu_items);
@@ -443,7 +455,14 @@ where
     H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
     Sel: SelectionState<N::Id> + 'a,
 {
-    tree_forest_styled(roots, expansion, selection, TreeStyle::default(), row_builder, handler)
+    tree_forest_styled(
+        roots,
+        expansion,
+        selection,
+        TreeStyle::default(),
+        row_builder,
+        handler,
+    )
 }
 
 /// Creates a tree view for a forest with custom styling.
@@ -495,22 +514,25 @@ where
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
 
-            let btn = row_button_with_press(row_view, move |state: &mut State, press: &RowButtonPress| {
-                let action = match press.button {
-                    Some(PointerButton::Secondary) => TreeAction::ContextMenu(press.position),
-                    None | Some(PointerButton::Primary) => {
-                        if press.click_count >= 2 {
-                            TreeAction::DoubleClick
-                        } else if is_expandable {
-                            TreeAction::Toggle
-                        } else {
-                            TreeAction::Select
+            let btn = row_button_with_press(
+                row_view,
+                move |state: &mut State, press: &RowButtonPress| {
+                    let action = match press.button {
+                        Some(PointerButton::Secondary) => TreeAction::ContextMenu(press.position),
+                        None | Some(PointerButton::Primary) => {
+                            if press.click_count >= 2 {
+                                TreeAction::DoubleClick
+                            } else if is_expandable {
+                                TreeAction::Toggle
+                            } else {
+                                TreeAction::Select
+                            }
                         }
-                    }
-                    _ => return,
-                };
-                handler(state, &node_id, action);
-            })
+                        _ => return,
+                    };
+                    handler(state, &node_id, action);
+                },
+            )
             .hover_bg(hover_bg);
 
             btn.boxed()
@@ -581,17 +603,18 @@ where
             let hover_bg = style.hover_bg;
             let menu_items = context_menu_items_fn(&node_id);
 
-            let btn = row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
-                let action = if click_count >= 2 {
-                    TreeAction::DoubleClick
-                } else if is_expandable {
-                    TreeAction::Toggle
-                } else {
-                    TreeAction::Select
-                };
-                handler(state, &node_id, action);
-            })
-            .hover_bg(hover_bg);
+            let btn =
+                row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                    let action = if click_count >= 2 {
+                        TreeAction::DoubleClick
+                    } else if is_expandable {
+                        TreeAction::Toggle
+                    } else {
+                        TreeAction::Select
+                    };
+                    handler(state, &node_id, action);
+                })
+                .hover_bg(hover_bg);
 
             let with_menu = context_menu(btn, menu_items);
 
@@ -749,24 +772,20 @@ mod tests {
             TestNode {
                 id: "a".into(),
                 name: "A".into(),
-                children: vec![
-                    TestNode {
-                        id: "a1".into(),
-                        name: "A1".into(),
-                        children: vec![],
-                    },
-                ],
+                children: vec![TestNode {
+                    id: "a1".into(),
+                    name: "A1".into(),
+                    children: vec![],
+                }],
             },
             TestNode {
                 id: "b".into(),
                 name: "B".into(),
-                children: vec![
-                    TestNode {
-                        id: "b1".into(),
-                        name: "B1".into(),
-                        children: vec![],
-                    },
-                ],
+                children: vec![TestNode {
+                    id: "b1".into(),
+                    name: "B1".into(),
+                    children: vec![],
+                }],
             },
         ]
     }

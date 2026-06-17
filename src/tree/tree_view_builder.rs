@@ -44,31 +44,29 @@ use masonry::properties::Padding;
 use xilem::core::MessageResult;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_col, flex_row, label, text_input, CrossAxisAlignment};
+use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, text_input};
 use xilem::{AnyWidgetView, WidgetView};
 
-use crate::components::{row_button_with_press, RowButtonPress};
+use crate::components::{RowButtonPress, row_button_with_press};
 use crate::context_menu::context_menu;
 use crate::menu_items::BoxedMenuEntry;
 use crate::traits::{Identifiable, SelectionState, TreeNode};
 use xilem::masonry::core::PointerButton;
 
-use super::disclosure_row::disclosure_row;
-use super::flatten::{flatten_forest_collecting, FlattenedNode};
-use super::keyboard_focus::{keyboard_focus, KeyAction};
-use super::scroll_focus::{scroll_focus, DEFAULT_ROW_HEIGHT_HINT};
-use super::types::{TreeAction, TreeStyle};
 use super::ExpansionState;
+use super::disclosure_row::disclosure_row;
+use super::flatten::{FlattenedNode, flatten_forest_collecting};
+use super::keyboard_focus::{KeyAction, keyboard_focus};
+use super::scroll_focus::{DEFAULT_ROW_HEIGHT_HINT, scroll_focus};
+use super::types::{TreeAction, TreeStyle};
 
 // Trait-object aliases used by the builder. Storing user-supplied closures
 // as `Arc<dyn Fn>` keeps the public type stable across the chain of opt-in
 // methods, so `build()` always sees the same `TreeView<...>` shape.
 type IconFn<N, State> = dyn Fn(&N) -> Option<Box<AnyWidgetView<State, ()>>> + Send + Sync;
 type LabelFn<N> = dyn Fn(&N) -> String + Send + Sync;
-type ActionFn<N, State> =
-    dyn Fn(&mut State, &<N as Identifiable>::Id, TreeAction) + Send + Sync;
-type MenuFn<N, State> =
-    dyn Fn(&N) -> Vec<BoxedMenuEntry<State, ()>> + Send + Sync;
+type ActionFn<N, State> = dyn Fn(&mut State, &<N as Identifiable>::Id, TreeAction) + Send + Sync;
+type MenuFn<N, State> = dyn Fn(&N) -> Vec<BoxedMenuEntry<State, ()>> + Send + Sync;
 type EditTextSetterFn<State> = dyn Fn(&mut State, String) + Send + Sync;
 
 /// Default selection background — a warm dark gray, neutral against the
@@ -410,7 +408,13 @@ where
         let flat_for_keys = flat_nodes;
 
         let key_layer = keyboard_focus(content, move |state: &mut State, action: KeyAction| {
-            handle_key(state, action, &flat_for_keys, selected_index, user_handler.as_deref());
+            handle_key(
+                state,
+                action,
+                &flat_for_keys,
+                selected_index,
+                user_handler.as_deref(),
+            );
             MessageResult::Action(())
         });
 
@@ -485,7 +489,9 @@ where
             });
             Box::new(flex_row((icon_view, input_view)).gap(4.px()))
         } else {
-            let text = label(display).text_size(text_size).color(text_color_for_row);
+            let text = label(display)
+                .text_size(text_size)
+                .color(text_color_for_row);
 
             // Wrap icon+text in a row_button so clicks dispatch Select /
             // DoubleClick / ContextMenu. The chevron stays OUTSIDE this button
@@ -494,23 +500,28 @@ where
 
             let node_id_for_press = node_id.clone();
             let user_handler_for_press = self.handler.clone();
-            let body_clickable = row_button_with_press(body, move |state: &mut State, press: &RowButtonPress| {
-                if let Some(h) = user_handler_for_press.as_ref() {
-                    match press.button {
-                        Some(PointerButton::Secondary) => {
-                            h(state, &node_id_for_press, TreeAction::ContextMenu(press.position));
-                        }
-                        None | Some(PointerButton::Primary) => {
-                            if press.click_count >= 2 {
-                                h(state, &node_id_for_press, TreeAction::DoubleClick);
-                            } else {
-                                h(state, &node_id_for_press, TreeAction::Select);
+            let body_clickable =
+                row_button_with_press(body, move |state: &mut State, press: &RowButtonPress| {
+                    if let Some(h) = user_handler_for_press.as_ref() {
+                        match press.button {
+                            Some(PointerButton::Secondary) => {
+                                h(
+                                    state,
+                                    &node_id_for_press,
+                                    TreeAction::ContextMenu(press.position),
+                                );
                             }
+                            None | Some(PointerButton::Primary) => {
+                                if press.click_count >= 2 {
+                                    h(state, &node_id_for_press, TreeAction::DoubleClick);
+                                } else {
+                                    h(state, &node_id_for_press, TreeAction::Select);
+                                }
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
-                }
-            });
+                });
 
             // Selection background painted around the icon + label only.
             // In `HighlightFill::Row` mode we skip this and paint the
@@ -586,7 +597,9 @@ fn handle_key<State, Id>(
 ) where
     Id: Clone,
 {
-    let Some(h) = handler else { return; };
+    let Some(h) = handler else {
+        return;
+    };
     if flat_nodes.is_empty() {
         return;
     }
@@ -716,7 +729,11 @@ mod tests {
             sel: SingleSelection::new(),
             exp: ExpansionState::new(),
         };
-        let root = Node { id: "r".into(), label: "Root".into(), children: vec![] };
+        let root = Node {
+            id: "r".into(),
+            label: "Root".into(),
+            children: vec![],
+        };
         let _ = tree_view::<Node, AppState>(&root, &app.exp)
             .selection(&app.sel)
             .selected_bg(Color::from_rgb8(50, 70, 100))
@@ -736,8 +753,16 @@ mod tests {
             exp: ExpansionState::new(),
         };
         let roots = vec![
-            Node { id: "a".into(), label: "A".into(), children: vec![] },
-            Node { id: "b".into(), label: "B".into(), children: vec![] },
+            Node {
+                id: "a".into(),
+                label: "A".into(),
+                children: vec![],
+            },
+            Node {
+                id: "b".into(),
+                label: "B".into(),
+                children: vec![],
+            },
         ];
         let _ = tree_forest_view::<Node, AppState>(&roots, &app.exp)
             .selection(&app.sel)

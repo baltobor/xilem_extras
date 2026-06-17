@@ -30,8 +30,8 @@ mod separator;
 mod sequence;
 mod submenu;
 
-pub use entry::{MenuEntry, BoxedMenuEntry};
-pub use group::{Group, group, IntoMenuEntries};
+pub use entry::{BoxedMenuEntry, MenuEntry};
+pub use group::{Group, IntoMenuEntries, group};
 pub use item::{MenuItem, menu_item};
 pub use separator::{SeparatorEntry, separator};
 pub use sequence::MenuItems;

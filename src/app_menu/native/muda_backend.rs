@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use muda::{
-    accelerator::Accelerator, CheckMenuItem, Menu, MenuEvent, MenuId, MenuItem as MudaMenuItem,
-    PredefinedMenuItem, Submenu,
+    CheckMenuItem, Menu, MenuEvent, MenuId, MenuItem as MudaMenuItem, PredefinedMenuItem, Submenu,
+    accelerator::Accelerator,
 };
 
 use crate::app_menu::builder::{MenuBarBuilder, MenuBuilder, MenuItemBuilder};
@@ -37,14 +37,8 @@ pub struct MudaMenuBar<State, Action> {
 
 /// An item that can have its state updated.
 enum UpdatableItem {
-    Regular {
-        id: MenuId,
-        action_idx: usize,
-    },
-    Check {
-        id: MenuId,
-        action_idx: usize,
-    },
+    Regular { id: MenuId, action_idx: usize },
+    Check { id: MenuId, action_idx: usize },
 }
 
 impl<State: 'static, Action: 'static> MudaMenuBar<State, Action> {
@@ -124,13 +118,14 @@ impl<State: 'static, Action: 'static> MudaMenuBar<State, Action> {
                     let is_enabled = enabled.as_ref().is_none_or(|f| f(state));
                     let is_checked = checked.as_ref().is_some_and(|f| f(state));
 
-                    let accelerator = shortcut.as_ref().and_then(|s| {
-                        s.to_accelerator().parse::<Accelerator>().ok()
-                    });
+                    let accelerator = shortcut
+                        .as_ref()
+                        .and_then(|s| s.to_accelerator().parse::<Accelerator>().ok());
 
                     if checked.is_some() {
                         // Use CheckMenuItem for checkable items
-                        let check_item = CheckMenuItem::new(label, is_enabled, is_checked, accelerator);
+                        let check_item =
+                            CheckMenuItem::new(label, is_enabled, is_checked, accelerator);
                         let id = check_item.id().clone();
                         action_map.insert(id.clone(), action_idx);
                         updatable_items.push(UpdatableItem::Check { id, action_idx });
@@ -167,9 +162,9 @@ impl<State: 'static, Action: 'static> MudaMenuBar<State, Action> {
                     let is_enabled = enabled.as_ref().is_none_or(|f| f(state));
                     let is_checked = checked.as_ref().is_some_and(|f| f(state));
 
-                    let accelerator = shortcut.as_ref().and_then(|s| {
-                        s.to_accelerator().parse::<Accelerator>().ok()
-                    });
+                    let accelerator = shortcut
+                        .as_ref()
+                        .and_then(|s| s.to_accelerator().parse::<Accelerator>().ok());
 
                     if checked.is_some() {
                         let check_item = CheckMenuItem::with_id(
@@ -181,16 +176,14 @@ impl<State: 'static, Action: 'static> MudaMenuBar<State, Action> {
                         );
                         parent.append(&check_item).ok();
                     } else {
-                        let menu_item = MudaMenuItem::with_id(
-                            id.as_str(),
-                            label,
-                            is_enabled,
-                            accelerator,
-                        );
+                        let menu_item =
+                            MudaMenuItem::with_id(id.as_str(), label, is_enabled, accelerator);
                         parent.append(&menu_item).ok();
                     }
                 }
-                MenuItemBuilder::Dynamic { builder: dyn_builder } => {
+                MenuItemBuilder::Dynamic {
+                    builder: dyn_builder,
+                } => {
                     // Generate dynamic items from current state
                     let dynamic_items = dyn_builder(state);
                     Self::build_items(
@@ -337,9 +330,9 @@ fn build_muda_items<State, Action>(
             } => {
                 let is_enabled = enabled.as_ref().is_none_or(|f| f(state));
                 let is_checked = checked.as_ref().is_some_and(|f| f(state));
-                let accelerator = shortcut.as_ref().and_then(|s| {
-                    s.to_accelerator().parse::<Accelerator>().ok()
-                });
+                let accelerator = shortcut
+                    .as_ref()
+                    .and_then(|s| s.to_accelerator().parse::<Accelerator>().ok());
 
                 if checked.is_some() {
                     let check_item = CheckMenuItem::new(label, is_enabled, is_checked, accelerator);
@@ -359,9 +352,9 @@ fn build_muda_items<State, Action>(
             } => {
                 let is_enabled = enabled.as_ref().is_none_or(|f| f(state));
                 let is_checked = checked.as_ref().is_some_and(|f| f(state));
-                let accelerator = shortcut.as_ref().and_then(|s| {
-                    s.to_accelerator().parse::<Accelerator>().ok()
-                });
+                let accelerator = shortcut
+                    .as_ref()
+                    .and_then(|s| s.to_accelerator().parse::<Accelerator>().ok());
 
                 if checked.is_some() {
                     let check_item = CheckMenuItem::with_id(
@@ -373,12 +366,8 @@ fn build_muda_items<State, Action>(
                     );
                     parent.append(&check_item).ok();
                 } else {
-                    let menu_item = MudaMenuItem::with_id(
-                        id.as_str(),
-                        label,
-                        is_enabled,
-                        accelerator,
-                    );
+                    let menu_item =
+                        MudaMenuItem::with_id(id.as_str(), label, is_enabled, accelerator);
                     parent.append(&menu_item).ok();
                 }
             }
@@ -393,7 +382,9 @@ fn build_muda_items<State, Action>(
                 build_muda_items(&sub, sub_items, state);
                 parent.append(&sub).ok();
             }
-            MenuItemBuilder::Dynamic { builder: dyn_builder } => {
+            MenuItemBuilder::Dynamic {
+                builder: dyn_builder,
+            } => {
                 let dynamic_items = dyn_builder(state);
                 build_muda_items(parent, &dynamic_items, state);
             }

@@ -10,16 +10,16 @@
 use std::sync::Arc;
 
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_col, flex_row, label, button, sized_box, CrossAxisAlignment};
-use xilem::WidgetView;
+use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label, sized_box};
 
 use xilem_extras::{
-    SelectionState, SelectionModifiers, SortOrder, SortDirection, Theme,
-    row_button, row_button_with_modifiers, resizable_header,
+    SelectionModifiers, SelectionState, SortDirection, SortOrder, Theme, resizable_header,
+    row_button, row_button_with_modifiers,
 };
-use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
+use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;
 use crate::mock_data::Cyclist;
@@ -115,13 +115,16 @@ fn cyclist_row<'a>(
             // Store modifier state for UI feedback
             model.last_click_mods = format!(
                 "meta={}, ctrl={}, shift={}, alt={}",
-                modifiers.meta(), modifiers.ctrl(), modifiers.shift(), modifiers.alt()
+                modifiers.meta(),
+                modifiers.ctrl(),
+                modifiers.shift(),
+                modifiers.alt()
             );
             let sel_mods = SelectionModifiers::from_modifiers(modifiers);
             model.table_selection.select(id, sel_mods);
         })
         .hover_bg(theme.hover_bg())
-        .background_color(row_bg)
+        .background_color(row_bg),
     )
     .width((total_width as i32).px())
 }
@@ -143,11 +146,22 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     let total_width = ICON_COL_WIDTH + name_w + route_w + dist_w + joy_w;
 
     // Build rows
-    let rows: Vec<_> = sorted_cyclists.iter().enumerate().map(|(idx, cyclist)| {
-        let is_selected = model.table_selection.is_selected(&cyclist.id);
-        let is_striped = idx % 2 == 1;
-        cyclist_row(cyclist, is_selected, is_striped, &model.table_column_widths, theme).boxed()
-    }).collect();
+    let rows: Vec<_> = sorted_cyclists
+        .iter()
+        .enumerate()
+        .map(|(idx, cyclist)| {
+            let is_selected = model.table_selection.is_selected(&cyclist.id);
+            let is_striped = idx % 2 == 1;
+            cyclist_row(
+                cyclist,
+                is_selected,
+                is_striped,
+                &model.table_column_widths,
+                theme,
+            )
+            .boxed()
+        })
+        .collect();
 
     // Build resizable header columns
     let header_columns = vec![
@@ -180,9 +194,7 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             .color(theme.text_secondary()),
         label("Outdated. Please use the virtualized table.")
             .text_size(12.0)
-            .color(theme.text_secondary()),            
-            
-
+            .color(theme.text_secondary()),
         // Table (header + rows)
         flex_col((
             // Table header with icon column + resizable columns
@@ -197,10 +209,9 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                     resizable_hdr,
                 ))
                 .gap(0.px())
-                .background_color(theme.nav_bg())
+                .background_color(theme.nav_bg()),
             )
             .width((total_width as i32).px()),
-
             // Table rows
             flex_col(rows)
                 .cross_axis_alignment(CrossAxisAlignment::Start)
@@ -208,7 +219,6 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(0.px()),
-
         // Info and actions
         flex_col((
             flex_row((
@@ -223,19 +233,19 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 ))
                 .text_size(12.0)
                 .color(theme.text_secondary()),
-
-                label(format!("Selected: {} cyclists", model.table_selection.count()))
-                    .text_size(12.0)
-                    .color(theme.text_secondary()),
+                label(format!(
+                    "Selected: {} cyclists",
+                    model.table_selection.count()
+                ))
+                .text_size(12.0)
+                .color(theme.text_secondary()),
             ))
             .gap(16.px()),
-
             label(format!("Last click modifiers: {}", model.last_click_mods))
                 .text_size(12.0)
                 .color(theme.text_secondary()),
         ))
         .gap(4.px()),
-
         flex_row((
             button(label("Clear Sort"), |model: &mut AppModel| {
                 model.table_sort.clear();

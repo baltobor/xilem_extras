@@ -9,7 +9,7 @@
 //!
 //! I love riding the bike. This is my honour to the community, and outdoor sports.
 
-use xilem_extras::{Identifiable, TreeNode, ListItem, TableRow, CellValue};
+use xilem_extras::{CellValue, Identifiable, ListItem, TableRow, TreeNode};
 
 /// A node in the file tree.
 #[derive(Debug, Clone)]
@@ -88,9 +88,7 @@ pub fn mock_file_tree() -> FileNode {
             FileNode::dir(
                 "tests",
                 "tests",
-                vec![
-                    FileNode::file("integration.rs", "tests/integration.rs"),
-                ],
+                vec![FileNode::file("integration.rs", "tests/integration.rs")],
             ),
             FileNode::file("Cargo.toml", "Cargo.toml"),
             FileNode::file("README.md", "README.md"),
@@ -248,24 +246,94 @@ pub fn mock_cyclists() -> Vec<Cyclist> {
 
 /// First names for generating cyclists.
 const FIRST_NAMES: &[&str] = &[
-    "Luna", "Felix", "Maya", "River", "Sage", "Willow", "Jack", "Emma", "Liam", "Olivia",
-    "Noah", "Ava", "Ethan", "Sophia", "Mason", "Isabella", "Logan", "Mia", "Lucas", "Charlotte",
-    "Alexander", "Amelia", "Benjamin", "Harper", "Elijah", "Evelyn", "James", "Abigail", "William", "Emily",
+    "Luna",
+    "Felix",
+    "Maya",
+    "River",
+    "Sage",
+    "Willow",
+    "Jack",
+    "Emma",
+    "Liam",
+    "Olivia",
+    "Noah",
+    "Ava",
+    "Ethan",
+    "Sophia",
+    "Mason",
+    "Isabella",
+    "Logan",
+    "Mia",
+    "Lucas",
+    "Charlotte",
+    "Alexander",
+    "Amelia",
+    "Benjamin",
+    "Harper",
+    "Elijah",
+    "Evelyn",
+    "James",
+    "Abigail",
+    "William",
+    "Emily",
 ];
 
 /// Last names for generating cyclists.
 const LAST_NAMES: &[&str] = &[
-    "Park", "Walker", "Sunshine", "Stone", "Meadow", "Creek", "Pearse", "Smith", "Johnson", "Brown",
-    "Davis", "Miller", "Wilson", "Moore", "Taylor", "Anderson", "Thomas", "Jackson", "White", "Harris",
-    "Martin", "Thompson", "Garcia", "Martinez", "Robinson", "Clark", "Rodriguez", "Lewis", "Lee", "Hall",
+    "Park",
+    "Walker",
+    "Sunshine",
+    "Stone",
+    "Meadow",
+    "Creek",
+    "Pearse",
+    "Smith",
+    "Johnson",
+    "Brown",
+    "Davis",
+    "Miller",
+    "Wilson",
+    "Moore",
+    "Taylor",
+    "Anderson",
+    "Thomas",
+    "Jackson",
+    "White",
+    "Harris",
+    "Martin",
+    "Thompson",
+    "Garcia",
+    "Martinez",
+    "Robinson",
+    "Clark",
+    "Rodriguez",
+    "Lewis",
+    "Lee",
+    "Hall",
 ];
 
 /// Routes for generating cyclists.
 const ROUTES: &[&str] = &[
-    "Riverside Trail", "Mountain Loop", "Beach Path", "Forest Circuit", "City Greenway",
-    "Lakeside Route", "Vennbahnweg", "Alpine Pass", "Coastal Highway", "Valley Road",
-    "Sunset Boulevard", "Harbor Bridge", "Canal Path", "Vineyard Tour", "Historic Route",
-    "Meadow Lane", "Hilltop Circuit", "River Crossing", "Woodland Trail", "Seaside Promenade",
+    "Riverside Trail",
+    "Mountain Loop",
+    "Beach Path",
+    "Forest Circuit",
+    "City Greenway",
+    "Lakeside Route",
+    "Vennbahnweg",
+    "Alpine Pass",
+    "Coastal Highway",
+    "Valley Road",
+    "Sunset Boulevard",
+    "Harbor Bridge",
+    "Canal Path",
+    "Vineyard Tour",
+    "Historic Route",
+    "Meadow Lane",
+    "Hilltop Circuit",
+    "River Crossing",
+    "Woodland Trail",
+    "Seaside Promenade",
 ];
 
 /// Creates a large dataset of cyclists for performance testing.
@@ -296,8 +364,6 @@ pub fn mock_cyclists_large(count: usize) -> Vec<Cyclist> {
         .collect()
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -310,11 +376,7 @@ mod tests {
 
     #[test]
     fn file_node_tree_node() {
-        let dir = FileNode::dir(
-            "src",
-            "src",
-            vec![FileNode::file("main.rs", "src/main.rs")],
-        );
+        let dir = FileNode::dir("src", "src", vec![FileNode::file("main.rs", "src/main.rs")]);
         assert!(dir.is_expandable());
         assert_eq!(dir.children().len(), 1);
         assert_eq!(dir.label(), "src");

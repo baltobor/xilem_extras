@@ -46,13 +46,13 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::Arc;
 
-use tracing::{trace_span, Span};
+use tracing::{Span, trace_span};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, CursorIcon, EventCtx, LayoutCtx, MeasureCtx, NewWidget,
-    PaintCtx, PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate,
-    PropertiesMut, PropertiesRef, QueryCtx, RegisterCtx, ScrollDelta, TextEvent, Update,
-    UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
+    PaintCtx, PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate, PropertiesMut,
+    PropertiesRef, QueryCtx, RegisterCtx, ScrollDelta, TextEvent, Update, UpdateCtx, Widget,
+    WidgetId, WidgetMut, WidgetPod,
     keyboard::{Key, NamedKey},
 };
 use xilem::masonry::imaging::Painter;
@@ -61,8 +61,8 @@ use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
 use xilem::masonry::properties::Background;
 
-use super::state::TableScrollState;
 use super::TableStyle;
+use super::state::TableScrollState;
 
 /// Scrollbar configuration.
 const SCROLLBAR_WIDTH: f64 = 8.0;
@@ -165,7 +165,11 @@ pub struct TableWidget {
 
 impl TableWidget {
     /// Creates a new table widget with a header.
-    pub fn new(header: NewWidget<dyn Widget>, style: TableStyle, column_keys: Vec<Arc<str>>) -> Self {
+    pub fn new(
+        header: NewWidget<dyn Widget>,
+        style: TableStyle,
+        column_keys: Vec<Arc<str>>,
+    ) -> Self {
         Self::new_with_item_count(header, style, column_keys, 0)
     }
 
@@ -660,26 +664,24 @@ impl Widget for TableWidget {
         event: &TextEvent,
     ) {
         match event {
-            TextEvent::Keyboard(key_event) if !key_event.state.is_up() => {
-                match &key_event.key {
-                    Key::Named(NamedKey::ArrowUp) => {
-                        let new_idx = self
-                            .focused_row_index
-                            .map(|i| i.saturating_sub(1))
-                            .unwrap_or(0);
-                        self.navigate_to_row(ctx, new_idx, key_event.modifiers);
-                    }
-                    Key::Named(NamedKey::ArrowDown) => {
-                        let max_idx = self.state.item_count.saturating_sub(1);
-                        let new_idx = self
-                            .focused_row_index
-                            .map(|i| (i + 1).min(max_idx))
-                            .unwrap_or(0);
-                        self.navigate_to_row(ctx, new_idx, key_event.modifiers);
-                    }
-                    _ => {}
+            TextEvent::Keyboard(key_event) if !key_event.state.is_up() => match &key_event.key {
+                Key::Named(NamedKey::ArrowUp) => {
+                    let new_idx = self
+                        .focused_row_index
+                        .map(|i| i.saturating_sub(1))
+                        .unwrap_or(0);
+                    self.navigate_to_row(ctx, new_idx, key_event.modifiers);
                 }
-            }
+                Key::Named(NamedKey::ArrowDown) => {
+                    let max_idx = self.state.item_count.saturating_sub(1);
+                    let new_idx = self
+                        .focused_row_index
+                        .map(|i| (i + 1).min(max_idx))
+                        .unwrap_or(0);
+                    self.navigate_to_row(ctx, new_idx, key_event.modifiers);
+                }
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -755,10 +757,14 @@ impl Widget for TableWidget {
 
         // Check if width changed (for responsive column scaling)
         let content_width = size.width - SCROLLBAR_WIDTH;
-        let width_changed = self.last_layout_width.map_or(true, |w| (w - content_width).abs() > 0.5);
+        let width_changed = self
+            .last_layout_width
+            .map_or(true, |w| (w - content_width).abs() > 0.5);
         if width_changed && !self.size_change_pending {
             self.last_layout_width = Some(content_width);
-            ctx.submit_action::<Self::Action>(TableWidgetAction::SizeChanged { width: content_width });
+            ctx.submit_action::<Self::Action>(TableWidgetAction::SizeChanged {
+                width: content_width,
+            });
             self.size_change_pending = true;
         }
 
@@ -837,8 +843,12 @@ impl Widget for TableWidget {
         // Clip rect is used by child painting automatically via layout placement
 
         // 3. Paint header background (to cover any row content at top)
-        let header_rect =
-            Rect::new(0.0, 0.0, self.size.width - SCROLLBAR_WIDTH, self.header_height);
+        let header_rect = Rect::new(
+            0.0,
+            0.0,
+            self.size.width - SCROLLBAR_WIDTH,
+            self.header_height,
+        );
         painter.fill(header_rect, self.style.header_bg).draw();
 
         // Note: Children (header and rows) paint themselves based on their layout positions

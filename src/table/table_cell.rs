@@ -11,8 +11,8 @@
 //! text overflow into adjacent columns when columns are resized.
 
 use masonry::layout::AsUnit;
-use xilem::style::Style;
 use xilem::WidgetView;
+use xilem::style::Style;
 
 use crate::components::ClippedView;
 

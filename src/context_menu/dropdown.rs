@@ -71,7 +71,6 @@ impl ContextMenuDropdown {
     }
 }
 
-
 impl Widget for ContextMenuDropdown {
     type Action = NoAction;
 
@@ -219,7 +218,12 @@ impl Widget for ContextMenuDropdown {
 
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let size = ctx.border_box().size();
         let padding = 6.0;
         let rect = Rect::new(
@@ -231,14 +235,21 @@ impl Widget for ContextMenuDropdown {
         let rounded = RoundedRect::from_rect(rect, 4.0);
 
         painter.fill(rounded, self.bg_color).draw();
-        painter.stroke(rounded, &Stroke::new(1.0), self.border_color).draw();
+        painter
+            .stroke(rounded, &Stroke::new(1.0), self.border_color)
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {
         Role::Menu
     }
 
-    fn accessibility(&mut self, _ctx: &mut AccessCtx<'_>, _props: &PropertiesRef<'_>, node: &mut Node) {
+    fn accessibility(
+        &mut self,
+        _ctx: &mut AccessCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        node: &mut Node,
+    ) {
         node.set_label("Context menu");
     }
 

@@ -11,59 +11,61 @@
 //! - On macOS/Windows: Native muda menus (system menu bar)
 //! - On Linux: xilem_extras menu_button widgets (in-window menu bar)
 
+mod app_menu_demo;
 mod app_model;
+mod calendar_demo;
+mod chart_demo;
+mod list_demo;
+mod menu_demo;
 mod mock_data;
+mod progress_demo;
+mod sectioned_list_demo;
+mod stock_chart_demo;
+mod table_demo;
+mod tabs_demo;
 mod tree_demo;
 mod tree_view_demo;
-mod list_demo;
-mod sectioned_list_demo;
-mod table_demo;
 mod virtual_table_demo;
-mod tabs_demo;
-mod menu_demo;
-mod app_menu_demo;
-mod calendar_demo;
 mod widgets_demo;
-mod chart_demo;
-mod progress_demo;
-mod stock_chart_demo;
 
 use masonry::layout::{AsUnit, Length};
 use masonry::theme::default_property_set;
-use xilem::masonry::peniko::Color;
-use xilem::style::Style;
-use xilem::core::fork;
-use xilem::view::{button, CrossAxisAlignment, split, flex_col, flex_row, label, task_raw, zstack};
-use xilem::{window, EventLoop, WidgetView, WindowView, Xilem};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use xilem::core::fork;
+use xilem::masonry::peniko::Color;
+use xilem::style::Style;
+use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label, split, task_raw, zstack};
+use xilem::{EventLoop, WidgetView, WindowView, Xilem, window};
 
 // External event loop support
-use masonry_winit::app::{AppDriver, MasonryUserEvent, MasonryState};
+use masonry_winit::app::{AppDriver, MasonryState, MasonryUserEvent};
 use xilem::winit::application::ApplicationHandler;
+use xilem::winit::event::{DeviceEvent, DeviceId, StartCause, WindowEvent};
 use xilem::winit::event_loop::ActiveEventLoop;
 use xilem::winit::window::WindowId as WinitWindowId;
-use xilem::winit::event::{WindowEvent, DeviceEvent, DeviceId, StartCause};
 
-use xilem_extras::{row_button, sheet, Theme};
 use app_model::{AppModel, Page};
+use xilem_extras::{Theme, row_button, sheet};
 
 // Material Symbols font
 use xilem_material_icons::FONT_DATA;
 
 // Linux-only: menu_button imports for fallback menu bar
 #[cfg(target_os = "linux")]
-use xilem_extras::{group, menu_button, menu_item, separator, submenu};
-#[cfg(target_os = "linux")]
 use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
+#[cfg(target_os = "linux")]
+use xilem_extras::{group, menu_button, menu_item, separator, submenu};
 
 // macOS/Windows: muda for native menus (re-exported from xilem_extras)
 #[cfg(not(target_os = "linux"))]
-use xilem_extras::app_menu::muda::{Menu, MenuItem, MenuEvent, PredefinedMenuItem, Submenu, CheckMenuItem, accelerator::Accelerator};
+use xilem_extras::app_menu::muda::{
+    CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu, accelerator::Accelerator,
+};
 
 // Channel for menu commands (macOS/Windows)
 #[cfg(not(target_os = "linux"))]
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 
 // Some styling. Demo-only fallbacks; the gallery now derives all
 // colours from `xilem_extras::Theme` via `model.dark_mode`. These
@@ -196,23 +198,28 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
                 menu_item("Dark Mode", |model: &mut AppModel| {
                     model.dark_mode = !model.dark_mode;
                     model.menu_last_action = format!("Dark Mode: {}", model.dark_mode);
-                }).checked(model.dark_mode),
+                })
+                .checked(model.dark_mode),
                 menu_item("Show Toolbar", |model: &mut AppModel| {
                     model.show_toolbar = !model.show_toolbar;
                     model.menu_last_action = format!("Show Toolbar: {}", model.show_toolbar);
-                }).checked(model.show_toolbar),
+                })
+                .checked(model.show_toolbar),
                 separator(),
-                submenu("Zoom", (
-                    menu_item("Zoom In", |model: &mut AppModel| {
-                        model.menu_last_action = "View > Zoom In".to_string();
-                    }),
-                    menu_item("Zoom Out", |model: &mut AppModel| {
-                        model.menu_last_action = "View > Zoom Out".to_string();
-                    }),
-                    menu_item("Reset Zoom", |model: &mut AppModel| {
-                        model.menu_last_action = "View > Reset Zoom".to_string();
-                    }),
-                )),
+                submenu(
+                    "Zoom",
+                    (
+                        menu_item("Zoom In", |model: &mut AppModel| {
+                            model.menu_last_action = "View > Zoom In".to_string();
+                        }),
+                        menu_item("Zoom Out", |model: &mut AppModel| {
+                            model.menu_last_action = "View > Zoom Out".to_string();
+                        }),
+                        menu_item("Reset Zoom", |model: &mut AppModel| {
+                            model.menu_last_action = "View > Reset Zoom".to_string();
+                        }),
+                    ),
+                ),
             ),
         ),
         // Help menu
@@ -241,7 +248,11 @@ fn nav_button(
     theme: Theme,
 ) -> impl WidgetView<AppModel> + use<'_> {
     let is_active = page == current;
-    let bg = if is_active { theme.active_bg() } else { theme.nav_bg() };
+    let bg = if is_active {
+        theme.active_bg()
+    } else {
+        theme.nav_bg()
+    };
 
     row_button(
         label(text.to_string())
@@ -269,18 +280,15 @@ fn modal_content() -> impl WidgetView<AppModel> {
         label("Click backdrop or Close button to dismiss.")
             .text_size(10.0)
             .color(Color::from_rgb8(120, 120, 120)),
-        button(
-            label("Close").text_size(12.0),
-            |model: &mut AppModel| {
-                model.widgets_show_sheet = false;
-            },
-        ),
+        button(label("Close").text_size(12.0), |model: &mut AppModel| {
+            model.widgets_show_sheet = false;
+        }),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(8.0_f64.px())
 }
 
-// --- MARK: App view 
+// --- MARK: App view
 fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     // Poll and process native menu commands (macOS/Windows)
     #[cfg(not(target_os = "linux"))]
@@ -320,7 +328,6 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
         .gap(4.px())
         .padding(Length::px(12.0))
         .background_color(theme.nav_bg()),
-
         // Demo content
         match model.page {
             Page::Tree => tree_demo::tree_demo(model).boxed(),
@@ -348,13 +355,11 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     let content_with_modal = if show_modal {
         zstack((
             main_content,
-            sheet(
-                modal_content(),
-                |model: &mut AppModel| {
-                    model.widgets_show_sheet = false;
-                },
-            ),
-        )).boxed()
+            sheet(modal_content(), |model: &mut AppModel| {
+                model.widgets_show_sheet = false;
+            }),
+        ))
+        .boxed()
     } else {
         main_content.boxed()
     };
@@ -364,11 +369,8 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     #[cfg(target_os = "linux")]
     {
         use xilem::view::FlexExt as _;
-        flex_col((
-            build_menu_bar(model),
-            content_with_modal.flex(1.0),
-        ))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        flex_col((build_menu_bar(model), content_with_modal.flex(1.0)))
+            .cross_axis_alignment(CrossAxisAlignment::Stretch)
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -432,7 +434,6 @@ mod menu_ids {
     pub const ABOUT: &str = "about";
 }
 
-
 /// Build native muda menu bar for macOS/Windows
 #[cfg(not(target_os = "linux"))]
 fn build_native_menu() -> Menu {
@@ -460,56 +461,234 @@ fn build_native_menu() -> Menu {
 
     // Examples menu - Navigate to different demos
     let examples_menu = Submenu::new("Examples", true);
-    examples_menu.append(&MenuItem::with_id(TREE, "Tree Group", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(TREE_VIEW, "Tree View", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(LIST, "List View", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(SECTIONED_LIST, "Sectioned List", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(TABLE, "Table View", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(VIRTUAL_TABLE, "Virtual Table (10k)", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(TABS, "Tabs", true, None::<Accelerator>)).ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            TREE,
+            "Tree Group",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            TREE_VIEW,
+            "Tree View",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            LIST,
+            "List View",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            SECTIONED_LIST,
+            "Sectioned List",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            TABLE,
+            "Table View",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            VIRTUAL_TABLE,
+            "Virtual Table (10k)",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(TABS, "Tabs", true, None::<Accelerator>))
+        .ok();
     examples_menu.append(&PredefinedMenuItem::separator()).ok();
-    examples_menu.append(&MenuItem::with_id(MENU, "Pulldown Menus", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(APP_MENU, "App Menu Bar", true, None::<Accelerator>)).ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            MENU,
+            "Pulldown Menus",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            APP_MENU,
+            "App Menu Bar",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
     examples_menu.append(&PredefinedMenuItem::separator()).ok();
-    examples_menu.append(&MenuItem::with_id(CALENDAR, "Calendar", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(WIDGETS, "Widgets", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(PROGRESS, "Progress", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(CHART, "Chart", true, None::<Accelerator>)).ok();
-    examples_menu.append(&MenuItem::with_id(STOCK_CHART, "Stock Chart", true, None::<Accelerator>)).ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            CALENDAR,
+            "Calendar",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            WIDGETS,
+            "Widgets",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            PROGRESS,
+            "Progress",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            CHART,
+            "Chart",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    examples_menu
+        .append(&MenuItem::with_id(
+            STOCK_CHART,
+            "Stock Chart",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
     menu.append(&examples_menu).ok();
 
     // Edit menu
     let edit_menu = Submenu::new("Edit", true);
-    edit_menu.append(&MenuItem::with_id(UNDO, "Undo", true, "CmdOrCtrl+Z".parse::<Accelerator>().ok())).ok();
-    edit_menu.append(&MenuItem::with_id(REDO, "Redo", true, "CmdOrCtrl+Shift+Z".parse::<Accelerator>().ok())).ok();
+    edit_menu
+        .append(&MenuItem::with_id(
+            UNDO,
+            "Undo",
+            true,
+            "CmdOrCtrl+Z".parse::<Accelerator>().ok(),
+        ))
+        .ok();
+    edit_menu
+        .append(&MenuItem::with_id(
+            REDO,
+            "Redo",
+            true,
+            "CmdOrCtrl+Shift+Z".parse::<Accelerator>().ok(),
+        ))
+        .ok();
     edit_menu.append(&PredefinedMenuItem::separator()).ok();
-    edit_menu.append(&MenuItem::with_id(CUT, "Cut", true, "CmdOrCtrl+X".parse::<Accelerator>().ok())).ok();
-    edit_menu.append(&MenuItem::with_id(COPY, "Copy", true, "CmdOrCtrl+C".parse::<Accelerator>().ok())).ok();
-    edit_menu.append(&MenuItem::with_id(PASTE, "Paste", true, "CmdOrCtrl+V".parse::<Accelerator>().ok())).ok();
+    edit_menu
+        .append(&MenuItem::with_id(
+            CUT,
+            "Cut",
+            true,
+            "CmdOrCtrl+X".parse::<Accelerator>().ok(),
+        ))
+        .ok();
+    edit_menu
+        .append(&MenuItem::with_id(
+            COPY,
+            "Copy",
+            true,
+            "CmdOrCtrl+C".parse::<Accelerator>().ok(),
+        ))
+        .ok();
+    edit_menu
+        .append(&MenuItem::with_id(
+            PASTE,
+            "Paste",
+            true,
+            "CmdOrCtrl+V".parse::<Accelerator>().ok(),
+        ))
+        .ok();
     menu.append(&edit_menu).ok();
 
     // View menu
     let view_menu = Submenu::new("View", true);
-    view_menu.append(&CheckMenuItem::with_id(DARK_MODE, "Dark Mode", true, true, None::<Accelerator>)).ok();
-    view_menu.append(&CheckMenuItem::with_id(SHOW_TOOLBAR, "Show Toolbar", true, true, None::<Accelerator>)).ok();
+    view_menu
+        .append(&CheckMenuItem::with_id(
+            DARK_MODE,
+            "Dark Mode",
+            true,
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
+    view_menu
+        .append(&CheckMenuItem::with_id(
+            SHOW_TOOLBAR,
+            "Show Toolbar",
+            true,
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
     view_menu.append(&PredefinedMenuItem::separator()).ok();
     let zoom_menu = Submenu::new("Zoom", true);
-    zoom_menu.append(&MenuItem::with_id(ZOOM_IN, "Zoom In", true, "CmdOrCtrl+=".parse::<Accelerator>().ok())).ok();
-    zoom_menu.append(&MenuItem::with_id(ZOOM_OUT, "Zoom Out", true, "CmdOrCtrl+-".parse::<Accelerator>().ok())).ok();
-    zoom_menu.append(&MenuItem::with_id(ZOOM_RESET, "Reset Zoom", true, "CmdOrCtrl+0".parse::<Accelerator>().ok())).ok();
+    zoom_menu
+        .append(&MenuItem::with_id(
+            ZOOM_IN,
+            "Zoom In",
+            true,
+            "CmdOrCtrl+=".parse::<Accelerator>().ok(),
+        ))
+        .ok();
+    zoom_menu
+        .append(&MenuItem::with_id(
+            ZOOM_OUT,
+            "Zoom Out",
+            true,
+            "CmdOrCtrl+-".parse::<Accelerator>().ok(),
+        ))
+        .ok();
+    zoom_menu
+        .append(&MenuItem::with_id(
+            ZOOM_RESET,
+            "Reset Zoom",
+            true,
+            "CmdOrCtrl+0".parse::<Accelerator>().ok(),
+        ))
+        .ok();
     view_menu.append(&zoom_menu).ok();
     menu.append(&view_menu).ok();
 
     // Help menu
     let help_menu = Submenu::new("Help", true);
-    help_menu.append(&MenuItem::with_id(DOCUMENTATION, "Documentation", true, None::<Accelerator>)).ok();
+    help_menu
+        .append(&MenuItem::with_id(
+            DOCUMENTATION,
+            "Documentation",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
     help_menu.append(&PredefinedMenuItem::separator()).ok();
-    help_menu.append(&MenuItem::with_id(ABOUT, "About xilem_extras", true, None::<Accelerator>)).ok();
+    help_menu
+        .append(&MenuItem::with_id(
+            ABOUT,
+            "About xilem_extras",
+            true,
+            None::<Accelerator>,
+        ))
+        .ok();
     menu.append(&help_menu).ok();
 
     menu
 }
-
 
 // --- MARK: GalleryApp
 
@@ -539,8 +718,8 @@ impl ApplicationHandler<MasonryUserEvent> for GalleryApp {
         // Poll muda menu events and send commands through the channel (macOS/Windows)
         #[cfg(not(target_os = "linux"))]
         {
-            use menu_ids::*;
             use app_model::MenuCommand;
+            use menu_ids::*;
 
             while let Ok(event) = MenuEvent::receiver().try_recv() {
                 let cmd = match event.id().0.as_str() {
@@ -575,7 +754,8 @@ impl ApplicationHandler<MasonryUserEvent> for GalleryApp {
                 if let Some(cmd) = cmd {
                     let _ = self.menu_command_tx.send(cmd);
                     // Set bg_active to trigger re-render via background ticker
-                    self.bg_active.store(true, std::sync::atomic::Ordering::Relaxed);
+                    self.bg_active
+                        .store(true, std::sync::atomic::Ordering::Relaxed);
                 }
             }
         }
@@ -630,7 +810,9 @@ impl ApplicationHandler<MasonryUserEvent> for GalleryApp {
 }
 
 /// Window logic function for Xilem::new (returns iterator of WindowView)
-fn gallery_window_logic(model: &mut AppModel) -> impl Iterator<Item = WindowView<AppModel>> + use<> {
+fn gallery_window_logic(
+    model: &mut AppModel,
+) -> impl Iterator<Item = WindowView<AppModel>> + use<> {
     let window_size = xilem::winit::dpi::LogicalSize::new(900.0, 600.0);
     let main_window = window(
         model.main_window_id,
@@ -657,7 +839,9 @@ fn main() {
         use xilem::winit::platform::macos::EventLoopBuilderExtMacOS;
         event_loop_builder.with_default_menu(false);
     }
-    let event_loop = event_loop_builder.build().expect("Failed to build event loop");
+    let event_loop = event_loop_builder
+        .build()
+        .expect("Failed to build event loop");
 
     // Create proxy for event integration
     let proxy = event_loop.create_proxy();
@@ -687,21 +871,15 @@ fn main() {
     let bg_active = model.bg_active.clone();
 
     // Create xilem app using Xilem::new with window logic (like rust_conductor)
-    let xilem = Xilem::new(model, gallery_window_logic)
-        .with_font(FONT_DATA.to_vec());
+    let xilem = Xilem::new(model, gallery_window_logic).with_font(FONT_DATA.to_vec());
 
     // Get driver and windows from xilem
     let (driver, windows) =
         xilem.into_driver_and_windows(move |event| proxy.send_event(event).map_err(|err| err.0));
 
     // Create masonry state
-    let masonry_state = MasonryState::new(
-        event_loop.create_proxy(),
-        windows,
-        default_property_set(),
-    );
-
-
+    let masonry_state =
+        MasonryState::new(event_loop.create_proxy(), windows, default_property_set());
 
     // Create and run the app
     let mut app = GalleryApp {

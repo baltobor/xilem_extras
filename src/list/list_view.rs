@@ -13,7 +13,7 @@ use xilem::style::Style;
 use xilem::view::flex_col;
 use xilem::{AnyWidgetView, WidgetView};
 
-use crate::components::{row_button_with_press, RowButtonPress};
+use crate::components::{RowButtonPress, row_button_with_press};
 use crate::traits::{Identifiable, SelectionModifiers, SelectionState};
 use xilem::masonry::core::PointerButton;
 
@@ -151,21 +151,24 @@ where
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
 
-            let btn = row_button_with_press(row_view, move |state: &mut State, press: &RowButtonPress| {
-                // Only handle primary button clicks
-                match press.button {
-                    None | Some(PointerButton::Primary) => {
-                        let sel_mods = SelectionModifiers::from_modifiers(press.modifiers);
-                        let action = if press.click_count >= 2 {
-                            ListAction::Activate(item_id.clone())
-                        } else {
-                            ListAction::Select(item_id.clone(), sel_mods)
-                        };
-                        handler(state, action);
+            let btn = row_button_with_press(
+                row_view,
+                move |state: &mut State, press: &RowButtonPress| {
+                    // Only handle primary button clicks
+                    match press.button {
+                        None | Some(PointerButton::Primary) => {
+                            let sel_mods = SelectionModifiers::from_modifiers(press.modifiers);
+                            let action = if press.click_count >= 2 {
+                                ListAction::Activate(item_id.clone())
+                            } else {
+                                ListAction::Select(item_id.clone(), sel_mods)
+                            };
+                            handler(state, action);
+                        }
+                        _ => {}
                     }
-                    _ => {}
-                }
-            })
+                },
+            )
             .hover_bg(hover_bg);
 
             btn.boxed()

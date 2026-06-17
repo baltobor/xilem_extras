@@ -37,34 +37,29 @@
 //! ```
 
 mod list_view;
-mod widget;
 mod list_widget_view;
+mod widget;
 
-pub use list_view::{list, list_styled, ListAction, ListStyle};
-pub use widget::{
-    ListWidget,
-    ListWidgetAction,
-    ListWidgetStyle,
-    ListScrollState,
-    ListSection,
-    ListRangeAction,
-    ListRowAction,
-};
+pub use list_view::{ListAction, ListStyle, list, list_styled};
 pub use list_widget_view::{
-    // Full-featured virtualized list
-    list_view,
-    list_view_styled,
+    ListNavigableView,
     ListView,
-    ListViewState,
     ListViewAction,
+    ListViewState,
     ListViewStyle,
-    // Sectioned list
-    list_view_sectioned,
     SectionDef,
-    SectionedRowInfo,
     SectionedListView,
     SectionedListViewState,
+    SectionedRowInfo,
     // Simple navigable list (legacy)
     list_navigable,
-    ListNavigableView,
+    // Full-featured virtualized list
+    list_view,
+    // Sectioned list
+    list_view_sectioned,
+    list_view_styled,
+};
+pub use widget::{
+    ListRangeAction, ListRowAction, ListScrollState, ListSection, ListWidget, ListWidgetAction,
+    ListWidgetStyle,
 };

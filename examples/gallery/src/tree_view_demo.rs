@@ -14,13 +14,13 @@
 use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_col, label, CrossAxisAlignment};
+use xilem::view::{CrossAxisAlignment, flex_col, label};
 use xilem::{AnyWidgetView, WidgetView};
 use xilem_extras::{
-    ferris, menu_item, rust_gear, separator, svg_icon, tree_view, BoxedMenuEntry, HighlightFill,
-    Identifiable, MenuItems, Theme, TreeAction, TreeStyle,
+    BoxedMenuEntry, HighlightFill, Identifiable, MenuItems, Theme, TreeAction, TreeStyle, ferris,
+    menu_item, rust_gear, separator, svg_icon, tree_view,
 };
-use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
+use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;
 use crate::mock_data::FileNode;
@@ -43,30 +43,32 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
         .highlight_fill(HighlightFill::Row)
         .text_color(header_fg)
         .text_size(13.0)
-        .icon_for(move |node: &FileNode| -> Option<Box<AnyWidgetView<AppModel, ()>>> {
-            // Pick the right icon per node type. Same set as the legacy
-            // tree_group demo: Ferris for Cargo.toml, the Rust gear for
-            // any `.rs` file, the Material folder/document glyph otherwise.
-            if node.is_dir {
-                Some(Box::new(
-                    label(icons::FOLDER)
-                        .font(FONT_FAMILY)
-                        .text_size(ICON_SIZE_SM)
-                        .color(FOLDER_FG),
-                ))
-            } else if node.name == "Cargo.toml" {
-                Some(Box::new(svg_icon(ferris().size(13.0).color(RUST_FG))))
-            } else if node.name.ends_with(".rs") {
-                Some(Box::new(svg_icon(rust_gear().size(13.0).color(RUST_FG))))
-            } else {
-                Some(Box::new(
-                    label(icons::DESCRIPTION)
-                        .font(FONT_FAMILY)
-                        .text_size(ICON_SIZE_SM)
-                        .color(header_fg),
-                ))
-            }
-        })
+        .icon_for(
+            move |node: &FileNode| -> Option<Box<AnyWidgetView<AppModel, ()>>> {
+                // Pick the right icon per node type. Same set as the legacy
+                // tree_group demo: Ferris for Cargo.toml, the Rust gear for
+                // any `.rs` file, the Material folder/document glyph otherwise.
+                if node.is_dir {
+                    Some(Box::new(
+                        label(icons::FOLDER)
+                            .font(FONT_FAMILY)
+                            .text_size(ICON_SIZE_SM)
+                            .color(FOLDER_FG),
+                    ))
+                } else if node.name == "Cargo.toml" {
+                    Some(Box::new(svg_icon(ferris().size(13.0).color(RUST_FG))))
+                } else if node.name.ends_with(".rs") {
+                    Some(Box::new(svg_icon(rust_gear().size(13.0).color(RUST_FG))))
+                } else {
+                    Some(Box::new(
+                        label(icons::DESCRIPTION)
+                            .font(FONT_FAMILY)
+                            .text_size(ICON_SIZE_SM)
+                            .color(header_fg),
+                    ))
+                }
+            },
+        )
         .label_for(|n: &FileNode| {
             if n.is_dir {
                 format!("{} ({})", n.name, n.children.len())

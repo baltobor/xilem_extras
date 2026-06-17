@@ -283,10 +283,30 @@ mod tests {
 
     fn test_data() -> Vec<TestRow> {
         vec![
-            TestRow { id: 1, name: "Alice".into(), age: 30, score: 85.5 },
-            TestRow { id: 2, name: "Bob".into(), age: 25, score: 92.0 },
-            TestRow { id: 3, name: "Charlie".into(), age: 35, score: 78.3 },
-            TestRow { id: 4, name: "Alice".into(), age: 28, score: 88.0 },
+            TestRow {
+                id: 1,
+                name: "Alice".into(),
+                age: 30,
+                score: 85.5,
+            },
+            TestRow {
+                id: 2,
+                name: "Bob".into(),
+                age: 25,
+                score: 92.0,
+            },
+            TestRow {
+                id: 3,
+                name: "Charlie".into(),
+                age: 35,
+                score: 78.3,
+            },
+            TestRow {
+                id: 4,
+                name: "Alice".into(),
+                age: 28,
+                score: 88.0,
+            },
         ]
     }
 

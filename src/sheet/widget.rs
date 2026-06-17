@@ -17,8 +17,8 @@ use xilem::masonry::peniko::Color;
 
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget, PaintCtx,
-    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent,
-    Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
+    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update,
+    UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenReq, Length};
@@ -173,8 +173,13 @@ impl Widget for SheetWidget {
         // Measure child to determine content size
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
-        let _child_len =
-            ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
+        let _child_len = ctx.compute_length(
+            &mut self.child,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        );
 
         // Return available space (sheet fills parent)
         match len_req {
@@ -193,7 +198,7 @@ impl Widget for SheetWidget {
         let max_child_height = (size.height * 0.9) - self.padding * 2.0;
 
         // Use MinContent for both axes with ZERO context to force shrink-wrap
-        use xilem::masonry::layout::{LenDef, LayoutSize as LS, SizeDef};
+        use xilem::masonry::layout::{LayoutSize as LS, LenDef, SizeDef};
         let size_def = SizeDef::new(LenDef::MinContent, LenDef::MinContent);
         // Don't tell the child about available space - force it to report true minimum
         let context_size = LS::new(Length::ZERO, Length::ZERO);
@@ -243,7 +248,9 @@ impl Widget for SheetWidget {
 
         // Draw subtle border
         let border_color = Color::from_rgba8(0x80, 0x80, 0x80, 0x40);
-        painter.stroke(rounded, &Stroke::new(1.0), border_color).draw();
+        painter
+            .stroke(rounded, &Stroke::new(1.0), border_color)
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {

@@ -179,7 +179,8 @@ impl TableScrollState {
             // Recalculate anchor for max scroll position
             let max_anchor = (max_scroll / self.row_height).floor() as usize;
             self.anchor_index = max_anchor.min(self.item_count.saturating_sub(1));
-            self.scroll_offset_from_anchor = max_scroll - (self.anchor_index as f64 * self.row_height);
+            self.scroll_offset_from_anchor =
+                max_scroll - (self.anchor_index as f64 * self.row_height);
             self.scroll_offset_from_anchor = self.scroll_offset_from_anchor.max(0.0);
         }
     }

@@ -5,8 +5,8 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-mod single;
 mod multi;
+mod single;
 
-pub use single::SingleSelection;
 pub use multi::MultiSelection;
+pub use single::SingleSelection;

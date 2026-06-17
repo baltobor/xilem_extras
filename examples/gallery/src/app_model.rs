@@ -7,21 +7,22 @@
 
 //! Application model for the gallery example.
 
+use chrono::NaiveDate;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use chrono::NaiveDate;
 use xilem_extras::{
-    ExpansionState, SingleSelection, MultiSelection, SortOrder, SortDirection, ColumnWidths, ColumnDef, column,
+    ColumnDef, ColumnWidths, ExpansionState, MultiSelection, SingleSelection, SortDirection,
+    SortOrder, column,
 };
 
 use xilem_extras::SimpleTab;
 
-use crate::mock_data::{FileNode, Contact, Cyclist};
+use crate::mock_data::{Contact, Cyclist, FileNode};
 use crate::tabs_demo::{DemoTab, create_demo_tabs};
 
 // Channel for menu commands (macOS/Windows only)
 #[cfg(not(target_os = "linux"))]
-use std::sync::{mpsc, Mutex};
+use std::sync::{Mutex, mpsc};
 
 /// Menu commands sent from the native menu bar to the application model.
 #[cfg(not(target_os = "linux"))]
@@ -139,7 +140,7 @@ pub struct AppModel {
     pub form_notify_about_alt: usize,
 
     // Chart demo state (simple bar/line)
-    pub chart_mode: usize,  // 0=Bar, 1=Line
+    pub chart_mode: usize, // 0=Bar, 1=Line
     pub chart_show_values: bool,
 
     // Stock chart demo state
@@ -405,7 +406,9 @@ impl AppModel {
                 MenuCommand::ZoomIn => self.menu_last_action = "View > Zoom In".to_string(),
                 MenuCommand::ZoomOut => self.menu_last_action = "View > Zoom Out".to_string(),
                 MenuCommand::ZoomReset => self.menu_last_action = "View > Reset Zoom".to_string(),
-                MenuCommand::Documentation => self.menu_last_action = "Help > Documentation".to_string(),
+                MenuCommand::Documentation => {
+                    self.menu_last_action = "Help > Documentation".to_string()
+                }
                 MenuCommand::About => self.menu_last_action = "Help > About".to_string(),
             }
         }

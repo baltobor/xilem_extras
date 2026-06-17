@@ -135,9 +135,7 @@ where
 ///     )),
 /// ))
 /// ```
-pub fn group<State, Action, Items>(
-    items: Items,
-) -> Group<State, Action, Items>
+pub fn group<State, Action, Items>(items: Items) -> Group<State, Action, Items>
 where
     Items: MenuItems<State, Action>,
 {

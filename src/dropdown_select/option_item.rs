@@ -10,20 +10,20 @@
 use std::any::TypeId;
 use std::sync::Arc;
 
-use xilem::masonry::accesskit::{self, Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{self, Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Rect, RoundedRect};
 use xilem::masonry::peniko::Color;
 
+use xilem::masonry::core::StyleProperty;
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
-    Widget, WidgetId, WidgetMut, WidgetPod,
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId,
+    WidgetMut, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
-use xilem::masonry::core::StyleProperty;
 use xilem::masonry::widgets::Label;
 
 use crate::menu_button::DEFAULT_ITEM_HEIGHT;
@@ -143,8 +143,13 @@ impl Widget for SelectOptionItem {
     ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
-        let child_length =
-            ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length);
+        let child_length = ctx.compute_length(
+            &mut self.child,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        );
 
         match axis {
             Axis::Horizontal => Length::px(child_length.get() + 2.0 * ITEM_PADDING_H),
@@ -154,10 +159,7 @@ impl Widget for SelectOptionItem {
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         self.size = size;
-        let inner = Size::new(
-            (size.width - 2.0 * ITEM_PADDING_H).max(0.0),
-            size.height,
-        );
+        let inner = Size::new((size.width - 2.0 * ITEM_PADDING_H).max(0.0), size.height);
         let child_size = ctx.compute_size(&mut self.child, SizeDef::fit(inner), inner.into());
         ctx.run_layout(&mut self.child, child_size);
 
@@ -167,7 +169,12 @@ impl Widget for SelectOptionItem {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let rect = Rect::from_origin_size(Point::ZERO, self.size);
         let rounded = RoundedRect::from_rect(rect, 3.0);
 

@@ -11,12 +11,12 @@
 //! grows to host it then.
 
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_col, flex_row, label, portal, CrossAxisAlignment};
-use xilem::WidgetView;
-use xilem_extras::progress::{busy_hex, progress_bar, round_progress, ProgressStyle};
+use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
 use xilem_extras::Theme;
+use xilem_extras::progress::{ProgressStyle, busy_hex, progress_bar, round_progress};
 
 use crate::app_model::AppModel;
 const BLUE_TINT: Color = Color::from_rgb8(0x4A, 0x9E, 0xFF);
@@ -31,9 +31,7 @@ fn row(
     theme: Theme,
 ) -> impl WidgetView<AppModel> + 'static {
     flex_row((
-        label(title.to_string())
-            .text_size(12.0)
-            .color(theme.text()),
+        label(title.to_string()).text_size(12.0).color(theme.text()),
         bar,
         label(format!("{:.0}%", value * 100.0))
             .text_size(11.0)
@@ -60,9 +58,7 @@ fn round_row(
 ) -> impl WidgetView<AppModel> + 'static {
     flex_row((
         widget,
-        label(title.to_string())
-            .text_size(12.0)
-            .color(theme.text()),
+        label(title.to_string()).text_size(12.0).color(theme.text()),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
     .gap(10.0_f64.px())
@@ -75,22 +71,59 @@ fn group_a(theme: Theme) -> impl WidgetView<AppModel> + 'static {
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
             .color(theme.text()),
-        label(
-            "Three render styles. All use linear scaling."
-                .to_string(),
-        )
-        .text_size(11.0)
-        .color(theme.text_secondary()),
+        label("Three render styles. All use linear scaling.".to_string())
+            .text_size(11.0)
+            .color(theme.text_secondary()),
         section("Gradient (default) — three zones", theme),
-        row("0.20", 0.20, progress_bar::<AppModel, ()>(0.20, 0.0, 1.0), theme),
-        row("0.55", 0.55, progress_bar::<AppModel, ()>(0.55, 0.0, 1.0), theme),
-        row("0.80", 0.80, progress_bar::<AppModel, ()>(0.80, 0.0, 1.0), theme),
-        row("0.95", 0.95, progress_bar::<AppModel, ()>(0.95, 0.0, 1.0), theme),
+        row(
+            "0.20",
+            0.20,
+            progress_bar::<AppModel, ()>(0.20, 0.0, 1.0),
+            theme,
+        ),
+        row(
+            "0.55",
+            0.55,
+            progress_bar::<AppModel, ()>(0.55, 0.0, 1.0),
+            theme,
+        ),
+        row(
+            "0.80",
+            0.80,
+            progress_bar::<AppModel, ()>(0.80, 0.0, 1.0),
+            theme,
+        ),
+        row(
+            "0.95",
+            0.95,
+            progress_bar::<AppModel, ()>(0.95, 0.0, 1.0),
+            theme,
+        ),
         section("Tint — single colour, level-driven", theme),
-        row("0.20", 0.20, progress_bar::<AppModel, ()>(0.20, 0.0, 1.0).tint(), theme),
-        row("0.55", 0.55, progress_bar::<AppModel, ()>(0.55, 0.0, 1.0).tint(), theme),
-        row("0.80", 0.80, progress_bar::<AppModel, ()>(0.80, 0.0, 1.0).tint(), theme),
-        row("0.95", 0.95, progress_bar::<AppModel, ()>(0.95, 0.0, 1.0).tint(), theme),
+        row(
+            "0.20",
+            0.20,
+            progress_bar::<AppModel, ()>(0.20, 0.0, 1.0).tint(),
+            theme,
+        ),
+        row(
+            "0.55",
+            0.55,
+            progress_bar::<AppModel, ()>(0.55, 0.0, 1.0).tint(),
+            theme,
+        ),
+        row(
+            "0.80",
+            0.80,
+            progress_bar::<AppModel, ()>(0.80, 0.0, 1.0).tint(),
+            theme,
+        ),
+        row(
+            "0.95",
+            0.95,
+            progress_bar::<AppModel, ()>(0.95, 0.0, 1.0).tint(),
+            theme,
+        ),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Start)
     .gap(8.0_f64.px())
@@ -100,9 +133,24 @@ fn group_a(theme: Theme) -> impl WidgetView<AppModel> + 'static {
 fn group_b(theme: Theme) -> impl WidgetView<AppModel> + 'static {
     flex_col((
         section("Monochrome — single fixed tint", theme),
-        row("0.42 (blue)", 0.42, progress_bar::<AppModel, ()>(0.42, 0.0, 1.0).monochrome(BLUE_TINT), theme),
-        row("0.66 (violet)", 0.66, progress_bar::<AppModel, ()>(0.66, 0.0, 1.0).monochrome(VIOLET_TINT), theme),
-        row("0.88 (teal)", 0.88, progress_bar::<AppModel, ()>(0.88, 0.0, 1.0).monochrome(TEAL_TINT), theme),
+        row(
+            "0.42 (blue)",
+            0.42,
+            progress_bar::<AppModel, ()>(0.42, 0.0, 1.0).monochrome(BLUE_TINT),
+            theme,
+        ),
+        row(
+            "0.66 (violet)",
+            0.66,
+            progress_bar::<AppModel, ()>(0.66, 0.0, 1.0).monochrome(VIOLET_TINT),
+            theme,
+        ),
+        row(
+            "0.88 (teal)",
+            0.88,
+            progress_bar::<AppModel, ()>(0.88, 0.0, 1.0).monochrome(TEAL_TINT),
+            theme,
+        ),
         section("Custom size", theme),
         row(
             "200×10",
@@ -194,22 +242,60 @@ fn group_c(theme: Theme) -> impl WidgetView<AppModel> + 'static {
 fn group_d(theme: Theme) -> impl WidgetView<AppModel> + 'static {
     flex_col((
         section("Reversed gradient — low is warning, high is good", theme),
-        row("0.20", 0.20, progress_bar::<AppModel, ()>(0.20, 0.0, 1.0).reversed(), theme),
-        row("0.55", 0.55, progress_bar::<AppModel, ()>(0.55, 0.0, 1.0).reversed(), theme),
-        row("0.80", 0.80, progress_bar::<AppModel, ()>(0.80, 0.0, 1.0).reversed(), theme),
-        row("0.95", 0.95, progress_bar::<AppModel, ()>(0.95, 0.0, 1.0).reversed(), theme),
+        row(
+            "0.20",
+            0.20,
+            progress_bar::<AppModel, ()>(0.20, 0.0, 1.0).reversed(),
+            theme,
+        ),
+        row(
+            "0.55",
+            0.55,
+            progress_bar::<AppModel, ()>(0.55, 0.0, 1.0).reversed(),
+            theme,
+        ),
+        row(
+            "0.80",
+            0.80,
+            progress_bar::<AppModel, ()>(0.80, 0.0, 1.0).reversed(),
+            theme,
+        ),
+        row(
+            "0.95",
+            0.95,
+            progress_bar::<AppModel, ()>(0.95, 0.0, 1.0).reversed(),
+            theme,
+        ),
         section("Reversed tint — same input transform, single colour", theme),
-        row("0.20", 0.20, progress_bar::<AppModel, ()>(0.20, 0.0, 1.0).tint().reversed(), theme),
-        row("0.95", 0.95, progress_bar::<AppModel, ()>(0.95, 0.0, 1.0).tint().reversed(), theme),
+        row(
+            "0.20",
+            0.20,
+            progress_bar::<AppModel, ()>(0.20, 0.0, 1.0)
+                .tint()
+                .reversed(),
+            theme,
+        ),
+        row(
+            "0.95",
+            0.95,
+            progress_bar::<AppModel, ()>(0.95, 0.0, 1.0)
+                .tint()
+                .reversed(),
+            theme,
+        ),
         section("Reversed round — small (text height)", theme),
         round_row(
             "0.20 (small reversed)",
-            round_progress::<AppModel, ()>(0.20, 0.0, 1.0).small().reversed(),
+            round_progress::<AppModel, ()>(0.20, 0.0, 1.0)
+                .small()
+                .reversed(),
             theme,
         ),
         round_row(
             "0.85 (small reversed)",
-            round_progress::<AppModel, ()>(0.85, 0.0, 1.0).small().reversed(),
+            round_progress::<AppModel, ()>(0.85, 0.0, 1.0)
+                .small()
+                .reversed(),
             theme,
         ),
         round_row(
@@ -225,11 +311,16 @@ fn group_d(theme: Theme) -> impl WidgetView<AppModel> + 'static {
 pub fn progress_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     let theme = Theme::from_dark(model.dark_mode);
     portal(
-        flex_col((group_a(theme), group_b(theme), group_c(theme), group_d(theme)))
-            .cross_axis_alignment(CrossAxisAlignment::Start)
-            .gap(16.0_f64.px())
-            .padding(Length::px(16.0))
-            .background_color(theme.page_bg()),
+        flex_col((
+            group_a(theme),
+            group_b(theme),
+            group_c(theme),
+            group_d(theme),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .gap(16.0_f64.px())
+        .padding(Length::px(16.0))
+        .background_color(theme.page_bg()),
     )
     .constrain_horizontal(true)
     .must_fill(true)

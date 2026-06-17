@@ -13,6 +13,7 @@
 
 use std::any::TypeId;
 
+use tracing::{Span, trace_span};
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
@@ -22,9 +23,8 @@ use xilem::masonry::core::{
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Point, Rect, Size};
-use xilem::masonry::layout::{LenReq, LayoutSize, Length, SizeDef};
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 use xilem::{Pod, ViewCtx, WidgetView};
-use tracing::{trace_span, Span};
 
 const CHILD_VIEW_ID: ViewId = ViewId::new(0);
 
@@ -102,7 +102,13 @@ impl Widget for ClippedWidget {
     ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
-        ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length)
+        ctx.compute_length(
+            &mut self.child,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        )
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
@@ -208,8 +214,10 @@ where
     type ViewState = V::ViewState;
 
     fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
-        let (child_pod, child_state) = ctx.with_id(CHILD_VIEW_ID, |ctx| self.child.build(ctx, app_state));
-        let pod = ctx.with_action_widget(|ctx| ctx.create_pod(ClippedWidget::new(child_pod.new_widget)));
+        let (child_pod, child_state) =
+            ctx.with_id(CHILD_VIEW_ID, |ctx| self.child.build(ctx, app_state));
+        let pod =
+            ctx.with_action_widget(|ctx| ctx.create_pod(ClippedWidget::new(child_pod.new_widget)));
         (pod, child_state)
     }
 
@@ -239,8 +247,11 @@ where
         mut element: Mut<'_, Self::Element>,
     ) {
         ctx.with_id(CHILD_VIEW_ID, |ctx| {
-            self.child
-                .teardown(view_state, ctx, ClippedWidget::child_mut(&mut element).downcast());
+            self.child.teardown(
+                view_state,
+                ctx,
+                ClippedWidget::child_mut(&mut element).downcast(),
+            );
         });
     }
 

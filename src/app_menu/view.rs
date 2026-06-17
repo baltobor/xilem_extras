@@ -10,11 +10,11 @@
 //! This module provides convenience functions for building application menu bars
 //! using the existing menu_button infrastructure.
 
+use xilem::WidgetView;
 use xilem::masonry::layout::Length;
 use xilem::masonry::peniko::Color;
 use xilem::style::{Padding, Style};
-use xilem::view::{flex_col, label, CrossAxisAlignment};
-use xilem::WidgetView;
+use xilem::view::{CrossAxisAlignment, flex_col, label};
 
 use super::builder::MenuBarBuilder;
 use crate::menu_button::DEFAULT_ITEM_HEIGHT;
@@ -61,9 +61,7 @@ const MENU_PADDING_H: f64 = 10.0;
 ///     menu_item("Quit", |s| s.quit()),
 /// ))
 /// ```
-pub fn app_menu_bar<State, Action, F>(
-    builder: F,
-) -> MenuBarBuilder<State, Action>
+pub fn app_menu_bar<State, Action, F>(builder: F) -> MenuBarBuilder<State, Action>
 where
     State: 'static,
     Action: 'static,
@@ -146,14 +144,15 @@ where
 
     // For now, just return the content
     // In a full implementation, this would wrap content with a menu bar view
-    flex_col((content,))
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+    flex_col((content,)).cross_axis_alignment(CrossAxisAlignment::Stretch)
 }
 
 /// Creates a styled label for menu bar buttons.
 ///
 /// Use this helper when building menu bars with menu_button.
-pub fn menu_bar_label<'a, State: 'static, Action: 'static>(text: &'a str) -> impl WidgetView<State, Action> + use<'a, State, Action> {
+pub fn menu_bar_label<'a, State: 'static, Action: 'static>(
+    text: &'a str,
+) -> impl WidgetView<State, Action> + use<'a, State, Action> {
     label(text.to_string())
         .text_size(MENU_TEXT_SIZE)
         .color(MENU_TEXT_COLOR)

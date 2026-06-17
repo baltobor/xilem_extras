@@ -9,8 +9,8 @@
 //!
 //! Provides bar and line chart widgets for data visualization.
 
-mod widget;
 mod view;
+mod widget;
 
-pub use widget::{ChartWidget, ChartAction, ChartMode};
-pub use view::{chart, ChartView};
+pub use view::{ChartView, chart};
+pub use widget::{ChartAction, ChartMode, ChartWidget};

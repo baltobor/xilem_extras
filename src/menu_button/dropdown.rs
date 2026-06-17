@@ -7,17 +7,17 @@
 
 //! Floating dropdown layer for pulldown menus.
 
-use xilem::masonry::accesskit::{Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Rect, RoundedRect, Stroke};
 use xilem::masonry::peniko::Color;
 
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, Layer, LayerType,
-    LayoutCtx, MeasureCtx, NewWidget, NoAction, PaintCtx, PointerButton, PointerButtonEvent,
-    PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
-    Widget, WidgetId, WidgetPod,
+    AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, Layer, LayerType, LayoutCtx,
+    MeasureCtx, NewWidget, NoAction, PaintCtx, PointerButton, PointerButtonEvent, PointerEvent,
+    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId,
+    WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenDef, LenReq, Length, SizeDef};
@@ -73,7 +73,11 @@ impl MenuDropdown {
     }
 
     /// Builder-style method to add a submenu item widget with children.
-    pub fn with_submenu_item(mut self, child: NewWidget<impl Widget + ?Sized>, children: Vec<MenuItemData>) -> Self {
+    pub fn with_submenu_item(
+        mut self,
+        child: NewWidget<impl Widget + ?Sized>,
+        children: Vec<MenuItemData>,
+    ) -> Self {
         self.children.push(child.erased().to_pod());
         self.submenu_data.push(Some(children));
         self
@@ -93,7 +97,10 @@ impl MenuDropdown {
 
     /// Checks if a child at the given index is a submenu.
     fn is_submenu(&self, index: usize) -> bool {
-        self.submenu_data.get(index).map(|d| d.is_some()).unwrap_or(false)
+        self.submenu_data
+            .get(index)
+            .map(|d| d.is_some())
+            .unwrap_or(false)
     }
 
     /// Builds a child submenu dropdown from item data.
@@ -129,7 +136,6 @@ impl MenuDropdown {
     }
 }
 
-
 impl Widget for MenuDropdown {
     type Action = NoAction;
 
@@ -163,7 +169,10 @@ impl Widget for MenuDropdown {
                         let mut menu_btn = menu_btn.downcast::<MenuButton>();
                         menu_btn
                             .ctx
-                            .submit_action::<MenuButtonPress>(MenuButtonPress { index, child_index: None });
+                            .submit_action::<MenuButtonPress>(MenuButtonPress {
+                                index,
+                                child_index: None,
+                            });
                         menu_btn.ctx.remove_layer(self_id);
                         menu_btn.widget.menu_layer_id = None;
                     });
@@ -200,9 +209,15 @@ impl Widget for MenuDropdown {
                     if let Some(idx) = new_hovered {
                         if let Some(Some(children)) = self.submenu_data.get(idx) {
                             if let Some((origin, _size)) = self.child_rects.get(idx) {
-                                let submenu = Self::build_submenu(ctx.widget_id(), self.creator, idx, children);
-                                let submenu_pos = ctx.to_window(Point::ORIGIN) +
-                                    Point::new(ctx.border_box().size().width + 4.0, origin.y).to_vec2();
+                                let submenu = Self::build_submenu(
+                                    ctx.widget_id(),
+                                    self.creator,
+                                    idx,
+                                    children,
+                                );
+                                let submenu_pos = ctx.to_window(Point::ORIGIN)
+                                    + Point::new(ctx.border_box().size().width + 4.0, origin.y)
+                                        .to_vec2();
 
                                 ctx.create_layer(
                                     LayerType::Other,
@@ -338,7 +353,12 @@ impl Widget for MenuDropdown {
 
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let size = ctx.border_box().size();
         let padding = 6.0;
         let rect = Rect::new(
@@ -350,7 +370,9 @@ impl Widget for MenuDropdown {
         let rounded = RoundedRect::from_rect(rect, 4.0);
 
         painter.fill(rounded, self.bg_color).draw();
-        painter.stroke(rounded, &Stroke::new(1.0), self.border_color).draw();
+        painter
+            .stroke(rounded, &Stroke::new(1.0), self.border_color)
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {
@@ -455,7 +477,6 @@ impl SubmenuDropdown {
     }
 }
 
-
 impl Widget for SubmenuDropdown {
     type Action = NoAction;
 
@@ -484,10 +505,12 @@ impl Widget for SubmenuDropdown {
                 *super::widget::ACTIVE_MENU_BUTTON.lock().unwrap() = None;
                 ctx.mutate_later(self.menu_button_id, move |mut menu_btn| {
                     let mut menu_btn = menu_btn.downcast::<MenuButton>();
-                    menu_btn.ctx.submit_action::<MenuButtonPress>(MenuButtonPress {
-                        index: parent_index,
-                        child_index: Some(child_index),
-                    });
+                    menu_btn
+                        .ctx
+                        .submit_action::<MenuButtonPress>(MenuButtonPress {
+                            index: parent_index,
+                            child_index: Some(child_index),
+                        });
                     // Close the submenu layer
                     menu_btn.ctx.remove_layer(self_id);
                     // Close the parent MenuDropdown layer
@@ -609,7 +632,12 @@ impl Widget for SubmenuDropdown {
 
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let size = ctx.border_box().size();
         let padding = 6.0;
         let rect = Rect::new(
@@ -621,7 +649,9 @@ impl Widget for SubmenuDropdown {
         let rounded = RoundedRect::from_rect(rect, 4.0);
 
         painter.fill(rounded, self.bg_color).draw();
-        painter.stroke(rounded, &Stroke::new(1.0), self.border_color).draw();
+        painter
+            .stroke(rounded, &Stroke::new(1.0), self.border_color)
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {

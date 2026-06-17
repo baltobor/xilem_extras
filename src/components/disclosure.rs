@@ -5,9 +5,9 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-use xilem::masonry::peniko::Color;
 use xilem::AnyWidgetView;
-use xilem_material_icons::{icon, icons, ICON_SIZE_SM};
+use xilem::masonry::peniko::Color;
+use xilem_material_icons::{ICON_SIZE_SM, icon, icons};
 
 /// A disclosure indicator (chevron) for expand/collapse.
 ///
@@ -124,9 +124,7 @@ mod tests {
     #[test]
     fn disclosure_chaining() {
         let blue = Color::from_rgb8(0, 0, 255);
-        let d = disclosure(true)
-            .size(20.0)
-            .color(blue);
+        let d = disclosure(true).size(20.0).color(blue);
         assert!(d.is_expanded());
         assert_eq!(d.size, 20.0);
         assert!(d.color.is_some());

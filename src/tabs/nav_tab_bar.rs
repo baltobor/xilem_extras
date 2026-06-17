@@ -15,11 +15,11 @@ use std::marker::PhantomData;
 use xilem::masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::{Padding, Style};
-use xilem::view::{button, flex_row, label, portal, FlexExt};
+use xilem::view::{FlexExt, button, flex_row, label, portal};
 use xilem::{AnyWidgetView, WidgetView};
 
 use super::{TabBarColors, TabItem};
-use xilem_material_icons::{icon, icons, ICON_SIZE_SM};
+use xilem_material_icons::{ICON_SIZE_SM, icon, icons};
 
 /// Golden ratio for proportional spacing.
 const PHI: f64 = 1.618;
@@ -342,16 +342,13 @@ where
                 };
 
                 let on_select = self.on_select.clone();
-                button(
-                    content,
-                    move |state: &mut State| {
-                        if let Some(ref cb) = on_select {
-                            cb(state, i)
-                        } else {
-                            unreachable!()
-                        }
-                    },
-                )
+                button(content, move |state: &mut State| {
+                    if let Some(ref cb) = on_select {
+                        cb(state, i)
+                    } else {
+                        unreachable!()
+                    }
+                })
                 .background_color(bg)
                 .border(Color::TRANSPARENT, Length::ZERO)
                 .corner_radius(Length::px(corner_radius))
@@ -491,10 +488,7 @@ mod tests {
 
     #[test]
     fn auto_nav_buttons_hides_for_few_tabs() {
-        let tabs = vec![
-            SimpleTab::new("Tab 1"),
-            SimpleTab::new("Tab 2"),
-        ];
+        let tabs = vec![SimpleTab::new("Tab 1"), SimpleTab::new("Tab 2")];
         let bar: NavTabBar<(), (), _, ()> = NavTabBar::new(&tabs, 0).auto_nav_buttons(300.0);
         // Two short tabs should fit in 300px
         assert!(!bar.should_show_nav());
@@ -539,8 +533,14 @@ mod tests {
 
     #[test]
     fn icon_widens_estimate_over_text_only() {
-        let text_only = vec![IconTab { title: "Tab", icon: None }];
-        let with_icon = vec![IconTab { title: "Tab", icon: Some("\u{e2c7}") }];
+        let text_only = vec![IconTab {
+            title: "Tab",
+            icon: None,
+        }];
+        let with_icon = vec![IconTab {
+            title: "Tab",
+            icon: Some("\u{e2c7}"),
+        }];
         let bar_text: NavTabBar<(), (), _, ()> = NavTabBar::new(&text_only, 0);
         let bar_icon: NavTabBar<(), (), _, ()> = NavTabBar::new(&with_icon, 0);
         assert!(bar_icon.estimated_tabs_width() > bar_text.estimated_tabs_width());
@@ -549,7 +549,10 @@ mod tests {
     #[test]
     fn icon_only_tab_has_positive_width() {
         // Empty title + icon (icon-only) still reserves glyph width.
-        let icon_only = vec![IconTab { title: "", icon: Some("\u{e2c7}") }];
+        let icon_only = vec![IconTab {
+            title: "",
+            icon: Some("\u{e2c7}"),
+        }];
         let bar: NavTabBar<(), (), _, ()> = NavTabBar::new(&icon_only, 0);
         assert!(bar.estimated_tabs_width() > 0.0);
     }

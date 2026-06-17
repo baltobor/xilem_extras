@@ -190,7 +190,15 @@ where
     H: Fn(&mut State, LegacyTableAction<R::Id>) + Clone + Send + Sync + 'static,
     Sel: SelectionState<R::Id> + 'a,
 {
-    legacy_table_styled(data, columns, selection, sort_order, TableStyle::default(), cell_builder, handler)
+    legacy_table_styled(
+        data,
+        columns,
+        selection,
+        sort_order,
+        TableStyle::default(),
+        cell_builder,
+        handler,
+    )
 }
 
 /// Creates a legacy table view with custom styling.
@@ -223,19 +231,18 @@ where
             let sortable = col.sortable;
 
             // Check if this column is currently sorted
-            let sort_indicator = sort_order.direction_for(&col.key).map(|dir| {
-                match dir {
+            let sort_indicator = sort_order
+                .direction_for(&col.key)
+                .map(|dir| match dir {
                     SortDirection::Ascending => " ▲",
                     SortDirection::Descending => " ▼",
-                }
-            }).unwrap_or("");
+                })
+                .unwrap_or("");
 
             let header_text = format!("{}{}", col.title, sort_indicator);
             let text_color = style.header_text_color;
 
-            let header_label = label(header_text)
-                .text_size(13.0)
-                .color(text_color);
+            let header_label = label(header_text).text_size(13.0).color(text_color);
 
             if sortable {
                 // Get current direction before closure (to avoid capturing sort_order reference)
@@ -295,10 +302,11 @@ where
                 .background_color(row_bg)
                 .height(style.row_height.px());
 
-            use crate::components::{row_button_with_press, RowButtonPress};
+            use crate::components::{RowButtonPress, row_button_with_press};
 
-            row_button_with_press(row_content, move |state: &mut State, press: &RowButtonPress| {
-                match press.button {
+            row_button_with_press(
+                row_content,
+                move |state: &mut State, press: &RowButtonPress| match press.button {
                     None | Some(PointerButton::Primary) => {
                         let sel_mods = SelectionModifiers::from_modifiers(press.modifiers);
                         let action = if press.click_count >= 2 {
@@ -309,8 +317,8 @@ where
                         handler(state, action);
                     }
                     _ => {}
-                }
-            })
+                },
+            )
             .hover_bg(hover_bg)
             .boxed()
         })

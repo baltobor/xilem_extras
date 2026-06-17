@@ -42,12 +42,12 @@ use std::marker::PhantomData;
 use masonry::core::ArcStr;
 use masonry::parley::FontFamily;
 use masonry::parley::style::FontWeight;
-use masonry::peniko::color::{AlphaColor, Srgb};
 use masonry::peniko::Color;
+use masonry::peniko::color::{AlphaColor, Srgb};
 use masonry::properties::{Background, BorderColor, CaretColor, PlaceholderColor};
 
-use xilem::view::text_input;
 use xilem::WidgetView;
+use xilem::view::text_input;
 use xilem::{InsertNewline, TextAlign};
 
 /// Text input color scheme.
@@ -75,22 +75,22 @@ impl TextInputColors {
     /// Create colors for light mode (white background, dark text)
     pub fn light() -> Self {
         Self {
-            background: AlphaColor::new([1.0, 1.0, 1.0, 1.0]),      // white
+            background: AlphaColor::new([1.0, 1.0, 1.0, 1.0]), // white
             text: Color::BLACK,
-            border: AlphaColor::new([0.7, 0.7, 0.7, 1.0]),          // light gray
-            caret: AlphaColor::new([0.0, 0.0, 0.0, 1.0]),           // black
-            placeholder: AlphaColor::new([0.5, 0.5, 0.5, 1.0]),     // medium gray
+            border: AlphaColor::new([0.7, 0.7, 0.7, 1.0]), // light gray
+            caret: AlphaColor::new([0.0, 0.0, 0.0, 1.0]),  // black
+            placeholder: AlphaColor::new([0.5, 0.5, 0.5, 1.0]), // medium gray
         }
     }
 
     /// Create colors for dark mode (dark background, light text)
     pub fn dark() -> Self {
         Self {
-            background: AlphaColor::new([0.15, 0.15, 0.15, 1.0]),   // dark gray
+            background: AlphaColor::new([0.15, 0.15, 0.15, 1.0]), // dark gray
             text: Color::WHITE,
-            border: AlphaColor::new([0.4, 0.4, 0.4, 1.0]),          // medium gray
-            caret: AlphaColor::new([1.0, 1.0, 1.0, 1.0]),           // white
-            placeholder: AlphaColor::new([0.6, 0.6, 0.6, 1.0]),     // light gray
+            border: AlphaColor::new([0.4, 0.4, 0.4, 1.0]), // medium gray
+            caret: AlphaColor::new([1.0, 1.0, 1.0, 1.0]),  // white
+            placeholder: AlphaColor::new([0.6, 0.6, 0.6, 1.0]), // light gray
         }
     }
 
@@ -365,8 +365,12 @@ where
 
         input
             .prop(Background::Color(self.colors.background))
-            .prop(BorderColor { color: self.colors.border })
-            .prop(CaretColor { color: self.colors.caret })
+            .prop(BorderColor {
+                color: self.colors.border,
+            })
+            .prop(CaretColor {
+                color: self.colors.caret,
+            })
             .prop(PlaceholderColor::new(self.colors.placeholder))
     }
 }

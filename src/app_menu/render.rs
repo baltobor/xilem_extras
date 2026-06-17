@@ -44,18 +44,18 @@
 
 use std::sync::Arc;
 
-use xilem::masonry::peniko::Color;
-use xilem::masonry::layout::Length;
-use xilem::view::{flex_row, label};
-use xilem::style::Style as _;
 use xilem::WidgetView;
+use xilem::masonry::layout::Length;
+use xilem::masonry::peniko::Color;
+use xilem::style::Style as _;
+use xilem::view::{flex_row, label};
 
+use crate::menu_button;
 use crate::menu_button::DEFAULT_ITEM_HEIGHT;
 use crate::menu_items::{BoxedMenuEntry, MenuItem, SeparatorEntry, Submenu};
-use crate::menu_button;
 
-use super::builder::{MenuBarBuilder, MenuItemBuilder};
 use super::action_trait::MenuActionTrait;
+use super::builder::{MenuBarBuilder, MenuItemBuilder};
 
 /// Default menu bar background color.
 pub const MENU_BAR_BG: Color = Color::from_rgb8(45, 43, 40);
@@ -130,13 +130,14 @@ where
     let gap = style.gap;
     let padding = style.padding;
 
-    let buttons: Vec<_> = builder.menus.into_iter().map(|menu| {
-        let items = convert_menu_items::<State, Action, A>(menu.items, handler);
-        menu_button(
-            label(menu.title).text_size(ts).color(tc),
-            items,
-        )
-    }).collect();
+    let buttons: Vec<_> = builder
+        .menus
+        .into_iter()
+        .map(|menu| {
+            let items = convert_menu_items::<State, Action, A>(menu.items, handler);
+            menu_button(label(menu.title).text_size(ts).color(tc), items)
+        })
+        .collect();
 
     flex_row(buttons)
         .gap(Length::px(gap))
@@ -170,7 +171,11 @@ where
                     action(state)
                 })));
             }
-            MenuItemBuilder::ActionEnum { label, action_value, .. } => {
+            MenuItemBuilder::ActionEnum {
+                label,
+                action_value,
+                ..
+            } => {
                 // Downcast the stored action value and wire up the handler
                 if let Some(action_val) = action_value.downcast_ref::<A>() {
                     let action_val = *action_val;
@@ -188,7 +193,10 @@ where
             MenuItemBuilder::Separator => {
                 entries.push(Box::new(SeparatorEntry::<State, Action>::default()));
             }
-            MenuItemBuilder::Submenu { label, items: sub_items } => {
+            MenuItemBuilder::Submenu {
+                label,
+                items: sub_items,
+            } => {
                 let children = convert_menu_items::<State, Action, A>(sub_items, handler);
                 entries.push(Box::new(Submenu::new(label, children)));
             }

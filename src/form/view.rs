@@ -9,12 +9,12 @@
 
 use masonry::core::ArcStr;
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{flex_col, flex_row, label, CrossAxisAlignment, FlexExt, FlexSequence};
-use xilem::WidgetView;
+use xilem::view::{CrossAxisAlignment, FlexExt, FlexSequence, flex_col, flex_row, label};
 
-use crate::components::{group_box, styled_check, styled_check_colored, CheckboxStyle};
+use crate::components::{CheckboxStyle, group_box, styled_check, styled_check_colored};
 use crate::theme::Theme;
 
 /// Vertical gap between rows / sections inside a form.
@@ -56,9 +56,7 @@ const FORM_LABEL: Color = Color::from_rgb8(0xDC, 0xDA, 0xD6);
 ///     )),
 /// ))
 /// ```
-pub fn form<State, Action, Seq>(
-    sequence: Seq,
-) -> impl WidgetView<State, Action>
+pub fn form<State, Action, Seq>(sequence: Seq) -> impl WidgetView<State, Action>
 where
     State: 'static,
     Action: 'static,
@@ -139,7 +137,10 @@ where
     F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
 {
     let label_text = label_text.into();
-    form_row(label_text, styled_check(CheckboxStyle::Switch, "", on, on_toggle))
+    form_row(
+        label_text,
+        styled_check(CheckboxStyle::Switch, "", on, on_toggle),
+    )
 }
 
 /// Labeled checkbox using the classic checkmark style.
@@ -154,7 +155,10 @@ where
     F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
 {
     let label_text = label_text.into();
-    form_row(label_text, styled_check(CheckboxStyle::Classic, "", checked, on_toggle))
+    form_row(
+        label_text,
+        styled_check(CheckboxStyle::Classic, "", checked, on_toggle),
+    )
 }
 
 /// Labeled radio button. Like SwiftUI's macOS `.pickerStyle(.inline)`

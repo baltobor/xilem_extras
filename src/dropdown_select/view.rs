@@ -89,13 +89,12 @@ where
     type Element = Pod<DropdownSelect>;
     type ViewState = ();
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        _app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, _app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(DropdownSelect::new(self.options.clone(), self.selected_index))
+            ctx.create_pod(DropdownSelect::new(
+                self.options.clone(),
+                self.selected_index,
+            ))
         });
         (pod, ())
     }

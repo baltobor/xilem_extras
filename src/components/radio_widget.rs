@@ -17,8 +17,8 @@ use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
 use xilem::masonry::accesskit::{self, Node, Role, Toggled};
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent,
-    Update, UpdateCtx, Widget, WidgetId, WidgetMut,
+    PointerButtonEvent, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update,
+    UpdateCtx, Widget, WidgetId, WidgetMut,
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Circle, Point, Rect, RoundedRect, Size, Stroke};
@@ -180,14 +180,12 @@ impl Widget for RadioWidget {
         let size = ctx.content_box().size();
         let frame_x = (size.width - FRAME_W) / 2.0;
         let frame_y = (size.height - FRAME_H) / 2.0;
-        let frame = Rect::new(
-            frame_x,
-            frame_y,
-            frame_x + FRAME_W,
-            frame_y + FRAME_H,
-        );
+        let frame = Rect::new(frame_x, frame_y, frame_x + FRAME_W, frame_y + FRAME_H);
         let pill = RoundedRect::from_rect(frame, FRAME_R);
-        painter.fill(pill, FRAME_FILL).fill_rule(Fill::NonZero).draw();
+        painter
+            .fill(pill, FRAME_FILL)
+            .fill_rule(Fill::NonZero)
+            .draw();
         painter.stroke(pill, &Stroke::new(0.5), FRAME_BORDER).draw();
 
         if self.selected {
@@ -208,7 +206,11 @@ impl Widget for RadioWidget {
         _props: &PropertiesRef<'_>,
         node: &mut Node,
     ) {
-        node.set_toggled(if self.selected { Toggled::True } else { Toggled::False });
+        node.set_toggled(if self.selected {
+            Toggled::True
+        } else {
+            Toggled::False
+        });
         node.add_action(accesskit::Action::Click);
     }
 
@@ -224,10 +226,7 @@ impl Widget for RadioWidget {
 // MARK: - View
 
 /// Synth-styled single radio button view.
-pub fn synth_radio<F, State, Action>(
-    selected: bool,
-    callback: F,
-) -> SynthRadio<State, Action, F>
+pub fn synth_radio<F, State, Action>(selected: bool, callback: F) -> SynthRadio<State, Action, F>
 where
     F: Fn(&mut State, bool) -> Action + Send + Sync + 'static,
     State: 'static,

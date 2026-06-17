@@ -7,10 +7,10 @@
 
 //! Context menu (right-click popup menu) support.
 
-mod widget;
-mod view;
 mod dropdown;
+mod view;
+mod widget;
 
-pub use widget::{ContextMenuWidget, ContextMenuAction};
-pub use view::{context_menu, ContextMenuView};
 pub use dropdown::ContextMenuDropdown;
+pub use view::{ContextMenuView, context_menu};
+pub use widget::{ContextMenuAction, ContextMenuWidget};

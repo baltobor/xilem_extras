@@ -5,9 +5,9 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
+use crate::traits::{SelectionModifiers, SelectionState};
 use std::collections::HashSet;
 use std::hash::Hash;
-use crate::traits::{SelectionModifiers, SelectionState};
 
 /// Multi-item selection state with modifier support.
 ///

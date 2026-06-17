@@ -69,10 +69,7 @@ pub struct MenuButtonView<State, Action, V, I> {
 ///     ),
 /// )
 /// ```
-pub fn menu_button<State, Action, V, I>(
-    label: V,
-    items: I,
-) -> MenuButtonView<State, Action, V, I>
+pub fn menu_button<State, Action, V, I>(label: V, items: I) -> MenuButtonView<State, Action, V, I>
 where
     State: 'static,
     Action: 'static,
@@ -104,19 +101,14 @@ where
     type Element = Pod<MenuButton>;
     type ViewState = MenuButtonViewState<State, Action, V>;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let entries: Vec<BoxedMenuEntry<State, Action>> = self.items.clone().collect_entries();
 
         // Convert entries to MenuItemData for the widget
         let item_data = Self::entries_to_item_data(&entries);
 
-        let (child, label_state) = ctx.with_id(LABEL_VIEW_ID, |ctx| {
-            self.label.build(ctx, app_state)
-        });
+        let (child, label_state) =
+            ctx.with_id(LABEL_VIEW_ID, |ctx| self.label.build(ctx, app_state));
 
         let pod = ctx.with_action_widget(|ctx| {
             ctx.create_pod(MenuButton::new_with_data(child.new_widget, item_data))
@@ -221,30 +213,34 @@ where
 {
     /// Convert MenuEntry items to MenuItemData for the widget.
     fn entries_to_item_data(entries: &[BoxedMenuEntry<State, Action>]) -> Vec<MenuItemData> {
-        entries.iter().map(|entry| {
-            if entry.is_submenu() {
-                // Get submenu children
-                let children = entry.submenu_items()
-                    .map(|items| Self::entries_to_item_data(&items))
-                    .unwrap_or_default();
-                MenuItemData::Submenu {
-                    label: entry.label().unwrap_or("").to_string(),
-                    children,
-                }
-            } else if entry.is_actionable() {
-                // Regular menu item
-                if let Some(label) = entry.label() {
-                    MenuItemData::Action {
-                        label: label.to_string(),
-                        checked: entry.checked(),
+        entries
+            .iter()
+            .map(|entry| {
+                if entry.is_submenu() {
+                    // Get submenu children
+                    let children = entry
+                        .submenu_items()
+                        .map(|items| Self::entries_to_item_data(&items))
+                        .unwrap_or_default();
+                    MenuItemData::Submenu {
+                        label: entry.label().unwrap_or("").to_string(),
+                        children,
+                    }
+                } else if entry.is_actionable() {
+                    // Regular menu item
+                    if let Some(label) = entry.label() {
+                        MenuItemData::Action {
+                            label: label.to_string(),
+                            checked: entry.checked(),
+                        }
+                    } else {
+                        MenuItemData::Separator
                     }
                 } else {
+                    // Separator
                     MenuItemData::Separator
                 }
-            } else {
-                // Separator
-                MenuItemData::Separator
-            }
-        }).collect()
+            })
+            .collect()
     }
 }

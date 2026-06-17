@@ -95,14 +95,8 @@ where
     type ViewState = ();
 
     fn build(&self, ctx: &mut ViewCtx, _state: &mut State) -> (Self::Element, Self::ViewState) {
-        let widget = StockChartWidget::with_style(
-            self.bars.clone(),
-            self.mode,
-            self.style.clone(),
-        );
-        let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(widget)
-        });
+        let widget = StockChartWidget::with_style(self.bars.clone(), self.mode, self.style.clone());
+        let pod = ctx.with_action_widget(|ctx| ctx.create_pod(widget));
         (pod, ())
     }
 

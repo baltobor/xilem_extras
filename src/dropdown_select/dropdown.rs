@@ -7,17 +7,16 @@
 
 //! Floating dropdown layer for selection.
 
-use xilem::masonry::accesskit::{Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Rect, RoundedRect, Stroke};
 use xilem::masonry::peniko::Color;
 
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, Layer, LayoutCtx,
-    MeasureCtx, NewWidget, NoAction, PaintCtx, PointerButton, PointerButtonEvent, PointerEvent,
-    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
-    Widget, WidgetId, WidgetPod,
+    AccessCtx, AccessEvent, ChildrenIds, ComposeCtx, EventCtx, Layer, LayoutCtx, MeasureCtx,
+    NewWidget, NoAction, PaintCtx, PointerButton, PointerButtonEvent, PointerEvent, PropertiesMut,
+    PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetPod,
 };
 use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenDef, LenReq, Length, SizeDef};
@@ -80,7 +79,6 @@ impl SelectDropdown {
     }
 }
 
-
 impl Widget for SelectDropdown {
     type Action = NoAction;
 
@@ -109,7 +107,10 @@ impl Widget for SelectDropdown {
                     let mut select = select.downcast::<DropdownSelect>();
                     select
                         .ctx
-                        .submit_action::<DropdownSelectAction>(DropdownSelectAction { value, index });
+                        .submit_action::<DropdownSelectAction>(DropdownSelectAction {
+                            value,
+                            index,
+                        });
                     select.ctx.remove_layer(self_id);
                     select.widget.dropdown_layer_id = None;
                 });
@@ -227,7 +228,12 @@ impl Widget for SelectDropdown {
 
     fn compose(&mut self, _ctx: &mut ComposeCtx<'_>) {}
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let size = ctx.border_box().size();
         let padding = 6.0;
         let rect = Rect::new(
@@ -239,7 +245,9 @@ impl Widget for SelectDropdown {
         let rounded = RoundedRect::from_rect(rect, 4.0);
 
         painter.fill(rounded, self.bg_color).draw();
-        painter.stroke(rounded, &Stroke::new(1.0), self.border_color).draw();
+        painter
+            .stroke(rounded, &Stroke::new(1.0), self.border_color)
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {

@@ -25,12 +25,12 @@
 //! )
 //! ```
 
-mod widget;
 mod dropdown;
 mod option_item;
 mod view;
+mod widget;
 
-pub use widget::{DropdownSelect, DropdownSelectAction};
 pub use dropdown::SelectDropdown;
 pub use option_item::SelectOptionItem;
-pub use view::{dropdown_select, DropdownSelectView};
+pub use view::{DropdownSelectView, dropdown_select};
+pub use widget::{DropdownSelect, DropdownSelectAction};

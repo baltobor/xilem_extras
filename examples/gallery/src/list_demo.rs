@@ -8,13 +8,13 @@
 //! List widget demo - demonstrates the virtualized list view with keyboard navigation.
 
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button};
-use xilem::WidgetView;
+use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label};
 
-use xilem_extras::{list_view_styled, ListViewAction, ListViewStyle, SelectionState, Theme};
-use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
+use xilem_extras::{ListViewAction, ListViewStyle, SelectionState, Theme, list_view_styled};
+use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;
 
@@ -42,12 +42,8 @@ fn contact_row(
             .color(ICON_COLOR)
             .width(24.px()),
         flex_col((
-            label(name)
-                .text_size(13.0)
-                .color(theme.text()),
-            label(email)
-                .text_size(11.0)
-                .color(theme.text_secondary()),
+            label(name).text_size(13.0).color(theme.text()),
+            label(email).text_size(11.0).color(theme.text_secondary()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(2.px()),
@@ -69,14 +65,20 @@ pub fn list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
         &model.contacts,
         &model.list_selection,
         ListViewStyle::new()
-            .row_height(52.0)  // Account for two-line rows
+            .row_height(52.0) // Account for two-line rows
             .hover_bg(theme.hover_bg())
             .selected_bg(theme.active_bg())
             .striped(true)
             .stripe_bg(theme.section_bg()),
         move |state: &mut AppModel, idx, is_selected, is_striped| {
             let contact = &state.contacts[idx];
-            contact_row(contact.name.clone(), contact.email.clone(), is_selected, is_striped, theme)
+            contact_row(
+                contact.name.clone(),
+                contact.email.clone(),
+                is_selected,
+                is_striped,
+                theme,
+            )
         },
         |state: &mut AppModel, action| {
             match action {
@@ -96,15 +98,16 @@ pub fn list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + use<'_
         label("Arrow keys to navigate, Shift+click for range, Cmd+click to toggle")
             .text_size(12.0)
             .color(theme.text_secondary()),
-
         // Virtualized list (handles its own scrolling)
         list_view,
-
         // Selection info
         flex_row((
-            label(format!("Selected: {} contacts", model.list_selection.count()))
-                .text_size(12.0)
-                .color(theme.text_secondary()),
+            label(format!(
+                "Selected: {} contacts",
+                model.list_selection.count()
+            ))
+            .text_size(12.0)
+            .color(theme.text_secondary()),
             button(label("Clear"), |model: &mut AppModel| {
                 model.list_selection.clear();
             }),

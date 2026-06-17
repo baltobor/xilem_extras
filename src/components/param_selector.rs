@@ -126,11 +126,7 @@ impl ParamSelectorWidget {
         self
     }
 
-    pub fn set_label_colors(
-        this: &mut WidgetMut<'_, Self>,
-        selected: Color,
-        unselected: Color,
-    ) {
+    pub fn set_label_colors(this: &mut WidgetMut<'_, Self>, selected: Color, unselected: Color) {
         if this.widget.label_selected != selected || this.widget.label_unselected != unselected {
             this.widget.label_selected = selected;
             this.widget.label_unselected = unselected;
@@ -149,7 +145,10 @@ impl ParamSelectorWidget {
     pub fn set_labels(this: &mut WidgetMut<'_, Self>, labels: Vec<String>) {
         this.widget.count = labels.len();
         this.widget.labels = labels;
-        this.widget.selected = this.widget.selected.min(this.widget.count.saturating_sub(1));
+        this.widget.selected = this
+            .widget
+            .selected
+            .min(this.widget.count.saturating_sub(1));
         this.widget.needs_layout = true;
         this.ctx.request_layout();
     }
@@ -234,7 +233,13 @@ impl Widget for ParamSelectorWidget {
         true
     }
     fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {}
-    fn update(&mut self, _ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, _event: &Update) {}
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        _event: &Update,
+    ) {
+    }
 
     fn measure(
         &mut self,
@@ -291,7 +296,12 @@ impl Widget for ParamSelectorWidget {
         self.ensure_text_layouts(ctx.text_contexts());
     }
 
-    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let size = ctx.content_box().size();
         let dot_col_w = Self::dot_col_w();
 
@@ -320,7 +330,11 @@ impl Widget for ParamSelectorWidget {
             .fill_rule(Fill::NonZero)
             .draw();
         painter
-            .stroke(frame_rr, &Stroke::new(1.0), Color::from_rgb8(0x55, 0x55, 0x55))
+            .stroke(
+                frame_rr,
+                &Stroke::new(1.0),
+                Color::from_rgb8(0x55, 0x55, 0x55),
+            )
             .draw();
 
         for i in 0..self.count {

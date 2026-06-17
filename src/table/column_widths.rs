@@ -131,10 +131,7 @@ mod tests {
 
     #[test]
     fn from_columns_stores_widths() {
-        let widths = ColumnWidths::from_columns(&[
-            ("name", 120.0),
-            ("age", 80.0),
-        ]);
+        let widths = ColumnWidths::from_columns(&[("name", 120.0), ("age", 80.0)]);
         assert_eq!(widths.get("name"), 120.0);
         assert_eq!(widths.get("age"), 80.0);
         assert_eq!(widths.len(), 2);

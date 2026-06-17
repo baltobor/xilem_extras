@@ -8,12 +8,12 @@
 //! Menu button demo showing pulldown menus.
 
 use masonry::layout::{AsUnit, Length};
-use xilem::style::{Style, Padding};
-use xilem::view::{flex_col, flex_row, label};
 use xilem::WidgetView;
+use xilem::style::{Padding, Style};
+use xilem::view::{flex_col, flex_row, label};
 
-use xilem_extras::{menu_button, menu_item, separator, submenu, group, dropdown_select, Theme};
 use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
+use xilem_extras::{Theme, dropdown_select, group, menu_button, menu_item, separator, submenu};
 
 use crate::app_model::AppModel;
 
@@ -82,17 +82,20 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 }),
                 separator(),
                 // Submenu example (visual placeholder - click shows ">" indicator)
-                submenu("Transform", (
-                    menu_item("Uppercase", |model: &mut AppModel| {
-                        model.menu_last_action = "Edit > Transform > Uppercase".to_string();
-                    }),
-                    menu_item("Lowercase", |model: &mut AppModel| {
-                        model.menu_last_action = "Edit > Transform > Lowercase".to_string();
-                    }),
-                    menu_item("Title Case", |model: &mut AppModel| {
-                        model.menu_last_action = "Edit > Transform > Title Case".to_string();
-                    }),
-                )),
+                submenu(
+                    "Transform",
+                    (
+                        menu_item("Uppercase", |model: &mut AppModel| {
+                            model.menu_last_action = "Edit > Transform > Uppercase".to_string();
+                        }),
+                        menu_item("Lowercase", |model: &mut AppModel| {
+                            model.menu_last_action = "Edit > Transform > Lowercase".to_string();
+                        }),
+                        menu_item("Title Case", |model: &mut AppModel| {
+                            model.menu_last_action = "Edit > Transform > Title Case".to_string();
+                        }),
+                    ),
+                ),
             ),
         ),
         menu_button(
@@ -112,11 +115,13 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 menu_item("Dark Mode", |model: &mut AppModel| {
                     model.dark_mode = !model.dark_mode;
                     model.menu_last_action = format!("View > Dark Mode: {}", model.dark_mode);
-                }).checked(model.dark_mode),
+                })
+                .checked(model.dark_mode),
                 menu_item("Show Toolbar", |model: &mut AppModel| {
                     model.show_toolbar = !model.show_toolbar;
                     model.menu_last_action = format!("View > Show Toolbar: {}", model.show_toolbar);
-                }).checked(model.show_toolbar),
+                })
+                .checked(model.show_toolbar),
                 separator(),
                 menu_item("Full Screen", |model: &mut AppModel| {
                     model.menu_last_action = "View > Full Screen".to_string();
@@ -128,24 +133,52 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             menu_bar_button("Refactor", theme),
             (
                 group((
-                    menu_item("Rename Symbol", |m: &mut AppModel| { m.menu_last_action = "Refactor > Rename Symbol".into(); }),
-                    menu_item("Extract Function", |m: &mut AppModel| { m.menu_last_action = "Refactor > Extract Function".into(); }),
-                    menu_item("Extract Variable", |m: &mut AppModel| { m.menu_last_action = "Refactor > Extract Variable".into(); }),
-                    menu_item("Extract Constant", |m: &mut AppModel| { m.menu_last_action = "Refactor > Extract Constant".into(); }),
-                    menu_item("Inline Variable", |m: &mut AppModel| { m.menu_last_action = "Refactor > Inline Variable".into(); }),
-                    menu_item("Inline Function", |m: &mut AppModel| { m.menu_last_action = "Refactor > Inline Function".into(); }),
+                    menu_item("Rename Symbol", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Rename Symbol".into();
+                    }),
+                    menu_item("Extract Function", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Extract Function".into();
+                    }),
+                    menu_item("Extract Variable", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Extract Variable".into();
+                    }),
+                    menu_item("Extract Constant", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Extract Constant".into();
+                    }),
+                    menu_item("Inline Variable", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Inline Variable".into();
+                    }),
+                    menu_item("Inline Function", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Inline Function".into();
+                    }),
                     separator(),
-                    menu_item("Move to Module", |m: &mut AppModel| { m.menu_last_action = "Refactor > Move to Module".into(); }),
-                    menu_item("Move to File", |m: &mut AppModel| { m.menu_last_action = "Refactor > Move to File".into(); }),
-                    menu_item("Change Visibility", |m: &mut AppModel| { m.menu_last_action = "Refactor > Change Visibility".into(); }),
+                    menu_item("Move to Module", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Move to Module".into();
+                    }),
+                    menu_item("Move to File", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Move to File".into();
+                    }),
+                    menu_item("Change Visibility", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Change Visibility".into();
+                    }),
                 )),
                 group((
                     separator(),
-                    menu_item("Convert to Struct", |m: &mut AppModel| { m.menu_last_action = "Refactor > Convert to Struct".into(); }),
-                    menu_item("Convert to Enum", |m: &mut AppModel| { m.menu_last_action = "Refactor > Convert to Enum".into(); }),
-                    menu_item("Convert fn to Method", |m: &mut AppModel| { m.menu_last_action = "Refactor > Convert fn to Method".into(); }),
-                    menu_item("Split Function", |m: &mut AppModel| { m.menu_last_action = "Refactor > Split Function".into(); }),
-                    menu_item("Remove Dead Code", |m: &mut AppModel| { m.menu_last_action = "Refactor > Remove Dead Code".into(); }),
+                    menu_item("Convert to Struct", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Convert to Struct".into();
+                    }),
+                    menu_item("Convert to Enum", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Convert to Enum".into();
+                    }),
+                    menu_item("Convert fn to Method", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Convert fn to Method".into();
+                    }),
+                    menu_item("Split Function", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Split Function".into();
+                    }),
+                    menu_item("Remove Dead Code", |m: &mut AppModel| {
+                        m.menu_last_action = "Refactor > Remove Dead Code".into();
+                    }),
                 )),
             ),
         ),
@@ -174,10 +207,8 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         label("Click on File, Edit, View, or Help to open pulldown menus")
             .text_size(12.0)
             .color(theme.text_secondary()),
-
         // Menu bar
         menu_bar,
-
         // Dropdown Select section
         flex_col((
             label("Dropdown Select".to_string())
@@ -203,7 +234,6 @@ pub fn menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         ))
         .gap(8.px())
         .padding(Length::px(16.0)),
-
         // Status area
         flex_col((
             label("Last action:".to_string())

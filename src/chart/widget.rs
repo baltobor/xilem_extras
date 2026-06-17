@@ -13,23 +13,23 @@
 //! - Bar or line rendering
 //! - Value labels above data points
 
+use xilem::Color;
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
-    AccessCtx, BrushIndex, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
-    PropertiesMut, PropertiesRef, RegisterCtx, StyleProperty,
-    Update, UpdateCtx, Widget, WidgetMut, render_text, ChildrenIds,
+    AccessCtx, BrushIndex, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PropertiesMut, PropertiesRef, RegisterCtx, StyleProperty, Update, UpdateCtx, Widget, WidgetMut,
+    render_text,
 };
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Affine, Axis, BezPath, Line, Point, Rect, RoundedRect, Size, Stroke};
 use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::parley::{Layout as ParleyLayout, StyleSet};
 use xilem::masonry::peniko::{Brush, Fill};
-use xilem::Color;
 
 // Layout constants
-const PADDING_LEFT: f64 = 40.0;   // Space for Y-axis labels
+const PADDING_LEFT: f64 = 40.0; // Space for Y-axis labels
 const PADDING_RIGHT: f64 = 10.0;
-const PADDING_TOP: f64 = 38.0;    // Space for title and value labels
+const PADDING_TOP: f64 = 38.0; // Space for title and value labels
 const PADDING_BOTTOM: f64 = 25.0; // Space for X-axis labels
 
 // Colors
@@ -82,7 +82,12 @@ pub struct ChartWidget {
 
 impl ChartWidget {
     /// Creates a new chart widget.
-    pub fn new(title: impl Into<String>, values: Vec<f64>, labels: Vec<String>, mode: ChartMode) -> Self {
+    pub fn new(
+        title: impl Into<String>,
+        values: Vec<f64>,
+        labels: Vec<String>,
+        mode: ChartMode,
+    ) -> Self {
         let max_value = values.iter().cloned().fold(0.0_f64, f64::max);
         Self {
             title: title.into(),
@@ -147,7 +152,9 @@ impl ChartWidget {
         {
             let mut styles: StyleSet<BrushIndex> = StyleSet::new(font_size * 1.1);
             styles.insert(StyleProperty::Brush(BrushIndex(0)));
-            styles.insert(StyleProperty::FontWeight(xilem::masonry::parley::style::FontWeight::BOLD));
+            styles.insert(StyleProperty::FontWeight(
+                xilem::masonry::parley::style::FontWeight::BOLD,
+            ));
             let mut builder = layout_ctx.ranged_builder(font_ctx, &self.title, 1.0, true);
             for prop in styles.inner().values() {
                 builder.push_default(prop.to_owned());
@@ -231,18 +238,34 @@ impl ChartWidget {
 impl Widget for ChartWidget {
     type Action = ChartAction;
 
-    fn on_pointer_event(&mut self, _ctx: &mut EventCtx<'_>, _: &mut PropertiesMut<'_>, _event: &PointerEvent) {
+    fn on_pointer_event(
+        &mut self,
+        _ctx: &mut EventCtx<'_>,
+        _: &mut PropertiesMut<'_>,
+        _event: &PointerEvent,
+    ) {
         // Could implement point clicking here
     }
 
-    fn accepts_pointer_interaction(&self) -> bool { false }
-    fn accepts_focus(&self) -> bool { false }
+    fn accepts_pointer_interaction(&self) -> bool {
+        false
+    }
+    fn accepts_focus(&self) -> bool {
+        false
+    }
 
     fn register_children(&mut self, _: &mut RegisterCtx<'_>) {}
 
     fn update(&mut self, _: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, _: &Update) {}
 
-    fn measure(&mut self, _: &mut MeasureCtx<'_>, _: &PropertiesRef<'_>, axis: Axis, _len_req: LenReq, _cross: Option<Length>) -> Length {
+    fn measure(
+        &mut self,
+        _: &mut MeasureCtx<'_>,
+        _: &PropertiesRef<'_>,
+        axis: Axis,
+        _len_req: LenReq,
+        _cross: Option<Length>,
+    ) -> Length {
         // Return minimum sizes - flex(1.0) will expand to fill available space
         // paint() uses ctx.content_box().size() so it adapts to actual size
         match axis {
@@ -267,7 +290,10 @@ impl Widget for ChartWidget {
         // Background
         let bg_rect = Rect::new(0.0, 0.0, size.width, size.height);
         let rounded_bg = RoundedRect::from_rect(bg_rect, 6.0);
-        painter.fill(&rounded_bg, BG_COLOR).fill_rule(Fill::NonZero).draw();
+        painter
+            .fill(&rounded_bg, BG_COLOR)
+            .fill_rule(Fill::NonZero)
+            .draw();
 
         let chart_rect = self.chart_rect(size);
 
@@ -303,14 +329,18 @@ impl Widget for ChartWidget {
             Point::new(chart_rect.min_x(), chart_rect.min_y()),
             Point::new(chart_rect.min_x(), chart_rect.max_y()),
         );
-        painter.stroke(&y_axis, &Stroke::new(1.0), AXIS_COLOR).draw();
+        painter
+            .stroke(&y_axis, &Stroke::new(1.0), AXIS_COLOR)
+            .draw();
 
         // X-axis
         let x_axis = Line::new(
             Point::new(chart_rect.min_x(), chart_rect.max_y()),
             Point::new(chart_rect.max_x(), chart_rect.max_y()),
         );
-        painter.stroke(&x_axis, &Stroke::new(1.0), AXIS_COLOR).draw();
+        painter
+            .stroke(&x_axis, &Stroke::new(1.0), AXIS_COLOR)
+            .draw();
 
         // Calculate data positions
         if self.values.is_empty() || self.max_value <= 0.0 {
@@ -335,7 +365,10 @@ impl Widget for ChartWidget {
                     if bar_height > 0.0 {
                         let bar_rect = Rect::new(bar_x, bar_y, bar_x + bar_w, chart_rect.max_y());
                         let rounded = RoundedRect::from_rect(bar_rect, 2.0);
-                        painter.fill(&rounded, BAR_COLOR).fill_rule(Fill::NonZero).draw();
+                        painter
+                            .fill(&rounded, BAR_COLOR)
+                            .fill_rule(Fill::NonZero)
+                            .draw();
                     }
 
                     // Value label above bar
@@ -372,7 +405,10 @@ impl Widget for ChartWidget {
                     for (i, &point) in points.iter().enumerate() {
                         // Point circle
                         let circle = xilem::masonry::kurbo::Circle::new(point, 3.0);
-                        painter.fill(&circle, LINE_COLOR).fill_rule(Fill::NonZero).draw();
+                        painter
+                            .fill(&circle, LINE_COLOR)
+                            .fill_rule(Fill::NonZero)
+                            .draw();
 
                         // Value label above point
                         if self.show_values && i < self.value_layouts.len() {
@@ -381,7 +417,13 @@ impl Widget for ChartWidget {
                             let tx = point.x - tw / 2.0;
                             let ty = point.y - 14.0;
                             let brushes = [Brush::Solid(TEXT_COLOR.into())];
-                            render_text(painter, Affine::translate((tx, ty)), layout, &brushes, true);
+                            render_text(
+                                painter,
+                                Affine::translate((tx, ty)),
+                                layout,
+                                &brushes,
+                                true,
+                            );
                         }
                     }
                 }
@@ -402,7 +444,9 @@ impl Widget for ChartWidget {
         ChildrenIds::from(vec![])
     }
 
-    fn accessibility_role(&self) -> Role { Role::Figure }
+    fn accessibility_role(&self) -> Role {
+        Role::Figure
+    }
 
     fn accessibility(&mut self, _ctx: &mut AccessCtx<'_>, _: &PropertiesRef<'_>, node: &mut Node) {
         node.set_label(self.title.as_str());

@@ -217,7 +217,11 @@ where
                     if let Some(mut child_state) = view_state.children.remove(&idx) {
                         ctx.with_id(view_id_for_row(idx), |ctx| {
                             if let Some(mut row_mut) = ListWidget::row_mut(&mut element, idx) {
-                                child_state.view.teardown(&mut child_state.state, ctx, row_mut.downcast());
+                                child_state.view.teardown(
+                                    &mut child_state.state,
+                                    ctx,
+                                    row_mut.downcast(),
+                                );
                             }
                             ListWidget::remove_row(&mut element, idx);
                         });
@@ -294,7 +298,9 @@ where
         for (&idx, child) in &mut view_state.children {
             ctx.with_id(view_id_for_row(idx), |ctx| {
                 if let Some(mut row_mut) = ListWidget::row_mut(&mut element, idx) {
-                    child.view.teardown(&mut child.state, ctx, row_mut.downcast());
+                    child
+                        .view
+                        .teardown(&mut child.state, ctx, row_mut.downcast());
                 }
             });
         }
@@ -321,9 +327,7 @@ where
                     );
                 }
             }
-            tracing::error!(
-                "Message sent to unloaded view in `ListView::message`: {message:?}"
-            );
+            tracing::error!("Message sent to unloaded view in `ListView::message`: {message:?}");
             return MessageResult::Stale;
         }
 
@@ -408,7 +412,13 @@ where
     F: Fn(&mut State, usize, bool, bool) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, ListViewAction<R::Id>) + Clone + Send + Sync + 'static,
 {
-    list_view_styled(data, selection, ListViewStyle::default(), row_builder, handler)
+    list_view_styled(
+        data,
+        selection,
+        ListViewStyle::default(),
+        row_builder,
+        handler,
+    )
 }
 
 /// Creates a high-performance virtualized list view with custom styling.
@@ -512,11 +522,7 @@ where
     type Element = Pod<ListWidget>;
     type ViewState = ListNavigableViewState;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        _app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
+    fn build(&self, ctx: &mut ViewCtx, _app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let mut widget = ListWidget::new(self.style.row_height);
         widget.state_mut().set_item_count(self.item_count);
 
@@ -568,7 +574,10 @@ where
                         command: row_action.command,
                         alt: false,
                     };
-                    (self.on_action)(app_state, ListViewAction::Select(row_action.row_index, mods));
+                    (self.on_action)(
+                        app_state,
+                        ListViewAction::Select(row_action.row_index, mods),
+                    );
                     return MessageResult::RequestRebuild;
                 }
                 ListWidgetAction::RowActivate(ref row_action) => {
@@ -731,7 +740,9 @@ where
 
     fn build(&self, ctx: &mut ViewCtx, _app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let mut widget = ListWidget::new(self.style.row_height);
-        widget.state_mut().set_item_count(self.flat_map.total_rows());
+        widget
+            .state_mut()
+            .set_item_count(self.flat_map.total_rows());
 
         let pod = Pod::new(widget);
         ctx.record_action_source(pod.new_widget.id());
@@ -768,7 +779,11 @@ where
                     if let Some(mut child_state) = view_state.children.remove(&idx) {
                         ctx.with_id(view_id_for_row(idx), |ctx| {
                             if let Some(mut row_mut) = ListWidget::row_mut(&mut element, idx) {
-                                child_state.view.teardown(&mut child_state.state, ctx, row_mut.downcast());
+                                child_state.view.teardown(
+                                    &mut child_state.state,
+                                    ctx,
+                                    row_mut.downcast(),
+                                );
                             }
                             ListWidget::remove_row(&mut element, idx);
                         });
@@ -800,7 +815,11 @@ where
                     let new_view = (self.row_builder)(app_state, row_info);
                     ctx.with_id(view_id_for_row(flat_idx), |ctx| {
                         let (new_element, child_state) = new_view.build(ctx, app_state);
-                        ListWidget::add_row(&mut element, flat_idx, new_element.new_widget.erased());
+                        ListWidget::add_row(
+                            &mut element,
+                            flat_idx,
+                            new_element.new_widget.erased(),
+                        );
                         view_state.children.insert(
                             flat_idx,
                             ChildState {
@@ -843,7 +862,9 @@ where
         for (&idx, child) in &mut view_state.children {
             ctx.with_id(view_id_for_row(idx), |ctx| {
                 if let Some(mut row_mut) = ListWidget::row_mut(&mut element, idx) {
-                    child.view.teardown(&mut child.state, ctx, row_mut.downcast());
+                    child
+                        .view
+                        .teardown(&mut child.state, ctx, row_mut.downcast());
                 }
             });
         }
@@ -927,7 +948,9 @@ where
             if is_header {
                 SectionedRowInfo::Header {
                     section_index: section_idx,
-                    title: self.section_titles.get(section_idx)
+                    title: self
+                        .section_titles
+                        .get(section_idx)
                         .cloned()
                         .unwrap_or_default(),
                 }

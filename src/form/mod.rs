@@ -31,7 +31,7 @@
 mod view;
 
 pub use view::{
-    form, form_section, form_row, form_toggle, form_radio, form_checkbox,
-    form_themed, form_section_themed, form_row_themed,
-    form_toggle_themed, form_radio_themed, form_checkbox_themed,
+    form, form_checkbox, form_checkbox_themed, form_radio, form_radio_themed, form_row,
+    form_row_themed, form_section, form_section_themed, form_themed, form_toggle,
+    form_toggle_themed,
 };

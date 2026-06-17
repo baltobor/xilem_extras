@@ -8,11 +8,11 @@
 //! Tabs widget demo.
 
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, portal};
-use xilem::WidgetView;
 
-use xilem_extras::{TabBar, TabBarColors, TabItem, NavTabBar, Theme};
+use xilem_extras::{NavTabBar, TabBar, TabBarColors, TabItem, Theme};
 
 use crate::app_model::AppModel;
 
@@ -230,13 +230,13 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             .text_size(12.0)
             .color(theme.text_secondary()),
         nav_tab_bar,
-        label(nav_content)
-            .text_size(14.0)
-            .color(theme.text()),
+        label(nav_content).text_size(14.0).color(theme.text()),
         flex_row((
             button(label("Add Nav Tab"), |model: &mut AppModel| {
                 let n = model.nav_tabs.len() + 1;
-                model.nav_tabs.push(xilem_extras::SimpleTab::new(format!("Tab {}", n)));
+                model
+                    .nav_tabs
+                    .push(xilem_extras::SimpleTab::new(format!("Tab {}", n)));
             }),
             button(label("Remove Nav Tab"), |model: &mut AppModel| {
                 if model.nav_tabs.len() > 1 {

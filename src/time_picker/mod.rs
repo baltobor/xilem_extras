@@ -11,8 +11,8 @@
 //! - Stepper buttons for hours (0-23)
 //! - Stepper buttons for minutes (0-59, configurable step)
 
-mod widget;
 mod view;
+mod widget;
 
-pub use widget::{TimePickerWidget, TimeAction};
-pub use view::{time_picker, TimePickerView};
+pub use view::{TimePickerView, time_picker};
+pub use widget::{TimeAction, TimePickerWidget};

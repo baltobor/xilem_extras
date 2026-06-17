@@ -21,16 +21,16 @@
 //! Linear-only scaling — no logarithmic / dB transforms. The
 //! caller's `min..max` is treated as the linear domain.
 
+mod busy_hex_view;
+mod busy_hex_widget;
 mod round_view;
 mod round_widget;
 mod view;
 mod widget;
-mod busy_hex_view;
-mod busy_hex_widget;
 
-pub use round_view::{round_progress, RoundProgressView};
-pub use round_widget::{RoundProgressSize, RoundProgressWidget};
-pub use view::{progress_bar, ProgressBarView};
-pub use widget::{ProgressBarWidget, ProgressOrientation, ProgressStyle};
-pub use busy_hex_view::{busy_hex, BusyHexView};
+pub use busy_hex_view::{BusyHexView, busy_hex};
 pub use busy_hex_widget::{BusyHexSize, BusyHexWidget};
+pub use round_view::{RoundProgressView, round_progress};
+pub use round_widget::{RoundProgressSize, RoundProgressWidget};
+pub use view::{ProgressBarView, progress_bar};
+pub use widget::{ProgressBarWidget, ProgressOrientation, ProgressStyle};

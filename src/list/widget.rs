@@ -17,15 +17,15 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::ops::Range;
 
+use tracing::{Span, trace_span};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, AccessEvent, ChildrenIds, CursorIcon, EventCtx, LayoutCtx, MeasureCtx, NewWidget,
-    PaintCtx, PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate,
-    PropertiesMut, PropertiesRef, QueryCtx, RegisterCtx, ScrollDelta, TextEvent, Update,
-    UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
+    PaintCtx, PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate, PropertiesMut,
+    PropertiesRef, QueryCtx, RegisterCtx, ScrollDelta, TextEvent, Update, UpdateCtx, Widget,
+    WidgetId, WidgetMut, WidgetPod,
     keyboard::{Key, NamedKey},
 };
-use tracing::{trace_span, Span};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, Point, Rect, RoundedRect, Size};
 use xilem::masonry::layout::{LenReq, Length};
@@ -425,7 +425,13 @@ impl ListWidget {
     // ========================================================================
 
     /// Navigate to a specific row.
-    fn navigate_to_row(&mut self, ctx: &mut EventCtx, row_index: usize, shift: bool, command: bool) {
+    fn navigate_to_row(
+        &mut self,
+        ctx: &mut EventCtx,
+        row_index: usize,
+        shift: bool,
+        command: bool,
+    ) {
         let row_index = row_index.min(self.state.item_count.saturating_sub(1));
         self.focused_row_index = Some(row_index);
         self.state.ensure_visible(row_index);
@@ -477,12 +483,7 @@ impl ListWidget {
         };
         let thumb_top = scroll_ratio * available_track;
 
-        Rect::new(
-            track.x0,
-            thumb_top,
-            track.x1,
-            thumb_top + thumb_height,
-        )
+        Rect::new(track.x0, thumb_top, track.x1, thumb_top + thumb_height)
     }
 
     /// Check if point is in scrollbar area.
@@ -500,7 +501,9 @@ impl ListWidget {
         // Track
         let track = self.scrollbar_rect();
         let track_rounded = RoundedRect::from_rect(track, SCROLLBAR_CORNER_RADIUS);
-        painter.fill(&track_rounded, self.style.scrollbar_track).draw();
+        painter
+            .fill(&track_rounded, self.style.scrollbar_track)
+            .draw();
 
         // Thumb
         let thumb = self.scrollbar_thumb_rect();
@@ -566,19 +569,23 @@ impl Widget for ListWidget {
                     let command = state.modifiers.meta() || state.modifiers.ctrl();
 
                     if click_count >= 2 {
-                        ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RowActivate(ListRowAction {
-                            row_index,
-                            click_count,
-                            shift,
-                            command,
-                        }));
+                        ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RowActivate(
+                            ListRowAction {
+                                row_index,
+                                click_count,
+                                shift,
+                                command,
+                            },
+                        ));
                     } else {
-                        ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RowSelect(ListRowAction {
-                            row_index,
-                            click_count,
-                            shift,
-                            command,
-                        }));
+                        ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RowSelect(
+                            ListRowAction {
+                                row_index,
+                                click_count,
+                                shift,
+                                command,
+                            },
+                        ));
                     }
                     ctx.set_handled();
                 }
@@ -599,7 +606,8 @@ impl Widget for ListWidget {
                         0.0
                     };
 
-                    self.state.scroll_to(self.scrollbar_drag_start_position + delta_scroll);
+                    self.state
+                        .scroll_to(self.scrollbar_drag_start_position + delta_scroll);
                     ctx.request_layout();
                     ctx.set_handled();
                 } else {
@@ -642,7 +650,8 @@ impl Widget for ListWidget {
 
             match &key_event.key {
                 Key::Named(NamedKey::ArrowUp) => {
-                    let new_idx = self.focused_row_index
+                    let new_idx = self
+                        .focused_row_index
                         .map(|i| i.saturating_sub(1))
                         .unwrap_or(0);
                     self.navigate_to_row(ctx, new_idx, shift, command);
@@ -650,7 +659,8 @@ impl Widget for ListWidget {
                 }
                 Key::Named(NamedKey::ArrowDown) => {
                     let max_idx = self.state.item_count.saturating_sub(1);
-                    let new_idx = self.focused_row_index
+                    let new_idx = self
+                        .focused_row_index
                         .map(|i| (i + 1).min(max_idx))
                         .unwrap_or(0);
                     self.navigate_to_row(ctx, new_idx, shift, command);
@@ -666,17 +676,21 @@ impl Widget for ListWidget {
                     ctx.set_handled();
                 }
                 Key::Named(NamedKey::PageUp) => {
-                    let page_rows = (self.state.viewport_height / self.state.row_height).floor() as usize;
-                    let new_idx = self.focused_row_index
+                    let page_rows =
+                        (self.state.viewport_height / self.state.row_height).floor() as usize;
+                    let new_idx = self
+                        .focused_row_index
                         .map(|i| i.saturating_sub(page_rows))
                         .unwrap_or(0);
                     self.navigate_to_row(ctx, new_idx, shift, command);
                     ctx.set_handled();
                 }
                 Key::Named(NamedKey::PageDown) => {
-                    let page_rows = (self.state.viewport_height / self.state.row_height).floor() as usize;
+                    let page_rows =
+                        (self.state.viewport_height / self.state.row_height).floor() as usize;
                     let max_idx = self.state.item_count.saturating_sub(1);
-                    let new_idx = self.focused_row_index
+                    let new_idx = self
+                        .focused_row_index
                         .map(|i| (i + page_rows).min(max_idx))
                         .unwrap_or(0);
                     self.navigate_to_row(ctx, new_idx, shift, command);
@@ -684,12 +698,14 @@ impl Widget for ListWidget {
                 }
                 Key::Named(NamedKey::Enter) => {
                     if let Some(row_index) = self.focused_row_index {
-                        ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RowActivate(ListRowAction {
-                            row_index,
-                            click_count: 2,
-                            shift,
-                            command,
-                        }));
+                        ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RowActivate(
+                            ListRowAction {
+                                row_index,
+                                click_count: 2,
+                                shift,
+                                command,
+                            },
+                        ));
                         ctx.set_handled();
                     }
                 }
@@ -774,10 +790,12 @@ impl Widget for ListWidget {
         // Check if range needs update
         let target_range = self.state.compute_target_range();
         if target_range != self.state.active_range && !self.action_pending {
-            ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RangeChanged(ListRangeAction {
-                old_range: self.state.active_range.clone(),
-                target_range: target_range.clone(),
-            }));
+            ctx.submit_action::<ListWidgetAction>(ListWidgetAction::RangeChanged(
+                ListRangeAction {
+                    old_range: self.state.active_range.clone(),
+                    target_range: target_range.clone(),
+                },
+            ));
             self.action_pending = true;
         }
 

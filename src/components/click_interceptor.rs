@@ -14,20 +14,20 @@
 
 use std::any::TypeId;
 
-use xilem::core::{MessageCtx, Mut, View, ViewMarker, ViewPathTracker, ViewId};
+use tracing::{Span, trace_span};
 use xilem::core::MessageResult;
+use xilem::core::{MessageCtx, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Point, Size};
-use tracing::{Span, trace_span};
 
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget,
-    PaintCtx, PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx,
-    TextEvent, Update, UpdateCtx, Widget, WidgetId, WidgetMut, WidgetPod,
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget, PaintCtx,
+    PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget,
+    WidgetId, WidgetMut, WidgetPod,
 };
-use xilem::masonry::layout::{LenReq, LayoutSize, Length, SizeDef};
 use xilem::masonry::kurbo::Axis;
+use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 use xilem::{Pod, ViewCtx, WidgetView};
 
 const CHILD_VIEW_ID: ViewId = ViewId::new(0);
@@ -91,15 +91,19 @@ impl Widget for ClickInterceptorWidget {
         // Let child handle accessibility events
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, _event: &Update) {
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        _event: &Update,
+    ) {
     }
 
     fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
         ctx.register_child(&mut self.child);
     }
 
-    fn property_changed(&mut self, _ctx: &mut UpdateCtx<'_>, _property_type: TypeId) {
-    }
+    fn property_changed(&mut self, _ctx: &mut UpdateCtx<'_>, _property_type: TypeId) {}
 
     fn measure(
         &mut self,
@@ -111,7 +115,13 @@ impl Widget for ClickInterceptorWidget {
     ) -> Length {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
-        ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length)
+        ctx.compute_length(
+            &mut self.child,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        )
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
@@ -122,7 +132,12 @@ impl Widget for ClickInterceptorWidget {
         ctx.derive_baselines(&self.child);
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        _ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        _painter: &mut Painter<'_>,
+    ) {
         // Transparent - no painting, child paints itself
     }
 
@@ -202,14 +217,9 @@ where
     type Element = Pod<ClickInterceptorWidget>;
     type ViewState = V::ViewState;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
-        let (child_pod, child_state) = ctx.with_id(CHILD_VIEW_ID, |ctx| {
-            self.child.build(ctx, app_state)
-        });
+    fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
+        let (child_pod, child_state) =
+            ctx.with_id(CHILD_VIEW_ID, |ctx| self.child.build(ctx, app_state));
         let pod = ctx.with_action_widget(|ctx| {
             ctx.create_pod(ClickInterceptorWidget::new(child_pod.new_widget))
         });

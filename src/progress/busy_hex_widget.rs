@@ -19,6 +19,7 @@
 
 use std::f64::consts::{PI, TAU};
 
+use xilem::Color;
 use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::core::{
     AccessCtx, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent, PropertiesMut,
@@ -28,7 +29,6 @@ use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, BezPath, Point, Size};
 use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Fill;
-use xilem::Color;
 
 use smallvec::SmallVec;
 use tracing::trace_span;
@@ -220,12 +220,7 @@ impl Widget for BusyHexWidget {
         }
     }
 
-    fn on_anim_frame(
-        &mut self,
-        ctx: &mut UpdateCtx<'_>,
-        _: &mut PropertiesMut<'_>,
-        interval: u64,
-    ) {
+    fn on_anim_frame(&mut self, ctx: &mut UpdateCtx<'_>, _: &mut PropertiesMut<'_>, interval: u64) {
         if !self.busy {
             // Let the cycle die when busy is off; restart on the
             // next `set_busy(true)`.
@@ -258,12 +253,7 @@ impl Widget for BusyHexWidget {
 
     fn layout(&mut self, _: &mut LayoutCtx<'_>, _: &PropertiesRef<'_>, _: Size) {}
 
-    fn paint(
-        &mut self,
-        ctx: &mut PaintCtx<'_>,
-        _: &PropertiesRef<'_>,
-        painter: &mut Painter<'_>,
-    ) {
+    fn paint(&mut self, ctx: &mut PaintCtx<'_>, _: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
         if !self.busy && self.hide_when_not_busy {
             return;
         }
@@ -293,7 +283,10 @@ impl Widget for BusyHexWidget {
 
             let cell_color = self.tint.with_alpha(alpha);
             let path = Self::hex_path(cx + dx, cy + dy, r * 0.92);
-            painter.fill(path, cell_color).fill_rule(Fill::NonZero).draw();
+            painter
+                .fill(path, cell_color)
+                .fill_rule(Fill::NonZero)
+                .draw();
         }
     }
 

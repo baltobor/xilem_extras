@@ -10,14 +10,14 @@
 use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, button};
+use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label};
 use xilem::{FontWeight, WidgetView};
 
 use xilem_extras::{
-    list_view_sectioned, ListViewAction, ListViewStyle, SectionDef, SectionedRowInfo,
-    SelectionState, Theme,
+    ListViewAction, ListViewStyle, SectionDef, SectionedRowInfo, SelectionState, Theme,
+    list_view_sectioned,
 };
-use xilem_material_icons::{icons, FONT_FAMILY, ICON_SIZE_SM};
+use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;
 
@@ -26,12 +26,10 @@ const ICON_RECENT: Color = Color::from_rgb8(100, 150, 255);
 const ICON_CONTACT: Color = Color::from_rgb8(100, 180, 100);
 
 fn section_header(title: String, theme: Theme) -> impl WidgetView<AppModel, ()> {
-    flex_row((
-        label(title)
-            .text_size(12.0)
-            .weight(FontWeight::BOLD)
-            .color(theme.text_secondary()),
-    ))
+    flex_row((label(title)
+        .text_size(12.0)
+        .weight(FontWeight::BOLD)
+        .color(theme.text_secondary()),))
     .padding(Length::px(8.0))
     .background_color(theme.page_bg())
 }
@@ -60,12 +58,8 @@ fn contact_item(
             .color(icon_color)
             .width(24.px()),
         flex_col((
-            label(name)
-                .text_size(13.0)
-                .color(theme.text()),
-            label(email)
-                .text_size(11.0)
-                .color(theme.text_secondary()),
+            label(name).text_size(13.0).color(theme.text()),
+            label(email).text_size(11.0).color(theme.text_secondary()),
         ))
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .gap(2.px()),
@@ -116,34 +110,31 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
             .selected_bg(theme.active_bg())
             .striped(true)
             .stripe_bg(theme.section_bg()),
-        move |state: &mut AppModel, row_info| {
-            match row_info {
-                SectionedRowInfo::Header { title, .. } => {
-                    section_header(title, theme).boxed()
-                }
-                SectionedRowInfo::Item {
-                    section_index,
-                    global_item_index,
+        move |state: &mut AppModel, row_info| match row_info {
+            SectionedRowInfo::Header { title, .. } => section_header(title, theme).boxed(),
+            SectionedRowInfo::Item {
+                section_index,
+                global_item_index,
+                is_selected,
+                is_striped,
+                ..
+            } => {
+                let contact = &state.contacts[global_item_index];
+                let (icon, icon_color) = match section_index {
+                    0 => (icons::STAR, ICON_STAR),
+                    1 => (icons::SCHEDULE, ICON_RECENT),
+                    _ => (icons::PERSON, ICON_CONTACT),
+                };
+                contact_item(
+                    contact.name.clone(),
+                    contact.email.clone(),
+                    icon,
+                    icon_color,
                     is_selected,
                     is_striped,
-                    ..
-                } => {
-                    let contact = &state.contacts[global_item_index];
-                    let (icon, icon_color) = match section_index {
-                        0 => (icons::STAR, ICON_STAR),
-                        1 => (icons::SCHEDULE, ICON_RECENT),
-                        _ => (icons::PERSON, ICON_CONTACT),
-                    };
-                    contact_item(
-                        contact.name.clone(),
-                        contact.email.clone(),
-                        icon,
-                        icon_color,
-                        is_selected,
-                        is_striped,
-                        theme,
-                    ).boxed()
-                }
+                    theme,
+                )
+                .boxed()
             }
         },
         |state: &mut AppModel, action| {
@@ -164,14 +155,15 @@ pub fn sectioned_list_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()
         label("Grouped list with section headers, keyboard navigation")
             .text_size(12.0)
             .color(theme.text_secondary()),
-
         list_view,
-
         // Selection info
         flex_row((
-            label(format!("Selected: {} contacts", model.sectioned_list_selection.count()))
-                .text_size(12.0)
-                .color(theme.text_secondary()),
+            label(format!(
+                "Selected: {} contacts",
+                model.sectioned_list_selection.count()
+            ))
+            .text_size(12.0)
+            .color(theme.text_secondary()),
             button(label("Clear"), |model: &mut AppModel| {
                 model.sectioned_list_selection.clear();
             }),

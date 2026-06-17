@@ -8,10 +8,10 @@
 //! App Menu Bar demo showing the unified cross-platform menu API.
 
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, label};
-use xilem::WidgetView;
 use xilem_extras::Theme;
 
 use crate::app_model::AppModel;
@@ -41,19 +41,28 @@ pub fn app_menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_
     let theme = Theme::from_dark(model.dark_mode);
 
     let overview = flex_col((
-        body_text("The app_menu module provides a declarative API for menus:", theme),
+        body_text(
+            "The app_menu module provides a declarative API for menus:",
+            theme,
+        ),
         body_text("  - macOS/Windows: Native menus via muda crate", theme),
         body_text("  - Linux: Fallback using menu_button widgets", theme),
-    )).gap(2.px());
+    ))
+    .gap(2.px());
 
     let features = flex_col((
         body_text("  - Fluent builder API inspired by SwiftUI Commands", theme),
         body_text("  - Keyboard shortcuts: CMD + Key::N", theme),
-        body_text("  - .enabled() and .checked() for state-driven items", theme),
+        body_text(
+            "  - .enabled() and .checked() for state-driven items",
+            theme,
+        ),
         body_text("  - Nested submenus via .submenu()", theme),
-    )).gap(2.px());
+    ))
+    .gap(2.px());
 
-    let usage_code = code_block(r#"use xilem_extras::{menu_button, menu_item, separator, submenu};
+    let usage_code = code_block(
+        r#"use xilem_extras::{menu_button, menu_item, separator, submenu};
 
 // Build menu bar with menu_button widgets
 flex_row((
@@ -66,7 +75,9 @@ flex_row((
         menu_item("Undo", |s| s.undo()),
         menu_item("Redo", |s| s.redo()),
     )),
-))"#, theme);
+))"#,
+        theme,
+    );
 
     flex_col((
         label("App Menu Bar (xilem_muda)")
@@ -88,7 +99,8 @@ flex_row((
             label(model.menu_last_action.clone())
                 .text_size(14.0)
                 .color(theme.text()),
-        )).gap(4.px()),
+        ))
+        .gap(4.px()),
     ))
     .gap(8.px())
     .padding(Length::px(16.0))

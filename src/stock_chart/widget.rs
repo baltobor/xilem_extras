@@ -7,17 +7,17 @@
 
 //! Stock chart widget implementation.
 
-use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerEvent, PointerUpdate, PropertiesMut, PropertiesRef,
-    RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId,
-};
+use tracing::{Span, trace_span};
 use xilem::masonry::accesskit::{Node, Role};
+use xilem::masonry::core::{
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PointerUpdate, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget,
+    WidgetId,
+};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::{Axis, BezPath, Line, Point, Rect, Size, Stroke};
 use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
-use tracing::{trace_span, Span};
 
 /// A single price bar with OHLCV data.
 #[derive(Debug, Clone)]
@@ -246,7 +246,12 @@ impl StockChartWidget {
         let chart = self.chart_area();
         let gap = self.size.height * 0.02;
         let vol_height = self.size.height * 0.15;
-        Rect::new(0.0, chart.y1 + gap, self.size.width, chart.y1 + gap + vol_height)
+        Rect::new(
+            0.0,
+            chart.y1 + gap,
+            self.size.width,
+            chart.y1 + gap + vol_height,
+        )
     }
 
     /// Converts a price to Y coordinate.
@@ -393,17 +398,11 @@ impl StockChartWidget {
             painter.stroke(&vert, &stroke, color).draw();
 
             // Left tick (open)
-            let open_tick = Line::new(
-                Point::new(x - tick_width, y_open),
-                Point::new(x, y_open),
-            );
+            let open_tick = Line::new(Point::new(x - tick_width, y_open), Point::new(x, y_open));
             painter.stroke(&open_tick, &stroke, color).draw();
 
             // Right tick (close)
-            let close_tick = Line::new(
-                Point::new(x, y_close),
-                Point::new(x + tick_width, y_close),
-            );
+            let close_tick = Line::new(Point::new(x, y_close), Point::new(x + tick_width, y_close));
             painter.stroke(&close_tick, &stroke, color).draw();
         }
     }
@@ -469,8 +468,12 @@ impl StockChartWidget {
         }
 
         let Some(pos) = self.mouse_pos else { return };
-        let Some(index) = self.hovered_index else { return };
-        let Some(bar) = self.bars.get(index) else { return };
+        let Some(index) = self.hovered_index else {
+            return;
+        };
+        let Some(bar) = self.bars.get(index) else {
+            return;
+        };
 
         let chart = self.chart_area();
         let stroke = Stroke::new(1.0);
@@ -480,7 +483,9 @@ impl StockChartWidget {
             Point::new(pos.x, chart.y0),
             Point::new(pos.x, self.size.height),
         );
-        painter.stroke(&vert, &stroke, self.style.crosshair_color).draw();
+        painter
+            .stroke(&vert, &stroke, self.style.crosshair_color)
+            .draw();
 
         // Horizontal line at close price
         let y_close = self.price_to_y(bar.close, &chart);
@@ -488,7 +493,9 @@ impl StockChartWidget {
             Point::new(0.0, y_close),
             Point::new(self.size.width, y_close),
         );
-        painter.stroke(&horiz, &stroke, self.style.crosshair_color).draw();
+        painter
+            .stroke(&horiz, &stroke, self.style.crosshair_color)
+            .draw();
 
         // Dot at intersection
         let dot = Rect::new(pos.x - 3.0, y_close - 3.0, pos.x + 3.0, y_close + 3.0);
@@ -554,11 +561,15 @@ impl Widget for StockChartWidget {
     ) {
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, _event: &Update) {
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        _event: &Update,
+    ) {
     }
 
-    fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {
-    }
+    fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {}
 
     fn measure(
         &mut self,
@@ -586,7 +597,12 @@ impl Widget for StockChartWidget {
         self.size = size;
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        _ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         // Background
         let bg = Rect::from_origin_size(Point::ZERO, self.size);
         painter.fill(bg, self.style.background_color).draw();
@@ -613,7 +629,12 @@ impl Widget for StockChartWidget {
         Role::Canvas
     }
 
-    fn accessibility(&mut self, _ctx: &mut AccessCtx<'_>, _props: &PropertiesRef<'_>, node: &mut Node) {
+    fn accessibility(
+        &mut self,
+        _ctx: &mut AccessCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        node: &mut Node,
+    ) {
         node.set_label("Stock chart");
     }
 

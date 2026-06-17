@@ -158,7 +158,13 @@ impl Widget for ContextMenuWidget {
         let auto_length = len_req.into();
         let context_size = LayoutSize::maybe(axis.cross(), cross_length);
 
-        ctx.compute_length(&mut self.child, auto_length, context_size, axis, cross_length)
+        ctx.compute_length(
+            &mut self.child,
+            auto_length,
+            context_size,
+            axis,
+            cross_length,
+        )
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {

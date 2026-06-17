@@ -9,16 +9,15 @@
 
 use std::any::TypeId;
 
-use xilem::masonry::accesskit::{Node, Role};
 use tracing::{Span, trace_span};
+use xilem::masonry::accesskit::{Node, Role};
 use xilem::masonry::imaging::Painter;
 use xilem::masonry::kurbo::Rect;
 use xilem::masonry::peniko::Color;
 
 use xilem::masonry::core::{
-    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx,
-    PointerEvent, PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx,
-    Widget, WidgetId,
+    AccessCtx, AccessEvent, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, PaintCtx, PointerEvent,
+    PropertiesMut, PropertiesRef, RegisterCtx, TextEvent, Update, UpdateCtx, Widget, WidgetId,
 };
 use xilem::masonry::kurbo::{Axis, Size};
 use xilem::masonry::layout::{LenReq, Length};
@@ -87,7 +86,12 @@ impl Widget for MenuSeparator {
     ) {
     }
 
-    fn update(&mut self, _ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, _event: &Update) {
+    fn update(
+        &mut self,
+        _ctx: &mut UpdateCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        _event: &Update,
+    ) {
     }
 
     fn register_children(&mut self, _ctx: &mut RegisterCtx<'_>) {
@@ -120,7 +124,12 @@ impl Widget for MenuSeparator {
         self.size = size;
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        _ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
         let y = self.size.height / 2.0;
         // Full width line - spans the entire allocated width
         let rect = Rect::new(

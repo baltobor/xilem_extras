@@ -76,10 +76,7 @@ pub struct SheetView<State, Action, V, F> {
 ///     },
 /// )
 /// ```
-pub fn sheet<State, Action, V, F>(
-    child: V,
-    on_dismiss: F,
-) -> SheetView<State, Action, V, F>
+pub fn sheet<State, Action, V, F>(child: V, on_dismiss: F) -> SheetView<State, Action, V, F>
 where
     State: 'static,
     Action: 'static,
@@ -110,18 +107,12 @@ where
     type Element = Pod<SheetWidget>;
     type ViewState = SheetViewState<State, Action, V>;
 
-    fn build(
-        &self,
-        ctx: &mut ViewCtx,
-        app_state: &mut State,
-    ) -> (Self::Element, Self::ViewState) {
-        let (child, child_state) = ctx.with_id(CHILD_VIEW_ID, |ctx| {
-            self.child.build(ctx, app_state)
-        });
+    fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
+        let (child, child_state) =
+            ctx.with_id(CHILD_VIEW_ID, |ctx| self.child.build(ctx, app_state));
 
-        let pod = ctx.with_action_widget(|ctx| {
-            ctx.create_pod(SheetWidget::new(child.new_widget, true))
-        });
+        let pod =
+            ctx.with_action_widget(|ctx| ctx.create_pod(SheetWidget::new(child.new_widget, true)));
 
         let view_state = SheetViewState { child_state };
 
@@ -179,9 +170,7 @@ where
             ),
             None => match message.take_message::<SheetAction>() {
                 Some(boxed) => match *boxed {
-                    SheetAction::Dismissed => {
-                        MessageResult::Action((self.on_dismiss)(app_state))
-                    }
+                    SheetAction::Dismissed => MessageResult::Action((self.on_dismiss)(app_state)),
                 },
                 None => MessageResult::Stale,
             },
