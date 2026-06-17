@@ -152,7 +152,10 @@ impl Widget for SelectOptionItem {
         );
 
         match axis {
-            Axis::Horizontal => Length::px(child_length.get() + 2.0 * ITEM_PADDING_H),
+            Axis::Horizontal => match len_req {
+                LenReq::FitContent(available) => available,
+                _ => Length::px(child_length.get() + 2.0 * ITEM_PADDING_H),
+            },
             Axis::Vertical => Length::px(DEFAULT_ITEM_HEIGHT),
         }
     }

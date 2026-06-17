@@ -98,7 +98,8 @@ impl DropdownSelect {
             return;
         }
 
-        let mut dropdown = SelectDropdown::new(ctx.widget_id());
+        let widget_w = ctx.border_box().size().width;
+        let mut dropdown = SelectDropdown::new(ctx.widget_id()).with_min_width(widget_w);
         for (i, label) in self.options.iter().enumerate() {
             let is_selected = i == self.selected_index;
             let item = super::SelectOptionItem::new(label.clone(), is_selected);

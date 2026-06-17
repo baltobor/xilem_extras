@@ -40,6 +40,8 @@ pub struct SelectDropdown {
     option_labels: Vec<String>,
     bg_color: Color,
     border_color: Color,
+    /// Minimum width — set to the opener button width so items fill the full row.
+    min_width: f64,
 }
 
 impl SelectDropdown {
@@ -51,7 +53,14 @@ impl SelectDropdown {
             option_labels: Vec::new(),
             bg_color: BG_COLOR,
             border_color: BORDER_COLOR,
+            min_width: 0.0,
         }
+    }
+
+    /// Sets the minimum width of the dropdown (typically the opener button's width).
+    pub fn with_min_width(mut self, width: f64) -> Self {
+        self.min_width = width;
+        self
     }
 
     /// Builder-style method to add an option widget.
@@ -188,7 +197,12 @@ impl Widget for SelectDropdown {
             length += gap_count * gap_length;
         }
 
-        Length::px(min_result.max(length))
+        let min = if axis == Axis::Horizontal {
+            self.min_width
+        } else {
+            0.0
+        };
+        Length::px(min_result.max(length).max(min))
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, props: &PropertiesRef<'_>, size: Size) {

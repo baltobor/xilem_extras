@@ -13,7 +13,7 @@ use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, MainAxisAlignment, button, flex_col, flex_row, label};
-use xilem_extras::{CalendarLocale, Theme, calendar_picker};
+use xilem_extras::{CalendarLocale, Theme, calendar_picker, dropdown_select};
 
 use crate::app_model::AppModel;
 
@@ -30,23 +30,35 @@ const TIME_ARROW: Color = Color::from_rgba8(0x00, 0x7A, 0xFF, 0xFF);
 // Grid cell size
 const CELL: f64 = 28.0;
 
-// Locale for the demo
-const LOCALE: CalendarLocale = CalendarLocale::English;
+const LOCALE_OPTIONS: &[(CalendarLocale, &str)] = &[
+    (CalendarLocale::English, "English"),
+    (CalendarLocale::German, "Deutsch"),
+    (CalendarLocale::French, "Français"),
+    (CalendarLocale::Spanish, "Español"),
+    (CalendarLocale::Dutch, "Nederlands"),
+    (CalendarLocale::Arabic, "Arabic (Gregorian)"),
+];
+
+fn locale_to_index(locale: CalendarLocale) -> usize {
+    LOCALE_OPTIONS
+        .iter()
+        .position(|(l, _)| *l == locale)
+        .unwrap_or(0)
+}
 
 pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
     let theme = Theme::from_dark(model.dark_mode);
+    let locale = model.calendar_locale;
     let today = Local::now().date_naive();
     let display_date = model.calendar_selected_date.unwrap_or(today);
-    let date_text = display_date.format("%d.%m.%Y").to_string();
-    let kw_text = format!("{} {}", LOCALE.week_label(), display_date.iso_week().week());
+    let date_text = display_date.format(locale.date_format()).to_string();
+    let kw_text = format!("{} {}", locale.week_label(), display_date.iso_week().week());
     let selected_text = format!("Selected: {}", date_text);
 
     let time_text = format!("{:02}:{:02}", model.calendar_hour, model.calendar_minute);
 
-    // Get displayed month from selected date or today
     let displayed_month = model.calendar_selected_date.unwrap_or(today);
 
-    // Navigation dates
     let month_start = displayed_month.with_day(1).unwrap_or(displayed_month);
     let prev = (month_start - Duration::days(15))
         .with_day(1)
@@ -55,16 +67,36 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
         .with_day(1)
         .unwrap_or(month_start);
 
-    let months = LOCALE.months();
+    let months = locale.months();
     let month_name = months[(month_start.month() - 1) as usize];
     let header = format!("{} {}", month_name, month_start.year());
+
+    let locale_options: Vec<String> = LOCALE_OPTIONS
+        .iter()
+        .map(|(_, name)| name.to_string())
+        .collect();
+    let locale_index = locale_to_index(locale);
 
     flex_col((
         label("Calendar & Time Picker")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
             .color(theme.text()),
-        // Selected date display
+        // Language selector row
+        flex_row((
+            label("Language:")
+                .text_size(11.0)
+                .color(theme.text_secondary()),
+            dropdown_select(
+                locale_index,
+                locale_options,
+                |m: &mut AppModel, _value: &str, index: usize| {
+                    m.calendar_locale = LOCALE_OPTIONS[index].0;
+                },
+            ),
+        ))
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .gap(8.0_f64.px()),
         label(selected_text).text_size(12.0).color(theme.text()),
         flex_row((
             // Calendar section
@@ -80,15 +112,15 @@ pub fn calendar_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> 
                 ))
                 .main_axis_alignment(MainAxisAlignment::SpaceBetween)
                 .width(((CELL * 7.0) as i32).px()),
-                // Grid-based calendar (using xilem_extras reusable widget)
+                // Grid-based calendar
                 calendar_picker(
                     displayed_month,
                     model.calendar_selected_date,
                     |model: &mut AppModel, date| {
                         model.calendar_selected_date = Some(date);
-                        () // Return unit action to trigger rebuild
                     },
-                ),
+                )
+                .locale(locale),
                 // Date, week display, and today button
                 flex_row((
                     flex_row((
@@ -191,16 +223,14 @@ fn time_btn(text: &'static str, is_hour: bool, is_up: bool) -> impl WidgetView<A
                         m.calendar_hour - 1
                     };
                 }
+            } else if is_up {
+                m.calendar_minute = (m.calendar_minute + 5) % 60;
             } else {
-                if is_up {
-                    m.calendar_minute = (m.calendar_minute + 5) % 60;
+                m.calendar_minute = if m.calendar_minute < 5 {
+                    55
                 } else {
-                    m.calendar_minute = if m.calendar_minute < 5 {
-                        55
-                    } else {
-                        m.calendar_minute - 5
-                    };
-                }
+                    m.calendar_minute - 5
+                };
             }
         },
     )

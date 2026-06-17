@@ -129,18 +129,34 @@ impl CalendarPickerWidget {
         }
     }
 
+    pub fn set_locale(this: &mut WidgetMut<'_, Self>, locale: CalendarLocale) {
+        if this.widget.locale != locale {
+            this.widget.locale = locale;
+            this.widget.weekday_layouts.clear();
+            this.ctx.request_render();
+        }
+    }
+
     fn grid_start(&self) -> NaiveDate {
         let month_start = self
             .displayed_month
             .with_day(1)
             .unwrap_or(self.displayed_month);
+        // RTL mirrors LTR: same Monday-first week, painted right-to-left.
         let wd = month_start.weekday().num_days_from_monday() as i64;
         month_start - Duration::days(wd)
     }
 
+    /// Maps a visual (col, row) to a calendar date.
+    /// For RTL the visual column order is reversed: col 0 is the rightmost day.
     fn date_at(&self, col: usize, row: usize) -> NaiveDate {
         let grid_start = self.grid_start();
-        grid_start + Duration::days((row * NUM_COLS + col) as i64)
+        let logical_col = if self.locale.is_rtl() {
+            NUM_COLS - 1 - col
+        } else {
+            col
+        };
+        grid_start + Duration::days((row * NUM_COLS + logical_col) as i64)
     }
 
     fn hit_test(&self, pos: Point) -> Option<(usize, usize)> {
@@ -270,18 +286,31 @@ impl Widget for CalendarPickerWidget {
         let displayed_month = self.displayed_month.month();
         let displayed_year = self.displayed_month.year();
 
-        // Paint weekday headers (row 0)
+        // Paint weekday headers (row 0).
+        // For RTL, label array index 0=Sun…6=Sat, but visual col 0 is leftmost = Sat.
+        // So visual col c uses label index (NUM_COLS-1-c), placing Sun on the right.
+        // Weekend labels: index 0 (Sun) and 6 (Sat) → visual cols 6 and 0.
         for col in 0..NUM_COLS {
+            let label_idx = if self.locale.is_rtl() {
+                NUM_COLS - 1 - col
+            } else {
+                col
+            };
             let x = col as f64 * self.cell_size;
             let y = 0.0;
 
-            if let Some(layout) = self.weekday_layouts.get(col) {
+            if let Some(layout) = self.weekday_layouts.get(label_idx) {
                 let tw = layout.width() as f64;
                 let th = layout.height() as f64;
                 let tx = x + (self.cell_size - tw) / 2.0;
                 let ty = y + (self.cell_size - th) / 2.0;
 
-                let color = if col >= 5 { TEXT_WEEKEND } else { TEXT_DIM };
+                // Index 5=Sat, 6=Sun are weekends for all locales (Mon-first array).
+                let color = if label_idx >= 5 {
+                    TEXT_WEEKEND
+                } else {
+                    TEXT_DIM
+                };
                 let brushes = [Brush::Solid(color.into())];
                 render_text(painter, Affine::translate((tx, ty)), layout, &brushes, true);
             }
@@ -297,7 +326,9 @@ impl Widget for CalendarPickerWidget {
                 let in_month = date.month() == displayed_month && date.year() == displayed_year;
                 let is_today = date == self.today;
                 let is_selected = self.selected == Some(date);
-                let is_weekend = col >= 5;
+                // Use the actual weekday so RTL and LTR both highlight Sat/Sun correctly.
+                use chrono::Weekday;
+                let is_weekend = matches!(date.weekday(), Weekday::Sat | Weekday::Sun);
 
                 // Background - squared with rounded corners (not circle)
                 let cell_rect = Rect::new(

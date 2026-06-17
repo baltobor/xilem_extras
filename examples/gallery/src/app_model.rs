@@ -10,6 +10,7 @@
 use chrono::NaiveDate;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use xilem_extras::CalendarLocale;
 use xilem_extras::{
     ColumnDef, ColumnWidths, ExpansionState, MultiSelection, SingleSelection, SortDirection,
     SortOrder, column,
@@ -119,6 +120,7 @@ pub struct AppModel {
     pub calendar_selected_date: Option<NaiveDate>,
     pub calendar_hour: u8,
     pub calendar_minute: u8,
+    pub calendar_locale: CalendarLocale,
 
     // Widgets demo state
     pub widgets_text_light: String,
@@ -253,6 +255,7 @@ impl AppModel {
             calendar_selected_date: None,
             calendar_hour: 12,
             calendar_minute: 0,
+            calendar_locale: CalendarLocale::English,
 
             // Widgets
             widgets_text_light: String::new(),

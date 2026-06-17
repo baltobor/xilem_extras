@@ -13,6 +13,8 @@ use chrono::NaiveDate;
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
 use xilem::{Pod, ViewCtx};
 
+use crate::CalendarLocale;
+
 use super::widget::{CalendarAction, CalendarPickerWidget};
 
 /// Xilem view that wraps a [`CalendarPickerWidget`].
@@ -33,13 +35,22 @@ use super::widget::{CalendarAction, CalendarPickerWidget};
 ///         state.selected_date = Some(date);
 ///     },
 /// )
+/// .locale(CalendarLocale::Arabic)
 /// ```
 #[must_use = "View values do nothing unless provided to Xilem."]
 pub struct CalendarPickerView<State, Action, F> {
     displayed_month: NaiveDate,
     selected_date: Option<NaiveDate>,
     callback: F,
+    locale: CalendarLocale,
     phantom: PhantomData<fn(State) -> Action>,
+}
+
+impl<State, Action, F> CalendarPickerView<State, Action, F> {
+    pub fn locale(mut self, locale: CalendarLocale) -> Self {
+        self.locale = locale;
+        self
+    }
 }
 
 /// Creates a calendar picker view.
@@ -66,6 +77,7 @@ where
         displayed_month,
         selected_date,
         callback,
+        locale: CalendarLocale::default(),
         phantom: PhantomData,
     }
 }
@@ -74,6 +86,7 @@ where
 pub struct CalendarPickerViewState {
     displayed_month: NaiveDate,
     selected: Option<NaiveDate>,
+    locale: CalendarLocale,
 }
 
 impl<State, Action, F> ViewMarker for CalendarPickerView<State, Action, F> {}
@@ -88,12 +101,12 @@ where
     type ViewState = CalendarPickerViewState;
 
     fn build(&self, ctx: &mut ViewCtx, _app_state: &mut State) -> (Self::Element, Self::ViewState) {
-        let widget = CalendarPickerWidget::new(self.selected_date);
-        // Set displayed month explicitly
+        let widget = CalendarPickerWidget::with_locale(self.selected_date, self.locale);
         let pod = ctx.with_action_widget(|ctx| ctx.create_pod(widget));
         let state = CalendarPickerViewState {
             displayed_month: self.displayed_month,
             selected: self.selected_date,
+            locale: self.locale,
         };
         (pod, state)
     }
@@ -112,6 +125,10 @@ where
             CalendarPickerWidget::set_state(&mut element, self.displayed_month, self.selected_date);
             view_state.displayed_month = self.displayed_month;
             view_state.selected = self.selected_date;
+        }
+        if self.locale != view_state.locale {
+            CalendarPickerWidget::set_locale(&mut element, self.locale);
+            view_state.locale = self.locale;
         }
     }
 

@@ -16,11 +16,18 @@ pub enum CalendarLocale {
     French,
     Spanish,
     Dutch,
+    Arabic,
 }
 
 impl CalendarLocale {
-    /// Returns 2-letter weekday abbreviations starting with Monday.
+    /// Returns true if this locale uses right-to-left layout.
+    pub fn is_rtl(&self) -> bool {
+        matches!(self, CalendarLocale::Arabic)
+    }
+
+    /// Returns 2-letter weekday abbreviations starting with Monday (or Sunday for RTL locales).
     /// Example: "Mo", "Di", "Mi" for German.
+    /// For Arabic the order is Sun–Sat (right-to-left reading: the rightmost column is Sunday).
     pub fn weekdays_short(&self) -> [&'static str; 7] {
         match self {
             CalendarLocale::English => ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
@@ -28,6 +35,9 @@ impl CalendarLocale {
             CalendarLocale::French => ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"],
             CalendarLocale::Spanish => ["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"],
             CalendarLocale::Dutch => ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
+            // Mon Tue Wed Thu Fri Sat Sun — same week order as other locales, mirrored RTL
+            // so Monday appears on the right and Sunday on the left.
+            CalendarLocale::Arabic => ["ان", "ثل", "رب", "خم", "جم", "سب", "أح"],
         }
     }
 
@@ -104,6 +114,20 @@ impl CalendarLocale {
                 "November",
                 "December",
             ],
+            CalendarLocale::Arabic => [
+                "يناير",
+                "فبراير",
+                "مارس",
+                "أبريل",
+                "مايو",
+                "يونيو",
+                "يوليو",
+                "أغسطس",
+                "سبتمبر",
+                "أكتوبر",
+                "نوفمبر",
+                "ديسمبر",
+            ],
         }
     }
 
@@ -115,6 +139,19 @@ impl CalendarLocale {
             CalendarLocale::French => "Sem",
             CalendarLocale::Spanish => "Sem",
             CalendarLocale::Dutch => "Week",
+            CalendarLocale::Arabic => "أسبوع",
+        }
+    }
+
+    /// Returns the strftime format string for short dates in this locale.
+    pub fn date_format(&self) -> &'static str {
+        match self {
+            CalendarLocale::English => "%m/%d/%Y",
+            CalendarLocale::German => "%d.%m.%Y",
+            CalendarLocale::French => "%d/%m/%Y",
+            CalendarLocale::Spanish => "%d/%m/%Y",
+            CalendarLocale::Dutch => "%d-%m-%Y",
+            CalendarLocale::Arabic => "%d/%m/%Y",
         }
     }
 
@@ -135,6 +172,20 @@ impl CalendarLocale {
             ],
             CalendarLocale::Dutch => [
                 "Jan", "Feb", "Mrt", "Apr", "Mei", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec",
+            ],
+            CalendarLocale::Arabic => [
+                "يناير",
+                "فبراير",
+                "مارس",
+                "أبريل",
+                "مايو",
+                "يونيو",
+                "يوليو",
+                "أغسطس",
+                "سبتمبر",
+                "أكتوبر",
+                "نوفمبر",
+                "ديسمبر",
             ],
         }
     }
