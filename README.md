@@ -2,7 +2,7 @@
 
 High-level widget library for [Xilem](https://github.com/linebender/xilem) providing Tree, List, Table, and Menu widgets with SwiftUI-inspired APIs.
 
-***This crate is highly experimental and a sandbox project for me and not for productive use. The API may break anytime. Use it at your own risk. It is used to try ideas and concepts. Also AI may be used to create sketches. It's marked then in the commit message. This project is not related to xilem or the team, even though the name includes "xilem." The purpose of this playground is to explore xilem so that well-balanced and refined concepts can later be submitted as single pull requests to the original xilem repository. If you create a xilem project, please use the original xilem reposity. Participation is optional. However, please do not consider this repository an official extension of xilem.***
+***This crate is highly experimental and a sandbox project for me and not for productive use. The API may break anytime. Use it at your own risk. It is used to try ideas and concepts. Also AI may be used to create sketches. It's marked then in the commit message. This project is not related to xilem or the team, even though the name includes "xilem." The purpose of this playground is to explore xilem so that well-balanced and refined concepts can later be submitted as single pull requests to the original xilem repository. If you create a xilem project, please use the original xilem reposity. Participation is optional. However, please do not consider this repository an official extension of xilem. Claude Code has been used to handle the arabic language, exotic operating systems like windows and for refactoring tasks.***
 
 
 ## Overview
