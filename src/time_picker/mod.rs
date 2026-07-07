@@ -1,18 +1,4 @@
-//! This file is part of the xilem_extras project.
-//! (c) 2026 by Jacek Wisniowski
-//!
-//! This project was released as open source under the
-//! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
-//! (compatible with the Xilem licence).
+//! Time picker — re-exports from masonry and xilem_masonry layers.
 
-//! Time picker widget module.
-//!
-//! Provides a simple time picker for hour:minute selection with:
-//! - Stepper buttons for hours (0-23)
-//! - Stepper buttons for minutes (0-59, configurable step)
-
-mod view;
-mod widget;
-
-pub use view::{TimePickerView, time_picker};
-pub use widget::{TimeAction, TimePickerWidget};
+pub use crate::masonry::time_picker::{TimeAction, TimePickerWidget};
+pub use crate::xilem_masonry::time_picker::{TimePickerView, time_picker};

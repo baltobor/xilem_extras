@@ -88,8 +88,8 @@ use xilem::style::Style;
 use xilem::view::label;
 use xilem::{Pod, ViewCtx, WidgetView};
 
-use super::resizable_header::{ColumnResizeAction, ResizableHeader};
-use super::widget::{TableRangeAction, TableWidget, TableWidgetAction};
+use crate::masonry::table::resizable_header::{ColumnResizeAction, ResizableHeader};
+use crate::masonry::table::widget::{TableRangeAction, TableWidget, TableWidgetAction};
 use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder, TableStyle};
 use crate::traits::{Identifiable, SelectionModifiers, SelectionState, TableRow};
 

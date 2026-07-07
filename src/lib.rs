@@ -46,6 +46,10 @@
 //! }
 //! ```
 
+pub mod masonry;
+pub mod xilem_masonry;
+pub mod views;
+
 pub mod app_menu;
 pub mod calendar_picker;
 pub mod chart;
@@ -252,3 +256,4 @@ pub use progress::{
 };
 
 pub use xilem;
+pub use masonry_winit;

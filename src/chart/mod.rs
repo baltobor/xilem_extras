@@ -1,16 +1,4 @@
-//! This file is part of the xilem_extras project.
-//! (c) 2026 by Jacek Wisniowski
-//!
-//! This project was released as open source under the
-//! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
-//! (compatible with the Xilem licence).
+//! Chart widget — re-exports from masonry and xilem_masonry layers.
 
-//! Chart widget module.
-//!
-//! Provides bar and line chart widgets for data visualization.
-
-mod view;
-mod widget;
-
-pub use view::{ChartView, chart};
-pub use widget::{ChartAction, ChartMode, ChartWidget};
+pub use crate::masonry::chart::{ChartAction, ChartMode, ChartWidget};
+pub use crate::xilem_masonry::chart::{ChartView, ChartViewState, chart};

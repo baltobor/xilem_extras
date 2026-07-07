@@ -1,16 +1,4 @@
-//! This file is part of the xilem_extras project.
-//! (c) 2026 by Jacek Wisniowski
-//!
-//! This project was released as open source under the
-//! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
-//! (compatible with the Xilem licence).
+//! Context menu — re-exports from masonry and xilem_masonry layers.
 
-//! Context menu (right-click popup menu) support.
-
-mod dropdown;
-mod view;
-mod widget;
-
-pub use dropdown::ContextMenuDropdown;
-pub use view::{ContextMenuView, context_menu};
-pub use widget::{ContextMenuAction, ContextMenuWidget};
+pub use crate::masonry::context_menu::{ContextMenuAction, ContextMenuDropdown, ContextMenuWidget};
+pub use crate::xilem_masonry::context_menu::{ContextMenuView, ContextMenuViewState, context_menu};
