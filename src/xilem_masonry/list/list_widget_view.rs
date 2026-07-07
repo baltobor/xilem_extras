@@ -38,7 +38,7 @@ use xilem::masonry::peniko::Color;
 use xilem::{Pod, ViewCtx, WidgetView};
 
 use crate::masonry::list::widget::{ListRangeAction, ListWidget, ListWidgetAction};
-use crate::traits::{Identifiable, SelectionModifiers, SelectionState};
+use crate::xilem::traits::{Identifiable, SelectionModifiers, SelectionState};
 
 /// Actions that can occur on list items.
 #[derive(Debug, Clone, PartialEq)]

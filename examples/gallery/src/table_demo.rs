@@ -15,10 +15,10 @@ use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label, sized_box};
 
-use xilem_extras::{
-    SelectionModifiers, SelectionState, SortDirection, SortOrder, Theme, resizable_header,
-    row_button, row_button_with_modifiers,
-};
+use xilem_extras::xilem::components::{row_button, row_button_with_modifiers};
+use xilem_extras::xilem::table::{SortDirection, SortOrder, resizable_header};
+use xilem_extras::xilem::theme::Theme;
+use xilem_extras::xilem::traits::{SelectionModifiers, SelectionState};
 use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;
@@ -79,7 +79,7 @@ fn cyclist_row<'a>(
     cyclist: &'a Cyclist,
     is_selected: bool,
     is_striped: bool,
-    col_widths: &'a xilem_extras::ColumnWidths,
+    col_widths: &'a xilem_extras::xilem::table::ColumnWidths,
     theme: Theme,
 ) -> impl WidgetView<AppModel> + use<'a> {
     let id = cyclist.id;

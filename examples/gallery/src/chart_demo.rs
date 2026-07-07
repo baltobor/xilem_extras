@@ -11,8 +11,8 @@ use masonry::layout::{AsUnit, Length};
 use xilem::WidgetView;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, FlexExt, button, checkbox, flex_col, flex_row, label};
-use xilem_extras::Theme;
-use xilem_extras::chart::{ChartMode, chart};
+use xilem_extras::xilem::chart::{ChartMode, chart};
+use xilem_extras::xilem::theme::Theme;
 
 use crate::app_model::AppModel;
 

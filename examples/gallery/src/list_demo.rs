@@ -13,7 +13,9 @@ use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label};
 
-use xilem_extras::{ListViewAction, ListViewStyle, SelectionState, Theme, list_view_styled};
+use xilem_extras::xilem::list::{ListViewAction, ListViewStyle, list_view_styled};
+use xilem_extras::xilem::theme::Theme;
+use xilem_extras::xilem::traits::SelectionState;
 use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;

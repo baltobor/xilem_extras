@@ -46,20 +46,24 @@ use xilem::winit::event_loop::ActiveEventLoop;
 use xilem::winit::window::WindowId as WinitWindowId;
 
 use app_model::{AppModel, Page};
-use xilem_extras::{Theme, row_button, sheet};
+use xilem_extras::xilem::components::row_button;
+use xilem_extras::xilem::sheet::sheet;
+use xilem_extras::xilem::theme::Theme;
 
 // Material Symbols font
 use xilem_material_icons::FONT_DATA;
 
 // Linux-only: menu_button imports for fallback menu bar
 #[cfg(target_os = "linux")]
-use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
+use xilem_extras::xilem::menu_button::DEFAULT_ITEM_HEIGHT;
 #[cfg(target_os = "linux")]
-use xilem_extras::{group, menu_button, menu_item, separator, submenu};
+use xilem_extras::xilem::menu_button::menu_button;
+#[cfg(target_os = "linux")]
+use xilem_extras::xilem::menu_items::{group, menu_item, separator, submenu};
 
 // macOS/Windows: muda for native menus (re-exported from xilem_extras)
 #[cfg(not(target_os = "linux"))]
-use xilem_extras::app_menu::muda::{
+use xilem_extras::xilem::app_menu::muda::{
     CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu, accelerator::Accelerator,
 };
 
@@ -68,7 +72,7 @@ use xilem_extras::app_menu::muda::{
 use std::sync::{Arc, Mutex, mpsc};
 
 // Some styling. Demo-only fallbacks; the gallery now derives all
-// colours from `xilem_extras::Theme` via `model.dark_mode`. These
+// colours from `xilem_extras::xilem::theme::Theme` via `model.dark_mode`. These
 // constants stay for the few spots that don't yet thread the
 // theme through (modal content, Linux menu bar) and are otherwise
 // unused.

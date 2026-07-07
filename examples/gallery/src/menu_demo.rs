@@ -12,8 +12,11 @@ use xilem::WidgetView;
 use xilem::style::{Padding, Style};
 use xilem::view::{flex_col, flex_row, label};
 
-use xilem_extras::menu_button::DEFAULT_ITEM_HEIGHT;
-use xilem_extras::{Theme, dropdown_select, group, menu_button, menu_item, separator, submenu};
+use xilem_extras::xilem::menu_button::DEFAULT_ITEM_HEIGHT;
+use xilem_extras::xilem::menu_button::menu_button;
+use xilem_extras::xilem::dropdown_select::dropdown_select;
+use xilem_extras::xilem::menu_items::{group, menu_item, separator, submenu};
+use xilem_extras::xilem::theme::Theme;
 
 use crate::app_model::AppModel;
 

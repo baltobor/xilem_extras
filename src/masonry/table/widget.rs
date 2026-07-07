@@ -61,8 +61,7 @@ use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
 use xilem::masonry::properties::Background;
 
-use crate::table::TableStyle;
-use crate::table::TableScrollState;
+use crate::xilem::table::{TableScrollState, TableStyle};
 
 /// Scrollbar configuration.
 const SCROLLBAR_WIDTH: f64 = 8.0;

@@ -15,8 +15,8 @@ use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
-use xilem_extras::Theme;
-use xilem_extras::progress::{ProgressStyle, busy_hex, progress_bar, round_progress};
+use xilem_extras::xilem::progress::{ProgressStyle, busy_hex, progress_bar, round_progress};
+use xilem_extras::xilem::theme::Theme;
 
 use crate::app_model::AppModel;
 const BLUE_TINT: Color = Color::from_rgb8(0x4A, 0x9E, 0xFF);

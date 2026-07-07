@@ -13,9 +13,9 @@ use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label};
 
-use xilem_extras::{
-    SelectionState, SortDirection, SortOrder, TableAction, Theme, table, table_cell,
-};
+use xilem_extras::xilem::table::{SortDirection, SortOrder, TableAction, table, table_cell};
+use xilem_extras::xilem::theme::Theme;
+use xilem_extras::xilem::traits::SelectionState;
 
 use crate::app_model::AppModel;
 
@@ -25,7 +25,7 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
     let selection_count = model.virtual_table_selection.count();
 
     // Compute sorted IDs for shift-selection to work
-    use xilem_extras::Identifiable;
+    use xilem_extras::xilem::traits::Identifiable;
     let sorted_indices = model
         .virtual_table_sort
         .sort_indices(&model.virtual_cyclists);

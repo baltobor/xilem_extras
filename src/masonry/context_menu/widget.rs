@@ -22,7 +22,7 @@ use xilem::masonry::kurbo::{Axis, Point, Size};
 use xilem::masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 
 use super::ContextMenuDropdown;
-use crate::menu_button::PulldownMenuItem;
+use crate::masonry::menu_button::PulldownMenuItem;
 
 /// Action emitted when a context menu item is selected.
 #[derive(PartialEq, Debug, Clone)]
@@ -67,7 +67,7 @@ impl ContextMenuWidget {
         let mut menu = ContextMenuDropdown::new(ctx.widget_id());
         for label in &self.items {
             if label == "---" {
-                menu = menu.with_item(NewWidget::new(crate::menu_button::MenuSeparator::new()));
+                menu = menu.with_item(NewWidget::new(crate::masonry::menu_button::MenuSeparator::new()));
             } else {
                 menu = menu.with_item(NewWidget::new(PulldownMenuItem::new(label.clone())));
             }

@@ -13,7 +13,7 @@ use chrono::NaiveDate;
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
 use xilem::{Pod, ViewCtx};
 
-use crate::CalendarLocale;
+use crate::locale::CalendarLocale;
 
 use crate::masonry::calendar_picker::widget::{CalendarAction, CalendarPickerWidget};
 

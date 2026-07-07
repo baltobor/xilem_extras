@@ -1,0 +1,847 @@
+//! This file is part of the xilem_extras project.
+//! (c) 2026 by Jacek Wisniowski
+//!
+//! This project was released as open source under the
+//! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
+//! (compatible with the Xilem licence).
+
+use masonry::layout::AsUnit;
+use xilem::style::Style;
+use xilem::view::flex_col;
+use xilem::{AnyWidgetView, WidgetView};
+
+use xilem::masonry::core::PointerButton;
+
+use super::ExpansionState;
+pub use super::types::{TreeAction, TreeStyle};
+use crate::xilem::components::{RowButtonPress, row_button_with_clicks, row_button_with_press};
+use crate::xilem::context_menu::context_menu;
+use crate::xilem::menu_items::MenuItems;
+use crate::xilem::traits::{SelectionState, TreeNode};
+
+/// Collects visible tree nodes into a flat list for rendering.
+pub fn flatten_tree<'a, N: TreeNode>(
+    node: &'a N,
+    expansion: &ExpansionState<N::Id>,
+    depth: usize,
+    result: &mut Vec<(&'a N, usize, bool)>,
+) {
+    let is_expanded = expansion.is_expanded(&node.id());
+    result.push((node, depth, is_expanded));
+
+    if is_expanded {
+        for child in node.children() {
+            flatten_tree(child, expansion, depth + 1, result);
+        }
+    }
+}
+
+/// Creates a tree group for hierarchical data.
+///
+/// The library handles recursion automatically. You provide a row builder and handler.
+///
+/// # Arguments
+///
+/// * `root` - The root node of the tree
+/// * `expansion` - Tracks which nodes are expanded
+/// * `selection` - Optional selection state (use `None::<&SingleSelection<Id>>` if not needed)
+/// * `row_builder` - Function that builds a view for each node: `(node, depth, is_expanded, is_selected) -> View`
+/// * `handler` - Function that handles tree actions and mutates state: `(state, node_id, action) -> ()`
+///
+/// # Example
+///
+/// ```ignore
+/// tree_group(
+///     &model.file_tree,
+///     &model.expansion,
+///     Some(&model.selection),
+///     |node, depth, is_expanded, is_selected| {
+///         flex_row((
+///             if node.is_expandable() {
+///                 disclosure(is_expanded).boxed()
+///             } else {
+///                 sized_box(()).width(16.0).boxed()
+///             },
+///             label(node.label()),
+///         ))
+///         .padding_left(depth as f64 * 16.0)
+///     },
+///     |state, node_id, action| {
+///         match action {
+///             TreeAction::Toggle => state.expansion.toggle(node_id),
+///             TreeAction::Select => state.selected = Some(node_id.clone()),
+///             TreeAction::DoubleClick => state.open(node_id),
+///             TreeAction::ContextMenu => state.show_context_menu(node_id),
+///         }
+///     },
+/// )
+/// ```
+pub fn tree_group<'a, State, N, R, F, H, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    tree_group_styled(
+        root,
+        expansion,
+        selection,
+        TreeStyle::default(),
+        row_builder,
+        handler,
+    )
+}
+
+/// Creates a tree group with custom styling.
+///
+/// Same as [`tree_group`] but accepts a [`TreeStyle`] for customization.
+///
+/// # Example
+///
+/// ```ignore
+/// tree_group_styled(
+///     &model.file_tree,
+///     &model.expansion,
+///     Some(&model.selection),
+///     TreeStyle::new().hover_bg(Color::from_rgb8(55, 53, 50)),
+///     |node, depth, is_expanded, is_selected| { ... },
+///     |state, node_id, action| { ... },
+/// )
+/// ```
+pub fn tree_group_styled<'a, State, N, R, F, H, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    style: TreeStyle,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
+    flatten_tree(root, expansion, 0, &mut flat_nodes);
+
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = flat_nodes
+        .into_iter()
+        .map(|(node, depth, is_expanded)| {
+            let is_selected = selection
+                .map(|sel| sel.is_selected(&node.id()))
+                .unwrap_or(false);
+
+            let row_view = row_builder(node, depth, is_expanded, is_selected);
+            let node_id = node.id();
+            let is_expandable = node.is_expandable();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
+
+            let btn = row_button_with_press(
+                row_view,
+                move |state: &mut State, press: &RowButtonPress| {
+                    let action = match press.button {
+                        Some(PointerButton::Secondary) => TreeAction::ContextMenu(press.position),
+                        None | Some(PointerButton::Primary) => {
+                            if press.click_count >= 2 {
+                                TreeAction::DoubleClick
+                            } else if is_expandable {
+                                TreeAction::Toggle
+                            } else {
+                                TreeAction::Select
+                            }
+                        }
+                        _ => return,
+                    };
+                    handler(state, &node_id, action);
+                },
+            )
+            .hover_bg(hover_bg);
+
+            btn.boxed()
+        })
+        .collect();
+
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
+}
+
+/// Creates a tree group with type-safe context menu support on each row.
+///
+/// Each menu item carries its own action callback, eliminating index matching errors.
+/// The callback is invoked with the node id when a menu item is selected.
+///
+/// # Arguments
+///
+/// * `root` - The root node of the tree
+/// * `expansion` - Tracks which nodes are expanded
+/// * `selection` - Optional selection state
+/// * `style` - Tree styling options
+/// * `context_menu_items_fn` - Function that returns menu items for a node
+/// * `row_builder` - Function that builds a view for each node
+/// * `handler` - Function that handles tree actions (Toggle, Select, DoubleClick)
+///
+/// # Example
+///
+/// ```ignore
+/// use xilem_extras::{tree_group_with_context_menu, menu_item, separator};
+///
+/// tree_group_with_context_menu(
+///     &model.file_tree,
+///     &model.expansion,
+///     Some(&model.selection),
+///     TreeStyle::new().hover_bg(Color::from_rgb8(55, 53, 50)),
+///     |node_id| (
+///         menu_item("Open", move |state: &mut AppState| state.open_file(node_id)),
+///         menu_item("Delete", move |state| state.delete_file(node_id)),
+///         separator(),
+///         menu_item("Properties", move |state| state.show_properties(node_id)),
+///     ),
+///     |node, depth, is_expanded, is_selected| { ... },
+///     |state, node_id, action| { ... },
+/// )
+/// ```
+pub fn tree_group_with_context_menu<'a, State, N, R, F, H, I, MI, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    style: TreeStyle,
+    context_menu_items_fn: MI,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, I, MI, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + Send + Sync + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    I: MenuItems<State, ()> + Clone,
+    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
+    flatten_tree(root, expansion, 0, &mut flat_nodes);
+
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = flat_nodes
+        .into_iter()
+        .map(|(node, depth, is_expanded)| {
+            let is_selected = selection
+                .map(|sel| sel.is_selected(&node.id()))
+                .unwrap_or(false);
+
+            let row_view = row_builder(node, depth, is_expanded, is_selected);
+            let node_id = node.id();
+            let is_expandable = node.is_expandable();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
+            let menu_items = context_menu_items_fn(&node_id);
+
+            // Wrap row in row_button for click handling
+            let btn =
+                row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                    let action = if click_count >= 2 {
+                        TreeAction::DoubleClick
+                    } else if is_expandable {
+                        TreeAction::Toggle
+                    } else {
+                        TreeAction::Select
+                    };
+                    handler(state, &node_id, action);
+                })
+                .hover_bg(hover_bg);
+
+            // Wrap in context menu
+            let with_menu = context_menu(btn, menu_items);
+
+            with_menu.boxed()
+        })
+        .collect();
+
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
+}
+
+/// Creates a tree group with context menu and inline editing support.
+///
+/// Like [`tree_group_with_context_menu`], but adds support for inline editing:
+/// - Pass `editing_id` to indicate which node is being edited
+/// - Row builder receives `is_editing: bool` as 5th parameter
+/// - Select/DoubleClick/Toggle actions are ignored while any node is being edited
+///
+/// Use this when implementing rename or other inline edit functionality.
+///
+/// # Arguments
+///
+/// * `root` - The root node of the tree
+/// * `expansion` - Tracks which nodes are expanded
+/// * `selection` - Optional selection state
+/// * `editing_id` - Currently editing node (or None)
+/// * `style` - Tree styling options
+/// * `context_menu_items_fn` - Function that returns menu items for a node
+/// * `row_builder` - `(node, depth, is_expanded, is_selected, is_editing) -> View`
+/// * `handler` - Handles tree actions. Edit action indicates rename was requested.
+///
+/// # Example
+///
+/// ```ignore
+/// tree_group_with_context_menu_editable(
+///     &model.file_tree,
+///     &model.expansion,
+///     Some(&model.selection),
+///     model.editing_id.as_ref(),  // Option<&String>
+///     TreeStyle::new(),
+///     |node_id| (
+///         menu_item("Rename", move |state| {
+///             state.editing_id = Some(node_id.clone());
+///         }).is_editable(true),
+///     ),
+///     |node, depth, is_expanded, is_selected, is_editing| {
+///         if is_editing {
+///             // render text_input
+///         } else {
+///             // render label
+///         }
+///     },
+///     |state, node_id, action| {
+///         if let TreeAction::StartEdit = action {
+///             state.editing_id = Some(node_id.clone());
+///         }
+///         // ... handle other actions
+///     },
+/// )
+/// ```
+pub fn tree_group_with_context_menu_editable<'a, State, N, R, F, H, I, MI, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    editing_id: Option<&'a N::Id>,
+    style: TreeStyle,
+    context_menu_items_fn: MI,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, I, MI, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + PartialEq + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool, bool) -> R + Clone + Send + Sync + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    I: MenuItems<State, ()> + Clone,
+    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    let is_any_editing = editing_id.is_some();
+    let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
+    flatten_tree(root, expansion, 0, &mut flat_nodes);
+
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = flat_nodes
+        .into_iter()
+        .map(|(node, depth, is_expanded)| {
+            let is_selected = selection
+                .map(|sel| sel.is_selected(&node.id()))
+                .unwrap_or(false);
+            let is_editing = editing_id.map(|id| id == &node.id()).unwrap_or(false);
+
+            let row_view = row_builder(node, depth, is_expanded, is_selected, is_editing);
+            let node_id = node.id();
+            let is_expandable = node.is_expandable();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
+            let menu_items = context_menu_items_fn(&node_id);
+
+            // Wrap row in row_button for click handling
+            let btn =
+                row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                    // Skip all click actions while editing
+                    if is_any_editing {
+                        return;
+                    }
+                    let action = if click_count >= 2 {
+                        TreeAction::DoubleClick
+                    } else if is_expandable {
+                        TreeAction::Toggle
+                    } else {
+                        TreeAction::Select
+                    };
+                    handler(state, &node_id, action);
+                })
+                .hover_bg(hover_bg);
+
+            // Wrap in context menu
+            let with_menu = context_menu(btn, menu_items);
+
+            with_menu.boxed()
+        })
+        .collect();
+
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
+}
+
+/// Collects visible tree nodes from a forest (multiple roots) into a flat list for rendering.
+pub fn flatten_forest<'a, N: TreeNode>(
+    roots: &'a [N],
+    expansion: &ExpansionState<N::Id>,
+    result: &mut Vec<(&'a N, usize, bool)>,
+) {
+    for root in roots {
+        flatten_tree(root, expansion, 0, result);
+    }
+}
+
+/// Creates a tree view for a forest (multiple root nodes).
+///
+/// Same as [`tree_group`] but takes a slice of root nodes instead of a single root.
+/// Useful for displaying multiple top-level items like test files or outline symbols.
+///
+/// # Arguments
+///
+/// * `roots` - Slice of root nodes
+/// * `expansion` - Tracks which nodes are expanded
+/// * `selection` - Optional selection state
+/// * `row_builder` - Function that builds a view for each node
+/// * `handler` - Function that handles tree actions
+///
+/// # Example
+///
+/// ```ignore
+/// tree_forest(
+///     &model.tests,  // Vec<TestItem>
+///     &model.tests_expansion,
+///     None::<&SingleSelection<String>>,
+///     |node, depth, is_expanded, is_selected| { ... },
+///     |state, node_id, action| { ... },
+/// )
+/// ```
+pub fn tree_forest<'a, State, N, R, F, H, Sel>(
+    roots: &'a [N],
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    tree_forest_styled(
+        roots,
+        expansion,
+        selection,
+        TreeStyle::default(),
+        row_builder,
+        handler,
+    )
+}
+
+/// Creates a tree view for a forest with custom styling.
+///
+/// Same as [`tree_group_styled`] but takes a slice of root nodes instead of a single root.
+///
+/// # Example
+///
+/// ```ignore
+/// tree_forest_styled(
+///     &model.outline,
+///     &model.outline_expansion,
+///     None::<&SingleSelection<String>>,
+///     TreeStyle::new().hover_bg(Color::from_rgb8(55, 53, 50)),
+///     |node, depth, is_expanded, is_selected| { ... },
+///     |state, node_id, action| { ... },
+/// )
+/// ```
+pub fn tree_forest_styled<'a, State, N, R, F, H, Sel>(
+    roots: &'a [N],
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    style: TreeStyle,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
+    flatten_forest(roots, expansion, &mut flat_nodes);
+
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = flat_nodes
+        .into_iter()
+        .map(|(node, depth, is_expanded)| {
+            let is_selected = selection
+                .map(|sel| sel.is_selected(&node.id()))
+                .unwrap_or(false);
+
+            let row_view = row_builder(node, depth, is_expanded, is_selected);
+            let node_id = node.id();
+            let is_expandable = node.is_expandable();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
+
+            let btn = row_button_with_press(
+                row_view,
+                move |state: &mut State, press: &RowButtonPress| {
+                    let action = match press.button {
+                        Some(PointerButton::Secondary) => TreeAction::ContextMenu(press.position),
+                        None | Some(PointerButton::Primary) => {
+                            if press.click_count >= 2 {
+                                TreeAction::DoubleClick
+                            } else if is_expandable {
+                                TreeAction::Toggle
+                            } else {
+                                TreeAction::Select
+                            }
+                        }
+                        _ => return,
+                    };
+                    handler(state, &node_id, action);
+                },
+            )
+            .hover_bg(hover_bg);
+
+            btn.boxed()
+        })
+        .collect();
+
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
+}
+
+/// Creates a tree view for a forest with context menu support.
+///
+/// Same as [`tree_group_with_context_menu`] but takes a slice of root nodes.
+///
+/// # Example
+///
+/// ```ignore
+/// tree_forest_with_context_menu(
+///     &model.tests,
+///     &model.tests_expansion,
+///     None::<&SingleSelection<String>>,
+///     TreeStyle::new().hover_bg(Color::from_rgb8(55, 53, 50)),
+///     |node_id| (
+///         menu_item("Run", move |state| state.run_test(node_id)),
+///         menu_item("Debug", move |state| state.debug_test(node_id)),
+///     ),
+///     |node, depth, is_expanded, is_selected| { ... },
+///     |state, node_id, action| { ... },
+/// )
+/// ```
+pub fn tree_forest_with_context_menu<'a, State, N, R, F, H, I, MI, Sel>(
+    roots: &'a [N],
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    style: TreeStyle,
+    context_menu_items_fn: MI,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, I, MI, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + Send + Sync + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    I: MenuItems<State, ()> + Clone,
+    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
+    flatten_forest(roots, expansion, &mut flat_nodes);
+
+    let rows: Vec<Box<AnyWidgetView<State, ()>>> = flat_nodes
+        .into_iter()
+        .map(|(node, depth, is_expanded)| {
+            let is_selected = selection
+                .map(|sel| sel.is_selected(&node.id()))
+                .unwrap_or(false);
+
+            let row_view = row_builder(node, depth, is_expanded, is_selected);
+            let node_id = node.id();
+            let is_expandable = node.is_expandable();
+            let handler = handler.clone();
+            let hover_bg = style.hover_bg;
+            let menu_items = context_menu_items_fn(&node_id);
+
+            let btn =
+                row_button_with_clicks(row_view, move |state: &mut State, click_count: u8| {
+                    let action = if click_count >= 2 {
+                        TreeAction::DoubleClick
+                    } else if is_expandable {
+                        TreeAction::Toggle
+                    } else {
+                        TreeAction::Select
+                    };
+                    handler(state, &node_id, action);
+                })
+                .hover_bg(hover_bg);
+
+            let with_menu = context_menu(btn, menu_items);
+
+            with_menu.boxed()
+        })
+        .collect();
+
+    if style.gap > 0.0 {
+        flex_col(rows).gap(style.gap.px())
+    } else {
+        flex_col(rows).gap(0.px())
+    }
+}
+
+/// Alias for tree_group.
+///
+/// See [`tree_group`] for full documentation.
+pub fn tree<'a, State, N, R, F, H, Sel>(
+    root: &'a N,
+    expansion: &'a ExpansionState<N::Id>,
+    selection: Option<&'a Sel>,
+    row_builder: F,
+    handler: H,
+) -> impl WidgetView<State, ()> + use<'a, State, N, R, F, H, Sel>
+where
+    State: 'static,
+    N: TreeNode + 'a,
+    N::Id: Clone + Send + Sync + 'static,
+    R: WidgetView<State, ()> + 'static,
+    F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
+    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Id> + 'a,
+{
+    tree_group(root, expansion, selection, row_builder, handler)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::xilem::traits::Identifiable;
+
+    #[derive(Debug, Clone)]
+    struct TestNode {
+        id: String,
+        name: String,
+        children: Vec<TestNode>,
+    }
+
+    impl Identifiable for TestNode {
+        type Id = String;
+        fn id(&self) -> Self::Id {
+            self.id.clone()
+        }
+    }
+
+    impl TreeNode for TestNode {
+        fn children(&self) -> &[Self] {
+            &self.children
+        }
+
+        fn label(&self) -> &str {
+            &self.name
+        }
+    }
+
+    fn create_test_tree() -> TestNode {
+        TestNode {
+            id: "root".into(),
+            name: "Root".into(),
+            children: vec![
+                TestNode {
+                    id: "a".into(),
+                    name: "A".into(),
+                    children: vec![
+                        TestNode {
+                            id: "a1".into(),
+                            name: "A1".into(),
+                            children: vec![],
+                        },
+                        TestNode {
+                            id: "a2".into(),
+                            name: "A2".into(),
+                            children: vec![],
+                        },
+                    ],
+                },
+                TestNode {
+                    id: "b".into(),
+                    name: "B".into(),
+                    children: vec![],
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn flatten_collapsed_tree() {
+        let tree = create_test_tree();
+        let expansion = ExpansionState::new();
+        let mut result = Vec::new();
+
+        flatten_tree(&tree, &expansion, 0, &mut result);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0.id(), "root");
+        assert_eq!(result[0].1, 0);
+        assert!(!result[0].2);
+    }
+
+    #[test]
+    fn flatten_expanded_root() {
+        let tree = create_test_tree();
+        let mut expansion = ExpansionState::new();
+        expansion.expand("root".to_string());
+        let mut result = Vec::new();
+
+        flatten_tree(&tree, &expansion, 0, &mut result);
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].0.id(), "root");
+        assert!(result[0].2);
+        assert_eq!(result[1].0.id(), "a");
+        assert_eq!(result[2].0.id(), "b");
+    }
+
+    #[test]
+    fn flatten_fully_expanded() {
+        let tree = create_test_tree();
+        let mut expansion = ExpansionState::new();
+        expansion.expand_all(&tree);
+        let mut result = Vec::new();
+
+        flatten_tree(&tree, &expansion, 0, &mut result);
+
+        assert_eq!(result.len(), 5);
+        let ids: Vec<_> = result.iter().map(|(n, _, _)| n.id()).collect();
+        assert_eq!(ids, vec!["root", "a", "a1", "a2", "b"]);
+    }
+
+    #[test]
+    fn flatten_preserves_depth() {
+        let tree = create_test_tree();
+        let mut expansion = ExpansionState::new();
+        expansion.expand_all(&tree);
+        let mut result = Vec::new();
+
+        flatten_tree(&tree, &expansion, 0, &mut result);
+
+        let depths: Vec<_> = result.iter().map(|(_, d, _)| *d).collect();
+        assert_eq!(depths, vec![0, 1, 2, 2, 1]);
+    }
+
+    fn create_forest() -> Vec<TestNode> {
+        vec![
+            TestNode {
+                id: "a".into(),
+                name: "A".into(),
+                children: vec![TestNode {
+                    id: "a1".into(),
+                    name: "A1".into(),
+                    children: vec![],
+                }],
+            },
+            TestNode {
+                id: "b".into(),
+                name: "B".into(),
+                children: vec![TestNode {
+                    id: "b1".into(),
+                    name: "B1".into(),
+                    children: vec![],
+                }],
+            },
+        ]
+    }
+
+    #[test]
+    fn flatten_forest_collapsed() {
+        let forest = create_forest();
+        let expansion = ExpansionState::new();
+        let mut result = Vec::new();
+
+        flatten_forest(&forest, &expansion, &mut result);
+
+        // Only top-level nodes visible when collapsed
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].0.id(), "a");
+        assert_eq!(result[1].0.id(), "b");
+    }
+
+    #[test]
+    fn flatten_forest_expanded() {
+        let forest = create_forest();
+        let mut expansion = ExpansionState::new();
+        expansion.expand("a".to_string());
+        expansion.expand("b".to_string());
+        let mut result = Vec::new();
+
+        flatten_forest(&forest, &expansion, &mut result);
+
+        // All nodes visible when expanded
+        assert_eq!(result.len(), 4);
+        let ids: Vec<_> = result.iter().map(|(n, _, _)| n.id()).collect();
+        assert_eq!(ids, vec!["a", "a1", "b", "b1"]);
+    }
+
+    #[test]
+    fn flatten_forest_preserves_depth() {
+        let forest = create_forest();
+        let mut expansion = ExpansionState::new();
+        expansion.expand("a".to_string());
+        expansion.expand("b".to_string());
+        let mut result = Vec::new();
+
+        flatten_forest(&forest, &expansion, &mut result);
+
+        let depths: Vec<_> = result.iter().map(|(_, d, _)| *d).collect();
+        assert_eq!(depths, vec![0, 1, 0, 1]);
+    }
+
+    #[test]
+    fn flatten_empty_forest() {
+        let forest: Vec<TestNode> = vec![];
+        let expansion = ExpansionState::new();
+        let mut result = Vec::new();
+
+        flatten_forest(&forest, &expansion, &mut result);
+
+        assert!(result.is_empty());
+    }
+}

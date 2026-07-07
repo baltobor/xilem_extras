@@ -35,7 +35,7 @@ use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::parley::{Layout as ParleyLayout, StyleSet};
 use xilem::masonry::peniko::{Brush, Fill};
 
-use crate::CalendarLocale;
+use crate::locale::CalendarLocale;
 
 // Grid dimensions
 pub const NUM_COLS: usize = 7;

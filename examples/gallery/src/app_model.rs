@@ -10,13 +10,12 @@
 use chrono::NaiveDate;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use xilem_extras::CalendarLocale;
-use xilem_extras::{
-    ColumnDef, ColumnWidths, ExpansionState, MultiSelection, SingleSelection, SortDirection,
-    SortOrder, column,
-};
+use xilem_extras::locale::CalendarLocale;
+use xilem_extras::xilem::table::{ColumnDef, ColumnWidths, SortDirection, SortOrder, column};
+use xilem_extras::xilem::tree::ExpansionState;
+use xilem_extras::xilem::selection::{MultiSelection, SingleSelection};
 
-use xilem_extras::SimpleTab;
+use xilem_extras::xilem::tabs::SimpleTab;
 
 use crate::mock_data::{Contact, Cyclist, FileNode};
 use crate::tabs_demo::{DemoTab, create_demo_tabs};

@@ -102,7 +102,7 @@ impl DropdownSelect {
         let mut dropdown = SelectDropdown::new(ctx.widget_id()).with_min_width(widget_w);
         for (i, label) in self.options.iter().enumerate() {
             let is_selected = i == self.selected_index;
-            let item = crate::dropdown_select::SelectOptionItem::new(label.clone(), is_selected);
+            let item = crate::xilem::dropdown_select::SelectOptionItem::new(label.clone(), is_selected);
             dropdown = dropdown
                 .with_option(NewWidget::new(item))
                 .with_option_label(label.clone());

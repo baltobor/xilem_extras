@@ -10,7 +10,7 @@
 //! a `param_selector` and the modal-overlay button. The page is
 //! long; wrap in `portal` so it scrolls.
 //!
-//! All themable widgets read from `xilem_extras::Theme` derived
+//! All themable widgets read from `xilem_extras::xilem::theme::Theme` derived
 //! from `model.dark_mode` — there are no per-widget colour
 //! patches in this file. The "Dark mode" switch in the form
 //! flips `model.dark_mode`, which the gallery picks up on the
@@ -20,11 +20,14 @@ use masonry::layout::{AsUnit, Length};
 use xilem::WidgetView;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, button, flex_col, label, portal};
-use xilem_extras::{
-    CheckboxStyle, LabelAlign, TextInputColors, Theme, form_radio_themed, form_row_themed,
-    form_section_themed, form_themed, form_toggle_themed, param_selector, styled_check_colored,
+use xilem_extras::xilem::components::{
+    CheckboxStyle, LabelAlign, TextInputColors, param_selector, styled_check_colored,
     styled_secure_text_input, styled_text_input_colored, styled_text_input_with_placeholder,
 };
+use xilem_extras::xilem::form::{
+    form_radio_themed, form_row_themed, form_section_themed, form_themed, form_toggle_themed,
+};
+use xilem_extras::xilem::theme::Theme;
 
 use crate::app_model::AppModel;
 

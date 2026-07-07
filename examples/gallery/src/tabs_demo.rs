@@ -12,7 +12,8 @@ use xilem::WidgetView;
 use xilem::style::Style;
 use xilem::view::{button, flex_col, flex_row, label, portal};
 
-use xilem_extras::{NavTabBar, TabBar, TabBarColors, TabItem, Theme};
+use xilem_extras::xilem::tabs::{NavTabBar, TabBar, TabBarColors, TabItem};
+use xilem_extras::xilem::theme::Theme;
 
 use crate::app_model::AppModel;
 
@@ -236,7 +237,7 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 let n = model.nav_tabs.len() + 1;
                 model
                     .nav_tabs
-                    .push(xilem_extras::SimpleTab::new(format!("Tab {}", n)));
+                    .push(xilem_extras::xilem::tabs::SimpleTab::new(format!("Tab {}", n)));
             }),
             button(label("Remove Nav Tab"), |model: &mut AppModel| {
                 if model.nav_tabs.len() > 1 {

@@ -12,6 +12,4 @@ pub mod progress;
 pub mod sheet;
 pub mod stock_chart;
 pub mod table;
-pub mod tabs;
 pub mod time_picker;
-pub mod tree;

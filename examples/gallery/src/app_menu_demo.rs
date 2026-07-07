@@ -12,7 +12,7 @@ use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{flex_col, label};
-use xilem_extras::Theme;
+use xilem_extras::xilem::theme::Theme;
 
 use crate::app_model::AppModel;
 
@@ -62,7 +62,8 @@ pub fn app_menu_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_
     .gap(2.px());
 
     let usage_code = code_block(
-        r#"use xilem_extras::{menu_button, menu_item, separator, submenu};
+        r#"use xilem_extras::xilem::menu_button::menu_button;
+use xilem_extras::xilem::menu_items::{menu_item, separator, submenu};
 
 // Build menu bar with menu_button widgets
 flex_row((

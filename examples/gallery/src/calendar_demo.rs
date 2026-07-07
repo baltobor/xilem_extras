@@ -13,7 +13,10 @@ use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, MainAxisAlignment, button, flex_col, flex_row, label};
-use xilem_extras::{CalendarLocale, Theme, calendar_picker, dropdown_select};
+use xilem_extras::locale::CalendarLocale;
+use xilem_extras::xilem::calendar_picker::calendar_picker;
+use xilem_extras::xilem::dropdown_select::dropdown_select;
+use xilem_extras::xilem::theme::Theme;
 
 use crate::app_model::AppModel;
 

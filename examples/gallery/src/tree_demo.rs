@@ -14,10 +14,10 @@ use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
 use xilem::{AnyWidgetView, WidgetView};
 
-use xilem_extras::{
-    Theme, TreeAction, TreeStyle, ferris, menu_item, rust_gear, separator, svg_icon,
-    tree_group_with_context_menu,
-};
+use xilem_extras::xilem::components::{ferris, rust_gear, svg_icon};
+use xilem_extras::xilem::menu_items::{menu_item, separator};
+use xilem_extras::xilem::theme::Theme;
+use xilem_extras::xilem::tree::{TreeAction, TreeStyle, tree_group_with_context_menu};
 use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;

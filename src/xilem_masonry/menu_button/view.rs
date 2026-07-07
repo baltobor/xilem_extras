@@ -14,7 +14,7 @@ use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, View
 use xilem::{Pod, ViewCtx, WidgetView};
 
 use crate::masonry::menu_button::widget::{MenuButton, MenuButtonPress, MenuItemData};
-use crate::menu_items::{BoxedMenuEntry, MenuItems};
+use crate::xilem::menu_items::{BoxedMenuEntry, MenuItems};
 
 /// Randomly generated view ID for the child label.
 const LABEL_VIEW_ID: ViewId = ViewId::new(0xa7f3_b0d1);

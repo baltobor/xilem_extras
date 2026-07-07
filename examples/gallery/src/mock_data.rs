@@ -9,7 +9,7 @@
 //!
 //! I love riding the bike. This is my honour to the community, and outdoor sports.
 
-use xilem_extras::{CellValue, Identifiable, ListItem, TableRow, TreeNode};
+use xilem_extras::xilem::traits::{CellValue, Identifiable, ListItem, TableRow, TreeNode};
 
 /// A node in the file tree.
 #[derive(Debug, Clone)]

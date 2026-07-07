@@ -13,10 +13,11 @@ use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label};
 use xilem::{FontWeight, WidgetView};
 
-use xilem_extras::{
-    ListViewAction, ListViewStyle, SectionDef, SectionedRowInfo, SelectionState, Theme,
-    list_view_sectioned,
+use xilem_extras::xilem::list::{
+    ListViewAction, ListViewStyle, SectionDef, SectionedRowInfo, list_view_sectioned,
 };
+use xilem_extras::xilem::theme::Theme;
+use xilem_extras::xilem::traits::SelectionState;
 use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
 use crate::app_model::AppModel;

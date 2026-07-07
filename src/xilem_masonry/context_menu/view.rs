@@ -14,7 +14,7 @@ use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, View
 use xilem::{Pod, ViewCtx, WidgetView};
 
 use crate::masonry::context_menu::widget::{ContextMenuAction, ContextMenuWidget};
-use crate::menu_items::{BoxedMenuEntry, MenuItems};
+use crate::xilem::menu_items::{BoxedMenuEntry, MenuItems};
 
 /// Randomly generated view ID for the child content.
 const CHILD_VIEW_ID: ViewId = ViewId::new(0xc0_7e_47_01);
