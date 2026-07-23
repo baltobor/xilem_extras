@@ -20,24 +20,24 @@ That’s why I decided to build this sandbox project. So the approach is *deduct
 
 ### Level 1 - Playground (AI can be used)
 
-[X] Create a reasonable amount of controls so that a useful apprication can be built
-[X] Experiment with these controls to find a useful working interface for xilem
+- [x] Create a reasonable amount of controls so that a useful apprication can be built
+- [x] Experiment with these controls to find a useful working interface for xilem
 
 ### Level 2 - Trial and Error (AI can be used)
 
-[X] Move stuff around, try, optimize, refactor
-[X] Cleanup 1: Split Masonry and Xilem so that it matches the original xilem folder scheme.
-[ ] Fix bugs
-[ ] Review functionality. Make sure most functionality is done in Masonry and just called from xilem.
+- [x] Move stuff around, try, optimize, refactor
+- [x] Cleanup 1: Split Masonry and Xilem so that it matches the original xilem folder scheme.
+- [ ] Fix bugs
+- [ ] Review functionality. Make sure most functionality is done in Masonry and just called from xilem.
 
 ## Level 3 - Make it perfect (From here on only humans are allowed to write and review code! AI is forbidden)
 
-[ ] Review naming, traits, signatures
-[ ] Fix bugs
-[ ] Cleanup 2
-[ ] Prepare a first release bundle
-[ ] Create pull requests for each widget at the official xilem repository. 
-[ ] Delete widgets from here which have been accepted by xilem.
+- [ ] Review naming, traits, signatures
+- [ ] Fix bugs
+- [ ] Cleanup 2
+- [ ] Prepare a first release bundle
+- [ ] Create pull requests for each widget at the official xilem repository. 
+- [ ] Delete widgets from here which have been accepted by xilem.
 
 
 ## Available Widgets
