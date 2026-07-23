@@ -16,6 +16,30 @@ Software is usually programmed *inductively*. You start by creating a structure.
 
 That’s why I decided to build this sandbox project. So the approach is *deductively*. I start at the high level and work *quick and dirty* at the beginning so that I can get into the real application very quickly. As I work with my own applications on a daily basis, I find myself needing to adapt the xilem layer for my needs. I start by working backward. Once I’ve fully understood everything, I try to dig deeper and write a foundation in Masonry. This crate works. And you can already use it to program real applications. However, *the project is primarily intended as a lab*. Feel free to use it for real applications. But let me be very clear: *this is not intended to be a final product*. Rather, it is meant to help understanding design patterns so that one can finally create a clean Rust interface for Xilem and Masonry.
 
+## Roadmap
+
+### Level 1 - Playground (AI can be used)
+
+[X] Create a reasonable amount of controls so that a useful apprication can be built
+[X] Experiment with these controls to find a useful working interface for xilem
+
+### Level 2 - Trial and Error (AI can be used)
+
+[X] Move stuff around, try, optimize, refactor
+[X] Cleanup 1: Split Masonry and Xilem so that it matches the original xilem folder scheme.
+[ ] Fix bugs
+[ ] Review functionality. Make sure most functionality is done in Masonry and just called from xilem.
+
+## Level 3 - Make it perfect (From here on only humans are allowed to write and review code! AI is forbidden)
+
+[ ] Review naming, traits, signatures
+[ ] Fix bugs
+[ ] Cleanup 2
+[ ] Prepare a first release bundle
+[ ] Create pull requests for each widget at the official xilem repository. 
+[ ] Delete widgets from here which have been accepted by xilem.
+
+
 ## Available Widgets
 
 - **Tree Group** - Hierarchical data group for DIY groups.
