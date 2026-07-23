@@ -30,7 +30,7 @@ That’s why I decided to build this sandbox project. So the approach is *deduct
 - [ ] Fix bugs
 - [ ] Review functionality. Make sure most functionality is done in Masonry and just called from xilem.
 
-## Level 3 - Make it perfect (From here on only humans are allowed to write and review code! AI is forbidden)
+### Level 3 - Make it perfect (From here on only humans are allowed to write and review code! AI is forbidden)
 
 - [ ] Review naming, traits, signatures
 - [ ] Fix bugs
