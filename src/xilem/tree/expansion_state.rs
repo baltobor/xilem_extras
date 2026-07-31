@@ -31,17 +31,17 @@ use crate::xilem::traits::TreeNode;
 /// assert!(!expansion.is_expanded(&"folder1".to_string()));
 /// ```
 #[derive(Debug, Clone)]
-pub struct ExpansionState<Id: Clone + Eq + Hash> {
-    expanded: HashSet<Id>,
+pub struct ExpansionState<Key: Clone + Eq + Hash> {
+    expanded: HashSet<Key>,
 }
 
-impl<Id: Clone + Eq + Hash> Default for ExpansionState<Id> {
+impl<Key: Clone + Eq + Hash> Default for ExpansionState<Key> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<Id: Clone + Eq + Hash> ExpansionState<Id> {
+impl<Key: Clone + Eq + Hash> ExpansionState<Key> {
     /// Creates a new empty expansion state (all nodes collapsed).
     pub fn new() -> Self {
         Self {
@@ -50,19 +50,19 @@ impl<Id: Clone + Eq + Hash> ExpansionState<Id> {
     }
 
     /// Creates an expansion state with the given nodes expanded.
-    pub fn with_expanded(ids: impl IntoIterator<Item = Id>) -> Self {
+    pub fn with_expanded(ids: impl IntoIterator<Item = Key>) -> Self {
         Self {
             expanded: ids.into_iter().collect(),
         }
     }
 
     /// Returns whether the given node is expanded.
-    pub fn is_expanded(&self, id: &Id) -> bool {
+    pub fn is_expanded(&self, id: &Key) -> bool {
         self.expanded.contains(id)
     }
 
     /// Toggles the expansion state of a node.
-    pub fn toggle(&mut self, id: &Id) {
+    pub fn toggle(&mut self, id: &Key) {
         if self.expanded.contains(id) {
             self.expanded.remove(id);
         } else {
@@ -71,23 +71,23 @@ impl<Id: Clone + Eq + Hash> ExpansionState<Id> {
     }
 
     /// Expands a node.
-    pub fn expand(&mut self, id: Id) {
+    pub fn expand(&mut self, id: Key) {
         self.expanded.insert(id);
     }
 
     /// Collapses a node.
-    pub fn collapse(&mut self, id: &Id) {
+    pub fn collapse(&mut self, id: &Key) {
         self.expanded.remove(id);
     }
 
     /// Expands all expandable nodes in the tree.
-    pub fn expand_all<N: TreeNode<Id = Id>>(&mut self, root: &N) {
+    pub fn expand_all<N: TreeNode<Key = Key>>(&mut self, root: &N) {
         self.expand_recursive(root);
     }
 
-    fn expand_recursive<N: TreeNode<Id = Id>>(&mut self, node: &N) {
+    fn expand_recursive<N: TreeNode<Key = Key>>(&mut self, node: &N) {
         if node.is_expandable() {
-            self.expanded.insert(node.id());
+            self.expanded.insert(node.key());
         }
         for child in node.children() {
             self.expand_recursive(child);
@@ -110,25 +110,25 @@ impl<Id: Clone + Eq + Hash> ExpansionState<Id> {
     }
 
     /// Returns an iterator over expanded node IDs.
-    pub fn iter(&self) -> impl Iterator<Item = &Id> {
+    pub fn iter(&self) -> impl Iterator<Item = &Key> {
         self.expanded.iter()
     }
 
     /// Expands the path from root to the given node.
     ///
     /// This expands all ancestor nodes so that the target node becomes visible.
-    pub fn expand_to<N: TreeNode<Id = Id>>(&mut self, root: &N, target_id: &Id) {
+    pub fn expand_to<N: TreeNode<Key = Key>>(&mut self, root: &N, target_id: &Key) {
         self.expand_path_recursive(root, target_id);
     }
 
-    fn expand_path_recursive<N: TreeNode<Id = Id>>(&mut self, node: &N, target_id: &Id) -> bool {
-        if &node.id() == target_id {
+    fn expand_path_recursive<N: TreeNode<Key = Key>>(&mut self, node: &N, target_id: &Key) -> bool {
+        if &node.key() == target_id {
             return true;
         }
 
         for child in node.children() {
             if self.expand_path_recursive(child, target_id) {
-                self.expanded.insert(node.id());
+                self.expanded.insert(node.key());
                 return true;
             }
         }
@@ -140,7 +140,7 @@ impl<Id: Clone + Eq + Hash> ExpansionState<Id> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::xilem::traits::Identifiable;
+    use crate::xilem::traits::Keyed;
 
     #[derive(Debug, Clone)]
     struct TestNode {
@@ -148,9 +148,9 @@ mod tests {
         children: Vec<TestNode>,
     }
 
-    impl Identifiable for TestNode {
-        type Id = String;
-        fn id(&self) -> Self::Id {
+    impl Keyed for TestNode {
+        type Key = String;
+        fn key(&self) -> Self::Key {
             self.id.clone()
         }
     }

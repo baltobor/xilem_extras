@@ -1363,7 +1363,7 @@ dependencies = [
  "tokio",
  "xilem",
  "xilem_extras",
- "xilem_material_icons 0.1.1",
+ "xilem_material_icons 0.1.0",
 ]
 
 [[package]]
@@ -5415,7 +5415,7 @@ dependencies = [
  "smallvec",
  "tracing",
  "xilem",
- "xilem_material_icons 0.1.1 (git+https://github.com/baltobor/xilem_material_icons?branch=main)",
+ "xilem_material_icons 0.1.1",
 ]
 
 [[package]]
@@ -5433,7 +5433,7 @@ dependencies = [
 
 [[package]]
 name = "xilem_material_icons"
-version = "0.1.1"
+version = "0.1.0"
 dependencies = [
  "xilem",
 ]

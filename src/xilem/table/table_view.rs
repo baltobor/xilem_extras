@@ -11,25 +11,19 @@
 //!
 //! This module implements a virtualized table using Xilem's View/Widget pattern:
 //!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────────────┐
-//! │ TableView (Xilem View layer)                             │
-//! │   - Declarative API for building tables                        │
-//! │   - Manages row view lifecycle (build/rebuild/teardown)        │
-//! │   - Routes messages to child row views                         │
-//! │   - Handles TableAction for user interactions           │
-//! └────────────────────────┬────────────────────────────────────────┘
-//!                          │ Creates & manages
-//!                          ▼
-//! ┌─────────────────────────────────────────────────────────────────┐
-//! │ TableWidget (Masonry Widget layer)                              │
-//! │   - Internal scroll state management (anchor-based)             │
-//! │   - Computes visible range with buffer zones                   │
-//! │   - Submits TableRangeAction when range changes                │
-//! │   - Handles pointer events, scrollbar interaction              │
-//! │   - Paints rows then header (header overlays scrolled content) │
-//! └─────────────────────────────────────────────────────────────────┘
-//! ```
+//! TableView (Xilem View layer)
+//!    - Declarative API for building tables
+//!    - Manages row view lifecycle (build/rebuild/teardown)
+//!    - Routes messages to child row views
+//!    - Handles TableAction for user interactions
+//!                   Creates & manages
+//!
+//!  TableWidget (Masonry Widget layer)
+//!    - Internal scroll state management (anchor-based)
+//!    - Computes visible range with buffer zones
+//!    - Submits TableRangeAction when range changes
+//!    - Handles pointer events, scrollbar interaction
+//!    - Paints rows then header (header overlays scrolled content)
 //!
 //! # Key Design Patterns
 //!
@@ -88,10 +82,10 @@ use xilem::style::Style;
 use xilem::view::label;
 use xilem::{Pod, ViewCtx, WidgetView};
 
+use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder, TableStyle};
 use crate::masonry::table::resizable_header::{ColumnResizeAction, ResizableHeader};
 use crate::masonry::table::widget::{TableRangeAction, TableWidget, TableWidgetAction};
-use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder, TableStyle};
-use crate::xilem::traits::{Identifiable, SelectionModifiers, SelectionState, TableRow};
+use crate::xilem::traits::{Keyed, SelectionModifiers, SelectionState, TableRow};
 
 /// Actions that can occur on virtual table rows or columns.
 #[derive(Debug, Clone, PartialEq)]
@@ -141,7 +135,7 @@ pub struct TableViewState<RowView, RowViewState> {
 /// The view type for [`table`].
 pub struct TableView<State, R, RowView, F, H, Sel>
 where
-    R: Identifiable,
+    R: Keyed,
 {
     phantom: PhantomData<fn() -> (State, RowView)>,
     /// Data slice (indices into this are used for row building).
@@ -163,12 +157,12 @@ where
     /// Selection state for determining which rows are selected.
     selection_fn: Box<dyn Fn(usize) -> bool + Send + Sync>,
     /// ID getter for rows (uses data_idx, not visual_idx).
-    id_getter: Box<dyn Fn(usize) -> R::Id + Send + Sync>,
+    id_getter: Box<dyn Fn(usize) -> R::Key + Send + Sync>,
     _sel: PhantomData<Sel>,
 }
 
 impl<State, R, RowView, F, H, Sel> ViewMarker for TableView<State, R, RowView, F, H, Sel> where
-    R: Identifiable
+    R: Keyed
 {
 }
 
@@ -176,16 +170,23 @@ impl<State, R, RowView, F, H, Sel> View<State, (), ViewCtx>
     for TableView<State, R, RowView, F, H, Sel>
 where
     State: 'static,
-    R: Identifiable + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     F: Fn(&mut State, usize, bool, bool, &[f64]) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, TableAction<R::Id>) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<R::Id> + 'static,
+    H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + 'static,
 {
     type Element = Pod<TableWidget>;
     type ViewState = TableViewState<RowView, RowView::ViewState>;
 
+    // `TableWidget` (masonry) owns scrolling, row virtualization, header
+    // placement and painting entirely by itself; it only ever holds header
+    // and row children as `dyn Widget`. `header.new_widget.erased()` below is
+    // the seam: whatever xilem view built the header (any
+    // `WidgetView<State, Action>`, not just the `label(...)` cells used in
+    // `build_header`) gets type-erased into a widget masonry can store
+    // without knowing it came from a xilem view at all.
     fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
         // Build header widget
         let header = self.build_header(ctx, app_state);
@@ -218,6 +219,12 @@ where
         )
     }
 
+    // Same seam as the header, applied per row: `row_builder` returns any
+    // `RowView: WidgetView<State, ()>`, which gets built/rebuilt here and
+    // `.erased()`'d into `NewWidget<dyn Widget>` before reaching
+    // `TableWidget::add_row`/`row_mut`. `TableWidget` never sees `RowView` —
+    // it just manages a `dyn Widget` per visible row, so arbitrary xilem
+    // content can back a row without any masonry-side changes.
     fn rebuild(
         &self,
         prev: &Self,
@@ -476,12 +483,19 @@ where
 impl<State, R, RowView, F, H, Sel> TableView<State, R, RowView, F, H, Sel>
 where
     State: 'static,
-    R: Identifiable,
+    R: Keyed,
 {
     /// Compute column widths to match header layout exactly.
     ///
     /// Mirrors `ResizableHeader::layout`: use configured widths when they fit,
     /// only scale down when available_width is narrower than the column sum.
+    ///
+    /// TODO: `column_widths` is laid out assuming LTR (left-to-right) order,
+    /// so resizing a column pushes columns on the right away. Right-to-left
+    /// languages such as Arabic likely need the mirrored behavior (pushing
+    /// columns on the left instead). We need to ask a native speaker (or
+    /// someone with real RTL UX experience) how this should work before
+    /// implementing it.
     fn compute_scaled_widths(&self, available_width: f64) -> Vec<f64> {
         let column_count = self.column_widths.len();
         if column_count == 0 {
@@ -508,6 +522,11 @@ where
     }
 
     /// Build the header widget using ResizableHeader for column resize support.
+    ///
+    /// Uses plain `label(...)` views for cells here, but any
+    /// `WidgetView<State, Action>` would work the same way — see the
+    /// `erased()` call below and `ResizableHeaderView::build` for why
+    /// `ResizableHeader` doesn't need to know what view built its children.
     fn build_header(&self, ctx: &mut ViewCtx, app_state: &mut State) -> Pod<ResizableHeader> {
         use xilem::masonry::core::NewWidget;
         use xilem::masonry::properties::Background;
@@ -562,7 +581,7 @@ where
 ///
 /// # Arguments
 ///
-/// * `data` - The collection of rows (must implement `Identifiable`)
+/// * `data` - The collection of rows (must implement `Keyed`)
 /// * `columns` - Column definitions
 /// * `selection` - Selection state
 /// * `sort_order` - Current sort state
@@ -609,11 +628,11 @@ pub fn table<'a, State, R, RowView, Sel, F, H>(
 where
     State: 'static,
     R: TableRow + Clone + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    Sel: SelectionState<R::Id> + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
     F: Fn(&mut State, usize, bool, bool, &[f64]) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, TableAction<R::Id>) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     table_styled(
         data,
@@ -643,11 +662,11 @@ pub fn table_styled<'a, State, R, RowView, Sel, F, H>(
 where
     State: 'static,
     R: TableRow + Clone + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    Sel: SelectionState<R::Id> + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
     F: Fn(&mut State, usize, bool, bool, &[f64]) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, TableAction<R::Id>) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     // Compute sorted indices: maps visual_idx -> data_idx
     let sorted_indices = sort_order.sort_indices(data);
@@ -667,8 +686,8 @@ where
 
     // Clone data references for closures (using sorted indices)
     let data_len = data.len();
-    let data_for_id: Vec<R::Id> = data.iter().map(|r| r.id()).collect();
-    let data_for_sel: Vec<R::Id> = data.iter().map(|r| r.id()).collect();
+    let data_for_id: Vec<R::Key> = data.iter().map(|r| r.key()).collect();
+    let data_for_sel: Vec<R::Key> = data.iter().map(|r| r.key()).collect();
 
     // Clone sorted indices for closures
     let sorted_for_sel = sorted_indices.clone();

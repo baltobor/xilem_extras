@@ -19,7 +19,7 @@ use xilem::{AnyWidgetView, WidgetView};
 use xilem_extras::xilem::components::{ferris, rust_gear, svg_icon};
 use xilem_extras::xilem::menu_items::{BoxedMenuEntry, MenuItems, menu_item, separator};
 use xilem_extras::xilem::theme::Theme;
-use xilem_extras::xilem::traits::Identifiable;
+use xilem_extras::xilem::traits::Keyed;
 use xilem_extras::xilem::tree::{HighlightFill, TreeAction, TreeStyle, tree_view};
 use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
 
@@ -80,9 +80,9 @@ pub fn tree_view_demo(model: &mut AppModel) -> impl WidgetView<AppModel, ()> + u
         .context_menu_for(|node: &FileNode| -> Vec<BoxedMenuEntry<AppModel, ()>> {
             // Each closure captures `id` by move so the menu item knows which
             // node it is operating on without needing extra plumbing.
-            let id_open = node.id();
-            let id_rename = node.id();
-            let id_delete = node.id();
+            let id_open = node.key();
+            let id_rename = node.key();
+            let id_delete = node.key();
             (
                 menu_item("Open", move |m: &mut AppModel| {
                     m.tree_activated = Some(id_open.clone());

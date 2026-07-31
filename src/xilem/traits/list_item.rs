@@ -5,7 +5,7 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-use super::Identifiable;
+use super::Keyed;
 
 /// A flat list item with a stable identity.
 ///
@@ -15,7 +15,7 @@ use super::Identifiable;
 /// # Example
 ///
 /// ```
-/// use xilem_extras::{Identifiable, ListItem};
+/// use xilem_extras::{Keyed, ListItem};
 ///
 /// struct Contact {
 ///     id: u64,
@@ -23,9 +23,9 @@ use super::Identifiable;
 ///     email: String,
 /// }
 ///
-/// impl Identifiable for Contact {
-///     type Id = u64;
-///     fn id(&self) -> Self::Id {
+/// impl Keyed for Contact {
+///     type Key = u64;
+///     fn key(&self) -> Self::Key {
 ///         self.id
 ///     }
 /// }
@@ -36,7 +36,7 @@ use super::Identifiable;
 ///     }
 /// }
 /// ```
-pub trait ListItem: Identifiable {
+pub trait ListItem: Keyed {
     /// Returns the primary display text for this item.
     fn label(&self) -> &str;
 
@@ -60,9 +60,9 @@ mod tests {
         name: String,
     }
 
-    impl Identifiable for SimpleItem {
-        type Id = u32;
-        fn id(&self) -> Self::Id {
+    impl Keyed for SimpleItem {
+        type Key = u32;
+        fn key(&self) -> Self::Key {
             self.id
         }
     }

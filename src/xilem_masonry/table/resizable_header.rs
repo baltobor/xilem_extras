@@ -6,6 +6,13 @@
 //! (compatible with the Xilem licence).
 
 //! Xilem view for the resizable header widget.
+//!
+//! TODO: Column resizing here assumes an LTR (left-to-right) layout, where
+//! dragging a divider grows the column on the left and pushes the columns
+//! on the right away. Right-to-left languages such as Arabic likely expect
+//! the mirrored behavior. We need to ask a native speaker (or someone with
+//! real RTL UX experience) how this should behave before implementing it,
+//! since it's not necessarily a simple mirror of the x-axis.
 
 use std::sync::Arc;
 
@@ -55,6 +62,12 @@ where
     type Element = Pod<ResizableHeader>;
     type ViewState = Vec<V::ViewState>;
 
+    // `child.build(...)` runs each child's own xilem view logic, then
+    // `.erased()` type-erases the resulting `Pod` into `NewWidget<dyn Widget>`
+    // before it's handed to `ResizableHeader::new`. `ResizableHeader` (masonry
+    // side) only ever stores `dyn Widget` children and does all drag math,
+    // layout and painting itself — it never knows or needs to know that a
+    // child came from a xilem view rather than a hand-built masonry widget.
     fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
         let mut child_pods = Vec::new();
         let mut child_states = Vec::new();
@@ -78,6 +91,12 @@ where
         (pod, child_states)
     }
 
+    // Diffing pushes down through masonry's `WidgetMut` setters instead of
+    // rebuilding the widget: scalar state (column widths) goes through
+    // `set_column_widths`, and each child view recurses into its own
+    // `rebuild` via `child_mut`, which hands back a `WidgetMut<dyn Widget>`.
+    // `ResizableHeader` stays generic over its children the whole time — it
+    // exposes a mutation slot per child, not a concrete child type.
     fn rebuild(
         &self,
         prev: &Self,
@@ -118,6 +137,11 @@ where
         }
     }
 
+    // `ResizableHeader` (masonry) knows nothing about `ViewId`s — it just
+    // emits its own `ColumnResizeAction`. Routing back to a specific child
+    // view (via the `ViewId` stashed in the message path) or catching that
+    // widget-level action and translating it into an app `Action` is entirely
+    // the xilem view's job; masonry's widget stays action-type-agnostic.
     fn message(
         &self,
         view_state: &mut Self::ViewState,

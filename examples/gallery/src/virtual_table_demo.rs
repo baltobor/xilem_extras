@@ -25,13 +25,13 @@ pub fn virtual_table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + u
     let selection_count = model.virtual_table_selection.count();
 
     // Compute sorted IDs for shift-selection to work
-    use xilem_extras::xilem::traits::Identifiable;
+    use xilem_extras::xilem::traits::Keyed;
     let sorted_indices = model
         .virtual_table_sort
         .sort_indices(&model.virtual_cyclists);
     let sorted_ids: Vec<u64> = sorted_indices
         .iter()
-        .map(|&idx| model.virtual_cyclists[idx].id())
+        .map(|&idx| model.virtual_cyclists[idx].key())
         .collect();
     model.virtual_table_selection.set_items(sorted_ids);
 

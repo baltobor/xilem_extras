@@ -253,7 +253,7 @@ impl SortOrder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::xilem::traits::Identifiable;
+    use crate::xilem::traits::Keyed;
 
     #[derive(Debug, Clone)]
     struct TestRow {
@@ -263,9 +263,9 @@ mod tests {
         score: f64,
     }
 
-    impl Identifiable for TestRow {
-        type Id = u64;
-        fn id(&self) -> Self::Id {
+    impl Keyed for TestRow {
+        type Key = u64;
+        fn key(&self) -> Self::Key {
             self.id
         }
     }

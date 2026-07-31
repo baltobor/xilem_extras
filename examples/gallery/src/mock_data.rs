@@ -9,7 +9,7 @@
 //!
 //! I love riding the bike. This is my honour to the community, and outdoor sports.
 
-use xilem_extras::xilem::traits::{CellValue, Identifiable, ListItem, TableRow, TreeNode};
+use xilem_extras::xilem::traits::{CellValue, Keyed, ListItem, TableRow, TreeNode};
 
 /// A node in the file tree.
 #[derive(Debug, Clone)]
@@ -40,10 +40,10 @@ impl FileNode {
     }
 }
 
-impl Identifiable for FileNode {
-    type Id = String;
+impl Keyed for FileNode {
+    type Key = String;
 
-    fn id(&self) -> Self::Id {
+    fn key(&self) -> Self::Key {
         self.path.clone()
     }
 }
@@ -105,10 +105,10 @@ pub struct Contact {
     pub favorite: bool,
 }
 
-impl Identifiable for Contact {
-    type Id = u64;
+impl Keyed for Contact {
+    type Key = u64;
 
-    fn id(&self) -> Self::Id {
+    fn key(&self) -> Self::Key {
         self.id
     }
 }
@@ -169,10 +169,10 @@ pub struct Cyclist {
     pub joy_level: i64,
 }
 
-impl Identifiable for Cyclist {
-    type Id = u64;
+impl Keyed for Cyclist {
+    type Key = u64;
 
-    fn id(&self) -> Self::Id {
+    fn key(&self) -> Self::Key {
         self.id
     }
 }
@@ -371,7 +371,7 @@ mod tests {
     #[test]
     fn file_node_identifiable() {
         let node = FileNode::file("test.rs", "src/test.rs");
-        assert_eq!(node.id(), "src/test.rs");
+        assert_eq!(node.key(), "src/test.rs");
     }
 
     #[test]
@@ -396,7 +396,7 @@ mod tests {
             email: "test@email.tld".into(),
             favorite: false,
         };
-        assert_eq!(contact.id(), 42);
+        assert_eq!(contact.key(), 42);
     }
 
     #[test]

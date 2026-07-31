@@ -22,11 +22,11 @@ use crate::xilem::traits::{SelectionState, TreeNode};
 /// Collects visible tree nodes into a flat list for rendering.
 pub fn flatten_tree<'a, N: TreeNode>(
     node: &'a N,
-    expansion: &ExpansionState<N::Id>,
+    expansion: &ExpansionState<N::Key>,
     depth: usize,
     result: &mut Vec<(&'a N, usize, bool)>,
 ) {
-    let is_expanded = expansion.is_expanded(&node.id());
+    let is_expanded = expansion.is_expanded(&node.key());
     result.push((node, depth, is_expanded));
 
     if is_expanded {
@@ -78,7 +78,7 @@ pub fn flatten_tree<'a, N: TreeNode>(
 /// ```
 pub fn tree_group<'a, State, N, R, F, H, Sel>(
     root: &'a N,
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     row_builder: F,
     handler: H,
@@ -86,11 +86,11 @@ pub fn tree_group<'a, State, N, R, F, H, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<N::Id> + 'a,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Key> + 'a,
 {
     tree_group_styled(
         root,
@@ -120,7 +120,7 @@ where
 /// ```
 pub fn tree_group_styled<'a, State, N, R, F, H, Sel>(
     root: &'a N,
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     style: TreeStyle,
     row_builder: F,
@@ -129,11 +129,11 @@ pub fn tree_group_styled<'a, State, N, R, F, H, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<N::Id> + 'a,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Key> + 'a,
 {
     let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
     flatten_tree(root, expansion, 0, &mut flat_nodes);
@@ -142,11 +142,11 @@ where
         .into_iter()
         .map(|(node, depth, is_expanded)| {
             let is_selected = selection
-                .map(|sel| sel.is_selected(&node.id()))
+                .map(|sel| sel.is_selected(&node.key()))
                 .unwrap_or(false);
 
             let row_view = row_builder(node, depth, is_expanded, is_selected);
-            let node_id = node.id();
+            let node_id = node.key();
             let is_expandable = node.is_expandable();
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
@@ -220,7 +220,7 @@ where
 /// ```
 pub fn tree_group_with_context_menu<'a, State, N, R, F, H, I, MI, Sel>(
     root: &'a N,
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     style: TreeStyle,
     context_menu_items_fn: MI,
@@ -230,13 +230,13 @@ pub fn tree_group_with_context_menu<'a, State, N, R, F, H, I, MI, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool) -> R + Clone + Send + Sync + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
     I: MenuItems<State, ()> + Clone,
-    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
-    Sel: SelectionState<N::Id> + 'a,
+    MI: Fn(&N::Key) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Key> + 'a,
 {
     let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
     flatten_tree(root, expansion, 0, &mut flat_nodes);
@@ -245,11 +245,11 @@ where
         .into_iter()
         .map(|(node, depth, is_expanded)| {
             let is_selected = selection
-                .map(|sel| sel.is_selected(&node.id()))
+                .map(|sel| sel.is_selected(&node.key()))
                 .unwrap_or(false);
 
             let row_view = row_builder(node, depth, is_expanded, is_selected);
-            let node_id = node.id();
+            let node_id = node.key();
             let is_expandable = node.is_expandable();
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
@@ -334,9 +334,9 @@ where
 /// ```
 pub fn tree_group_with_context_menu_editable<'a, State, N, R, F, H, I, MI, Sel>(
     root: &'a N,
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
-    editing_id: Option<&'a N::Id>,
+    editing_id: Option<&'a N::Key>,
     style: TreeStyle,
     context_menu_items_fn: MI,
     row_builder: F,
@@ -345,13 +345,13 @@ pub fn tree_group_with_context_menu_editable<'a, State, N, R, F, H, I, MI, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + PartialEq + Send + Sync + 'static,
+    N::Key: Clone + PartialEq + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool, bool) -> R + Clone + Send + Sync + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
     I: MenuItems<State, ()> + Clone,
-    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
-    Sel: SelectionState<N::Id> + 'a,
+    MI: Fn(&N::Key) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Key> + 'a,
 {
     let is_any_editing = editing_id.is_some();
     let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
@@ -361,12 +361,12 @@ where
         .into_iter()
         .map(|(node, depth, is_expanded)| {
             let is_selected = selection
-                .map(|sel| sel.is_selected(&node.id()))
+                .map(|sel| sel.is_selected(&node.key()))
                 .unwrap_or(false);
-            let is_editing = editing_id.map(|id| id == &node.id()).unwrap_or(false);
+            let is_editing = editing_id.map(|id| id == &node.key()).unwrap_or(false);
 
             let row_view = row_builder(node, depth, is_expanded, is_selected, is_editing);
-            let node_id = node.id();
+            let node_id = node.key();
             let is_expandable = node.is_expandable();
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
@@ -407,7 +407,7 @@ where
 /// Collects visible tree nodes from a forest (multiple roots) into a flat list for rendering.
 pub fn flatten_forest<'a, N: TreeNode>(
     roots: &'a [N],
-    expansion: &ExpansionState<N::Id>,
+    expansion: &ExpansionState<N::Key>,
     result: &mut Vec<(&'a N, usize, bool)>,
 ) {
     for root in roots {
@@ -441,7 +441,7 @@ pub fn flatten_forest<'a, N: TreeNode>(
 /// ```
 pub fn tree_forest<'a, State, N, R, F, H, Sel>(
     roots: &'a [N],
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     row_builder: F,
     handler: H,
@@ -449,11 +449,11 @@ pub fn tree_forest<'a, State, N, R, F, H, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<N::Id> + 'a,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Key> + 'a,
 {
     tree_forest_styled(
         roots,
@@ -483,7 +483,7 @@ where
 /// ```
 pub fn tree_forest_styled<'a, State, N, R, F, H, Sel>(
     roots: &'a [N],
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     style: TreeStyle,
     row_builder: F,
@@ -492,11 +492,11 @@ pub fn tree_forest_styled<'a, State, N, R, F, H, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<N::Id> + 'a,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Key> + 'a,
 {
     let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
     flatten_forest(roots, expansion, &mut flat_nodes);
@@ -505,11 +505,11 @@ where
         .into_iter()
         .map(|(node, depth, is_expanded)| {
             let is_selected = selection
-                .map(|sel| sel.is_selected(&node.id()))
+                .map(|sel| sel.is_selected(&node.key()))
                 .unwrap_or(false);
 
             let row_view = row_builder(node, depth, is_expanded, is_selected);
-            let node_id = node.id();
+            let node_id = node.key();
             let is_expandable = node.is_expandable();
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
@@ -568,7 +568,7 @@ where
 /// ```
 pub fn tree_forest_with_context_menu<'a, State, N, R, F, H, I, MI, Sel>(
     roots: &'a [N],
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     style: TreeStyle,
     context_menu_items_fn: MI,
@@ -578,13 +578,13 @@ pub fn tree_forest_with_context_menu<'a, State, N, R, F, H, I, MI, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool) -> R + Clone + Send + Sync + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
     I: MenuItems<State, ()> + Clone,
-    MI: Fn(&N::Id) -> I + Clone + Send + Sync + 'a,
-    Sel: SelectionState<N::Id> + 'a,
+    MI: Fn(&N::Key) -> I + Clone + Send + Sync + 'a,
+    Sel: SelectionState<N::Key> + 'a,
 {
     let mut flat_nodes: Vec<(&N, usize, bool)> = Vec::new();
     flatten_forest(roots, expansion, &mut flat_nodes);
@@ -593,11 +593,11 @@ where
         .into_iter()
         .map(|(node, depth, is_expanded)| {
             let is_selected = selection
-                .map(|sel| sel.is_selected(&node.id()))
+                .map(|sel| sel.is_selected(&node.key()))
                 .unwrap_or(false);
 
             let row_view = row_builder(node, depth, is_expanded, is_selected);
-            let node_id = node.id();
+            let node_id = node.key();
             let is_expandable = node.is_expandable();
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
@@ -634,7 +634,7 @@ where
 /// See [`tree_group`] for full documentation.
 pub fn tree<'a, State, N, R, F, H, Sel>(
     root: &'a N,
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     row_builder: F,
     handler: H,
@@ -642,11 +642,11 @@ pub fn tree<'a, State, N, R, F, H, Sel>(
 where
     State: 'static,
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&N, usize, bool, bool) -> R + Clone + 'a,
-    H: Fn(&mut State, &N::Id, TreeAction) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<N::Id> + 'a,
+    H: Fn(&mut State, &N::Key, TreeAction) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<N::Key> + 'a,
 {
     tree_group(root, expansion, selection, row_builder, handler)
 }
@@ -654,7 +654,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::xilem::traits::Identifiable;
+    use crate::xilem::traits::Keyed;
 
     #[derive(Debug, Clone)]
     struct TestNode {
@@ -663,9 +663,9 @@ mod tests {
         children: Vec<TestNode>,
     }
 
-    impl Identifiable for TestNode {
-        type Id = String;
-        fn id(&self) -> Self::Id {
+    impl Keyed for TestNode {
+        type Key = String;
+        fn key(&self) -> Self::Key {
             self.id.clone()
         }
     }
@@ -719,7 +719,7 @@ mod tests {
         flatten_tree(&tree, &expansion, 0, &mut result);
 
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0].0.id(), "root");
+        assert_eq!(result[0].0.key(), "root");
         assert_eq!(result[0].1, 0);
         assert!(!result[0].2);
     }
@@ -734,10 +734,10 @@ mod tests {
         flatten_tree(&tree, &expansion, 0, &mut result);
 
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0].0.id(), "root");
+        assert_eq!(result[0].0.key(), "root");
         assert!(result[0].2);
-        assert_eq!(result[1].0.id(), "a");
-        assert_eq!(result[2].0.id(), "b");
+        assert_eq!(result[1].0.key(), "a");
+        assert_eq!(result[2].0.key(), "b");
     }
 
     #[test]
@@ -750,7 +750,7 @@ mod tests {
         flatten_tree(&tree, &expansion, 0, &mut result);
 
         assert_eq!(result.len(), 5);
-        let ids: Vec<_> = result.iter().map(|(n, _, _)| n.id()).collect();
+        let ids: Vec<_> = result.iter().map(|(n, _, _)| n.key()).collect();
         assert_eq!(ids, vec!["root", "a", "a1", "a2", "b"]);
     }
 
@@ -800,8 +800,8 @@ mod tests {
 
         // Only top-level nodes visible when collapsed
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].0.id(), "a");
-        assert_eq!(result[1].0.id(), "b");
+        assert_eq!(result[0].0.key(), "a");
+        assert_eq!(result[1].0.key(), "b");
     }
 
     #[test]
@@ -816,7 +816,7 @@ mod tests {
 
         // All nodes visible when expanded
         assert_eq!(result.len(), 4);
-        let ids: Vec<_> = result.iter().map(|(n, _, _)| n.id()).collect();
+        let ids: Vec<_> = result.iter().map(|(n, _, _)| n.key()).collect();
         assert_eq!(ids, vec!["a", "a1", "b", "b1"]);
     }
 

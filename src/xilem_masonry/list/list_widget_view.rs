@@ -38,7 +38,7 @@ use xilem::masonry::peniko::Color;
 use xilem::{Pod, ViewCtx, WidgetView};
 
 use crate::masonry::list::widget::{ListRangeAction, ListWidget, ListWidgetAction};
-use crate::xilem::traits::{Identifiable, SelectionModifiers, SelectionState};
+use crate::xilem::traits::{Keyed, SelectionModifiers, SelectionState};
 
 /// Actions that can occur on list items.
 #[derive(Debug, Clone, PartialEq)]
@@ -140,7 +140,7 @@ pub struct ListViewState<RowView, RowViewState> {
 /// High-performance virtualized list view.
 pub struct ListView<State, R, RowView, F, H, Sel>
 where
-    R: Identifiable,
+    R: Keyed,
 {
     phantom: PhantomData<fn() -> (State, RowView)>,
     /// Number of items in the list.
@@ -154,12 +154,12 @@ where
     /// Selection state for determining which rows are selected.
     selection_fn: Box<dyn Fn(usize) -> bool + Send + Sync>,
     /// ID getter for rows.
-    id_getter: Box<dyn Fn(usize) -> R::Id + Send + Sync>,
+    id_getter: Box<dyn Fn(usize) -> R::Key + Send + Sync>,
     _sel: PhantomData<Sel>,
 }
 
 impl<State, R, RowView, F, H, Sel> ViewMarker for ListView<State, R, RowView, F, H, Sel> where
-    R: Identifiable
+    R: Keyed
 {
 }
 
@@ -167,12 +167,12 @@ impl<State, R, RowView, F, H, Sel> View<State, (), ViewCtx>
     for ListView<State, R, RowView, F, H, Sel>
 where
     State: 'static,
-    R: Identifiable + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     F: Fn(&mut State, usize, bool, bool) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, ListViewAction<R::Id>) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<R::Id> + 'static,
+    H: Fn(&mut State, ListViewAction<R::Key>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + 'static,
 {
     type Element = Pod<ListWidget>;
     type ViewState = ListViewState<RowView, RowView::ViewState>;
@@ -368,7 +368,7 @@ where
 ///
 /// # Arguments
 ///
-/// * `data` - The collection of items (must implement `Identifiable`)
+/// * `data` - The collection of items (must implement `Keyed`)
 /// * `selection` - Selection state
 /// * `row_builder` - Function that builds a view for each row: `(state, index, is_selected, is_striped) -> RowView`
 /// * `handler` - Function that handles list actions
@@ -405,12 +405,12 @@ pub fn list_view<'a, State, R, RowView, Sel, F, H>(
 ) -> impl WidgetView<State, ()> + use<'a, State, R, RowView, Sel, F, H>
 where
     State: 'static,
-    R: Identifiable + Clone + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + Clone + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    Sel: SelectionState<R::Id> + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
     F: Fn(&mut State, usize, bool, bool) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, ListViewAction<R::Id>) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, ListViewAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     list_view_styled(
         data,
@@ -433,16 +433,16 @@ pub fn list_view_styled<'a, State, R, RowView, Sel, F, H>(
 ) -> impl WidgetView<State, ()> + use<'a, State, R, RowView, Sel, F, H>
 where
     State: 'static,
-    R: Identifiable + Clone + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + Clone + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    Sel: SelectionState<R::Id> + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
     F: Fn(&mut State, usize, bool, bool) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, ListViewAction<R::Id>) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, ListViewAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     let data_len = data.len();
-    let data_for_id: Vec<R::Id> = data.iter().map(|r| r.id()).collect();
-    let data_for_sel: Vec<R::Id> = data.iter().map(|r| r.id()).collect();
+    let data_for_id: Vec<R::Key> = data.iter().map(|r| r.key()).collect();
+    let data_for_sel: Vec<R::Key> = data.iter().map(|r| r.key()).collect();
 
     let selection_clone = selection.clone();
     let selection_fn = Box::new(move |idx: usize| {
@@ -699,7 +699,7 @@ pub struct SectionedListViewState<RowView, RowViewState> {
 /// High-performance virtualized sectioned list view.
 pub struct SectionedListView<State, R, RowView, F, H, Sel>
 where
-    R: Identifiable,
+    R: Keyed,
 {
     phantom: PhantomData<fn() -> (State, RowView)>,
     /// Flat index map.
@@ -707,7 +707,7 @@ where
     /// Section titles.
     section_titles: Vec<String>,
     /// Global item IDs for selection.
-    item_ids: Vec<R::Id>,
+    item_ids: Vec<R::Key>,
     /// Style configuration.
     style: ListViewStyle,
     /// Function to build row view: (state, SectionedRowInfo) -> RowView.
@@ -720,7 +720,7 @@ where
 }
 
 impl<State, R, RowView, F, H, Sel> ViewMarker for SectionedListView<State, R, RowView, F, H, Sel> where
-    R: Identifiable
+    R: Keyed
 {
 }
 
@@ -728,12 +728,12 @@ impl<State, R, RowView, F, H, Sel> View<State, (), ViewCtx>
     for SectionedListView<State, R, RowView, F, H, Sel>
 where
     State: 'static,
-    R: Identifiable + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     F: Fn(&mut State, SectionedRowInfo) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, ListViewAction<R::Id>) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<R::Id> + 'static,
+    H: Fn(&mut State, ListViewAction<R::Key>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + 'static,
 {
     type Element = Pod<ListWidget>;
     type ViewState = SectionedListViewState<RowView, RowView::ViewState>;
@@ -941,7 +941,7 @@ where
 
 impl<State, R, RowView, F, H, Sel> SectionedListView<State, R, RowView, F, H, Sel>
 where
-    R: Identifiable,
+    R: Keyed,
 {
     fn make_row_info(&self, flat_idx: usize) -> SectionedRowInfo {
         if let Some(&(section_idx, is_header, item_idx_in_section)) = self.flat_map.get(flat_idx) {
@@ -1031,12 +1031,12 @@ pub fn list_view_sectioned<'a, State, R, RowView, Sel, F, H>(
 ) -> impl WidgetView<State, ()> + use<'a, State, R, RowView, Sel, F, H>
 where
     State: 'static,
-    R: Identifiable + Clone + 'static,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + Clone + 'static,
+    R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    Sel: SelectionState<R::Id> + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
     F: Fn(&mut State, SectionedRowInfo) -> RowView + Send + Sync + 'static,
-    H: Fn(&mut State, ListViewAction<R::Id>) + Clone + Send + Sync + 'static,
+    H: Fn(&mut State, ListViewAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     // Build flat index map
     let flat_map = FlatIndexMap::new(sections);
@@ -1045,9 +1045,9 @@ where
     let section_titles: Vec<String> = sections.iter().map(|s| s.title.clone()).collect();
 
     // Collect all item IDs
-    let item_ids: Vec<R::Id> = sections
+    let item_ids: Vec<R::Key> = sections
         .iter()
-        .flat_map(|s| s.items.iter().map(|r| r.id()))
+        .flat_map(|s| s.items.iter().map(|r| r.key()))
         .collect();
 
     // Clone for selection closure

@@ -5,13 +5,13 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-mod identifiable;
+mod keyed;
 mod list_item;
 mod selectable;
 mod table_row;
 mod tree_node;
 
-pub use identifiable::Identifiable;
+pub use keyed::Keyed;
 pub use list_item::ListItem;
 pub use selectable::{SelectionModifiers, SelectionState};
 pub use table_row::{CellValue, TableRow};

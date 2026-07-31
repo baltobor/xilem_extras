@@ -5,11 +5,11 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-use super::Identifiable;
+use super::Keyed;
 
 /// A node in a hierarchical tree structure.
 ///
-/// This trait extends `Identifiable` to provide tree-specific functionality:
+/// This trait extends `Keyed` to provide tree-specific functionality:
 /// - Access to children nodes
 /// - Expandability state
 /// - Display label
@@ -17,7 +17,7 @@ use super::Identifiable;
 /// # Example
 ///
 /// ```
-/// use xilem_extras::{Identifiable, TreeNode};
+/// use xilem_extras::{Keyed, TreeNode};
 ///
 /// struct FileNode {
 ///     path: String,
@@ -26,9 +26,9 @@ use super::Identifiable;
 ///     children: Vec<FileNode>,
 /// }
 ///
-/// impl Identifiable for FileNode {
-///     type Id = String;
-///     fn id(&self) -> Self::Id {
+/// impl Keyed for FileNode {
+///     type Key = String;
+///     fn key(&self) -> Self::Key {
 ///         self.path.clone()
 ///     }
 /// }
@@ -47,7 +47,7 @@ use super::Identifiable;
 ///     }
 /// }
 /// ```
-pub trait TreeNode: Identifiable + Sized {
+pub trait TreeNode: Keyed + Sized {
     /// Returns the direct children of this node.
     fn children(&self) -> &[Self];
 
@@ -74,10 +74,10 @@ pub trait TreeNode: Identifiable + Sized {
     fn depth_in(&self, root: &Self) -> Option<usize> {
         fn find_depth<T: TreeNode>(
             node: &T,
-            target_id: &T::Id,
+            target_id: &T::Key,
             current_depth: usize,
         ) -> Option<usize> {
-            if node.id() == *target_id {
+            if node.key() == *target_id {
                 return Some(current_depth);
             }
             for child in node.children() {
@@ -87,7 +87,7 @@ pub trait TreeNode: Identifiable + Sized {
             }
             None
         }
-        find_depth(root, &self.id(), 0)
+        find_depth(root, &self.key(), 0)
     }
 }
 
@@ -120,9 +120,9 @@ mod tests {
         children: Vec<TestNode>,
     }
 
-    impl Identifiable for TestNode {
-        type Id = String;
-        fn id(&self) -> Self::Id {
+    impl Keyed for TestNode {
+        type Key = String;
+        fn key(&self) -> Self::Key {
             self.id.clone()
         }
     }
@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn test_preorder_traversal() {
         let tree = create_test_tree();
-        let ids: Vec<_> = tree.iter_preorder().map(|n| n.id()).collect();
+        let ids: Vec<_> = tree.iter_preorder().map(|n| n.key()).collect();
         assert_eq!(ids, vec!["root", "a", "a1", "a2", "b"]);
     }
 
@@ -197,7 +197,7 @@ mod tests {
             name: "Leaf".into(),
             children: vec![],
         };
-        let ids: Vec<_> = leaf.iter_preorder().map(|n| n.id()).collect();
+        let ids: Vec<_> = leaf.iter_preorder().map(|n| n.key()).collect();
         assert_eq!(ids, vec!["leaf"]);
     }
 

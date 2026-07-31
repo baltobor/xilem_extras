@@ -31,19 +31,19 @@ pub struct FlattenedNode<Id> {
 /// Recurses into a node's children only when the node is expanded.
 pub fn flatten_tree_with_parents<N: TreeNode>(
     node: &N,
-    expansion: &ExpansionState<N::Id>,
+    expansion: &ExpansionState<N::Key>,
     depth: usize,
     parent_index: Option<usize>,
-    result: &mut Vec<FlattenedNode<N::Id>>,
+    result: &mut Vec<FlattenedNode<N::Key>>,
 ) where
-    N::Id: Clone,
+    N::Key: Clone,
 {
     let current_index = result.len();
-    let is_expanded = expansion.is_expanded(&node.id());
+    let is_expanded = expansion.is_expanded(&node.key());
     let is_expandable = node.is_expandable();
 
     result.push(FlattenedNode {
-        id: node.id(),
+        id: node.key(),
         depth,
         is_expanded,
         is_expandable,
@@ -60,10 +60,10 @@ pub fn flatten_tree_with_parents<N: TreeNode>(
 /// Flatten a forest (multiple roots) into a single list with parent tracking.
 pub fn flatten_forest_with_parents<N: TreeNode>(
     roots: &[N],
-    expansion: &ExpansionState<N::Id>,
-    result: &mut Vec<FlattenedNode<N::Id>>,
+    expansion: &ExpansionState<N::Key>,
+    result: &mut Vec<FlattenedNode<N::Key>>,
 ) where
-    N::Id: Clone,
+    N::Key: Clone,
 {
     for root in roots {
         flatten_tree_with_parents(root, expansion, 0, None, result);
@@ -73,7 +73,7 @@ pub fn flatten_forest_with_parents<N: TreeNode>(
 /// Flatten a forest into parallel `(node_refs, flat_metadata)` vectors in a
 /// single traversal. Used by the canonical `tree_view` builder so it can
 /// drive row construction directly off `node_refs[i]` while feeding the
-/// owned `FlattenedNode<N::Id>` list into the (`'static`) keyboard handler
+/// owned `FlattenedNode<N::Key>` list into the (`'static`) keyboard handler
 /// closure.
 ///
 /// Indices in the two vectors align: `node_refs[i]` is the node described
@@ -82,13 +82,13 @@ pub fn flatten_forest_with_parents<N: TreeNode>(
 /// `roots` to obtain `&N` per row.
 pub(crate) fn flatten_forest_collecting<'a, N: TreeNode>(
     roots: &'a [N],
-    expansion: &ExpansionState<N::Id>,
-) -> (Vec<&'a N>, Vec<FlattenedNode<N::Id>>)
+    expansion: &ExpansionState<N::Key>,
+) -> (Vec<&'a N>, Vec<FlattenedNode<N::Key>>)
 where
-    N::Id: Clone,
+    N::Key: Clone,
 {
     let mut nodes: Vec<&'a N> = Vec::new();
-    let mut flat: Vec<FlattenedNode<N::Id>> = Vec::new();
+    let mut flat: Vec<FlattenedNode<N::Key>> = Vec::new();
     for root in roots {
         collect_tree(root, expansion, 0, None, &mut nodes, &mut flat);
     }
@@ -97,21 +97,21 @@ where
 
 fn collect_tree<'a, N: TreeNode>(
     node: &'a N,
-    expansion: &ExpansionState<N::Id>,
+    expansion: &ExpansionState<N::Key>,
     depth: usize,
     parent_index: Option<usize>,
     nodes: &mut Vec<&'a N>,
-    flat: &mut Vec<FlattenedNode<N::Id>>,
+    flat: &mut Vec<FlattenedNode<N::Key>>,
 ) where
-    N::Id: Clone,
+    N::Key: Clone,
 {
     let current_index = flat.len();
-    let is_expanded = expansion.is_expanded(&node.id());
+    let is_expanded = expansion.is_expanded(&node.key());
     let is_expandable = node.is_expandable();
 
     nodes.push(node);
     flat.push(FlattenedNode {
-        id: node.id(),
+        id: node.key(),
         depth,
         is_expanded,
         is_expandable,
@@ -135,7 +135,7 @@ fn collect_tree<'a, N: TreeNode>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::xilem::traits::Identifiable;
+    use crate::xilem::traits::Keyed;
 
     #[derive(Clone, Debug)]
     struct Node {
@@ -143,9 +143,9 @@ mod tests {
         children: Vec<Node>,
     }
 
-    impl Identifiable for Node {
-        type Id = String;
-        fn id(&self) -> Self::Id {
+    impl Keyed for Node {
+        type Key = String;
+        fn key(&self) -> Self::Key {
             self.id.clone()
         }
     }

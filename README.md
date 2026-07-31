@@ -91,13 +91,13 @@ The library uses trait-based design for flexibility:
 
 ```rust
 // Stable identity for collections
-pub trait Identifiable {
-    type Id: Clone + Eq + Hash + Send + 'static;
-    fn id(&self) -> Self::Id;
+pub trait Keyed {
+    type Key: Clone + Eq + Hash + Send + 'static;
+    fn key(&self) -> Self::Key;
 }
 
 // Hierarchical data
-pub trait TreeNode: Identifiable + Sized {
+pub trait TreeNode: Keyed + Sized {
     fn children(&self) -> &[Self];
     fn is_expandable(&self) -> bool;
     fn label(&self) -> &str;

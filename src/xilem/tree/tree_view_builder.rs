@@ -50,7 +50,7 @@ use xilem::{AnyWidgetView, WidgetView};
 use crate::xilem::components::{RowButtonPress, row_button_with_press};
 use crate::xilem::context_menu::context_menu;
 use crate::xilem::menu_items::BoxedMenuEntry;
-use crate::xilem::traits::{Identifiable, SelectionState, TreeNode};
+use crate::xilem::traits::{Keyed, SelectionState, TreeNode};
 use xilem::masonry::core::PointerButton;
 
 use super::ExpansionState;
@@ -65,7 +65,7 @@ use super::types::{TreeAction, TreeStyle};
 // methods, so `build()` always sees the same `TreeView<...>` shape.
 type IconFn<N, State> = dyn Fn(&N) -> Option<Box<AnyWidgetView<State, ()>>> + Send + Sync;
 type LabelFn<N> = dyn Fn(&N) -> String + Send + Sync;
-type ActionFn<N, State> = dyn Fn(&mut State, &<N as Identifiable>::Id, TreeAction) + Send + Sync;
+type ActionFn<N, State> = dyn Fn(&mut State, &<N as Keyed>::Key, TreeAction) + Send + Sync;
 type MenuFn<N, State> = dyn Fn(&N) -> Vec<BoxedMenuEntry<State, ()>> + Send + Sync;
 type EditTextSetterFn<State> = dyn Fn(&mut State, String) + Send + Sync;
 
@@ -109,7 +109,7 @@ where
     /// the rendering / flattening / keyboard-nav code paths can be
     /// shared with `tree_forest_view`.
     roots: &'a [N],
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
     selection: Option<&'a Sel>,
     style: TreeStyle,
     selected_bg: Color,
@@ -126,7 +126,7 @@ where
     /// Id of the node currently in inline-edit mode. Provided by the app
     /// (typically `model.editing_id.as_ref()`). When this matches a node's
     /// id, the row renders a `text_input` instead of the label.
-    editing: Option<&'a N::Id>,
+    editing: Option<&'a N::Key>,
     /// Current edit-buffer text, displayed in the `text_input` for the
     /// row whose id matches `editing`. Required when `editing` is `Some`.
     editing_text: &'a str,
@@ -148,7 +148,7 @@ where
 /// identical.
 pub fn tree_view<'a, N, State>(
     root: &'a N,
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
 ) -> TreeView<'a, N, State>
 where
     N: TreeNode + 'a,
@@ -166,7 +166,7 @@ where
 /// keyboard-nav model is the same flat list semantics.
 pub fn tree_forest_view<'a, N, State>(
     roots: &'a [N],
-    expansion: &'a ExpansionState<N::Id>,
+    expansion: &'a ExpansionState<N::Key>,
 ) -> TreeView<'a, N, State>
 where
     N: TreeNode + 'a,
@@ -206,7 +206,7 @@ where
 {
     pub fn selection<NewSel>(self, selection: &'a NewSel) -> TreeView<'a, N, State, NewSel>
     where
-        NewSel: SelectionState<N::Id>,
+        NewSel: SelectionState<N::Key>,
     {
         TreeView {
             roots: self.roots,
@@ -293,7 +293,7 @@ where
 
     pub fn on_action<F>(mut self, h: F) -> Self
     where
-        F: Fn(&mut State, &N::Id, TreeAction) + Send + Sync + 'static,
+        F: Fn(&mut State, &N::Key, TreeAction) + Send + Sync + 'static,
     {
         self.handler = Some(Arc::new(h));
         self
@@ -330,7 +330,7 @@ where
     /// clearing the editing id and applying / discarding the new text.
     pub fn editing<F>(
         mut self,
-        editing: Option<&'a N::Id>,
+        editing: Option<&'a N::Key>,
         editing_text: &'a str,
         on_text_changed: F,
     ) -> Self
@@ -360,9 +360,9 @@ where
 impl<'a, N, State, Sel> TreeView<'a, N, State, Sel>
 where
     N: TreeNode + 'a,
-    N::Id: Clone + Send + Sync + 'static,
+    N::Key: Clone + Send + Sync + 'static,
     State: 'static,
-    Sel: SelectionState<N::Id> + 'a,
+    Sel: SelectionState<N::Key> + 'a,
 {
     /// Build the configured tree as a Xilem view with full keyboard navigation.
     pub fn build(self) -> impl WidgetView<State, ()> + use<'a, N, State, Sel> {
@@ -461,7 +461,7 @@ where
             text_color
         };
 
-        let node_id = node.id();
+        let node_id = node.key();
         let is_editing = self.editing.map(|id| id == &node_id).unwrap_or(false);
 
         // Render either a text_input (rename mode) or the regular row_button
@@ -551,7 +551,7 @@ where
         };
 
         // Chevron handler dispatches TreeAction::Toggle.
-        let node_id_for_toggle = node.id();
+        let node_id_for_toggle = node.key();
         let user_handler_for_toggle = self.handler.clone();
         let on_toggle = move |state: &mut State| {
             if let Some(h) = user_handler_for_toggle.as_ref() {
@@ -702,9 +702,9 @@ mod tests {
         children: Vec<Node>,
     }
 
-    impl Identifiable for Node {
-        type Id = String;
-        fn id(&self) -> Self::Id {
+    impl Keyed for Node {
+        type Key = String;
+        fn key(&self) -> Self::Key {
             self.id.clone()
         }
     }

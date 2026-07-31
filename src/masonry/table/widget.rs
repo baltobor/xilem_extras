@@ -1,9 +1,5 @@
-//! This file is part of the xilem_extras project.
-//! (c) 2026 by Jacek Wisniowski
-//!
-//! This project was released as open source under the
-//! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
-//! (compatible with the Xilem licence).
+// Copyright 2026 the Xilem Authors
+// SPDX-License-Identifier: Apache-2.0
 
 //! Virtualized table widget (Masonry layer) for efficient rendering of large datasets.
 //!
@@ -21,17 +17,13 @@
 //!
 //! When the visible range changes, the widget submits a `TableWidgetAction::RangeChanged`:
 //!
-//! ```text
-//! ┌────────────────────────────────────────────────────────────────┐
-//! │  1. Widget computes target_range in layout()                   │
-//! │  2. If target_range != active_range, submit TableRangeAction   │
-//! │  3. Set action_pending = true to prevent duplicate submissions │
-//! │  4. View calls will_handle_action() with the action            │
-//! │  5. View adds/removes row widgets                              │
-//! │  6. View calls did_handle_action() when done                   │
-//! │  7. Widget sets action_pending = false                         │
-//! └────────────────────────────────────────────────────────────────┘
-//! ```
+//! 1. Widget computes target_range in layout()
+//! 2. If target_range != active_range, submit TableRangeAction
+//! 3. Set action_pending = true to prevent duplicate submissions
+//! 4. View calls will_handle_action() with the action
+//! 5. View adds/removes row widgets
+//! 6. View calls did_handle_action() when done
+//! 7. Widget sets action_pending = false
 //!
 //! # Scrollbar
 //!
@@ -206,6 +198,14 @@ impl TableWidget {
     }
 
     /// Updates column layout info for hit testing (called after header layout).
+    ///
+    /// TODO: This always accumulates `x` left-to-right, i.e. it assumes an
+    /// LTR (left-to-right) reading order. Right-to-left languages such as
+    /// Arabic conventionally expect column resizing to push columns on the
+    /// left away instead of the right. We need to ask a native speaker
+    /// (or someone with real RTL UX experience) how column resize should
+    /// behave in an RTL table before implementing this, since it's not
+    /// just a simple mirroring of `x`.
     fn update_column_layouts(&mut self) {
         self.column_layouts.clear();
         let available_width = self.size.width - SCROLLBAR_WIDTH;

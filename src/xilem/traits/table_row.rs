@@ -5,7 +5,7 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-use super::Identifiable;
+use super::Keyed;
 
 /// A value that can be displayed in a table cell.
 ///
@@ -104,7 +104,7 @@ where
 /// # Example
 ///
 /// ```
-/// use xilem_extras::{Identifiable, TableRow, CellValue};
+/// use xilem_extras::{Keyed, TableRow, CellValue};
 ///
 /// struct Employee {
 ///     id: u64,
@@ -113,9 +113,9 @@ where
 ///     salary: f64,
 /// }
 ///
-/// impl Identifiable for Employee {
-///     type Id = u64;
-///     fn id(&self) -> Self::Id {
+/// impl Keyed for Employee {
+///     type Key = u64;
+///     fn key(&self) -> Self::Key {
 ///         self.id
 ///     }
 /// }
@@ -131,7 +131,7 @@ where
 ///     }
 /// }
 /// ```
-pub trait TableRow: Identifiable {
+pub trait TableRow: Keyed {
     /// Returns the cell value for the given column key.
     fn cell(&self, column_key: &str) -> CellValue;
 }

@@ -21,7 +21,7 @@ use xilem::{AnyWidgetView, WidgetView};
 
 use super::{ColumnDef, SortDirection, SortOrder};
 use crate::xilem::components::row_button;
-use crate::xilem::traits::{Identifiable, SelectionModifiers, SelectionState};
+use crate::xilem::traits::{Keyed, SelectionModifiers, SelectionState};
 
 /// Actions that can occur on table rows or columns.
 #[derive(Debug, Clone, PartialEq)]
@@ -128,7 +128,7 @@ impl TableStyle {
 ///
 /// # Arguments
 ///
-/// * `data` - The collection of rows (must implement `Identifiable`)
+/// * `data` - The collection of rows (must implement `Keyed`)
 /// * `columns` - Column definitions
 /// * `selection` - Selection state
 /// * `sort_order` - Current sort state
@@ -183,12 +183,12 @@ pub fn legacy_table<'a, State, R, C, Sel, F, H>(
 ) -> impl WidgetView<State, ()> + use<'a, State, R, C, Sel, F, H>
 where
     State: 'static,
-    R: Identifiable + 'a,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + 'a,
+    R::Key: Clone + Send + Sync + 'static,
     C: WidgetView<State, ()> + 'static,
     F: Fn(&R, &str) -> C + Clone + 'a,
-    H: Fn(&mut State, LegacyTableAction<R::Id>) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<R::Id> + 'a,
+    H: Fn(&mut State, LegacyTableAction<R::Key>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + 'a,
 {
     legacy_table_styled(
         data,
@@ -215,12 +215,12 @@ pub fn legacy_table_styled<'a, State, R, C, Sel, F, H>(
 ) -> impl WidgetView<State, ()> + use<'a, State, R, C, Sel, F, H>
 where
     State: 'static,
-    R: Identifiable + 'a,
-    R::Id: Clone + Send + Sync + 'static,
+    R: Keyed + 'a,
+    R::Key: Clone + Send + Sync + 'static,
     C: WidgetView<State, ()> + 'static,
     F: Fn(&R, &str) -> C + Clone + 'a,
-    H: Fn(&mut State, LegacyTableAction<R::Id>) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<R::Id> + 'a,
+    H: Fn(&mut State, LegacyTableAction<R::Key>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<R::Key> + 'a,
 {
     // Build header row
     let header_cells: Vec<Box<AnyWidgetView<State, ()>>> = columns
@@ -273,8 +273,8 @@ where
         .iter()
         .enumerate()
         .map(|(row_idx, row)| {
-            let is_selected = selection.is_selected(&row.id());
-            let row_id = row.id();
+            let is_selected = selection.is_selected(&row.key());
+            let row_id = row.key();
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
 

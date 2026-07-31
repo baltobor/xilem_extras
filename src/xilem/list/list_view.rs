@@ -14,7 +14,7 @@ use xilem::view::flex_col;
 use xilem::{AnyWidgetView, WidgetView};
 
 use crate::xilem::components::{RowButtonPress, row_button_with_press};
-use crate::xilem::traits::{Identifiable, SelectionModifiers, SelectionState};
+use crate::xilem::traits::{Keyed, SelectionModifiers, SelectionState};
 use xilem::masonry::core::PointerButton;
 
 /// Actions that can occur on list items.
@@ -101,12 +101,12 @@ pub fn list<'a, State, I, R, Sel, F, H>(
 ) -> impl WidgetView<State, ()> + use<'a, State, I, R, Sel, F, H>
 where
     State: 'static,
-    I: Identifiable + 'a,
-    I::Id: Clone + Send + Sync + 'static,
+    I: Keyed + 'a,
+    I::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&I, bool) -> R + Clone + 'a,
-    H: Fn(&mut State, ListAction<I::Id>) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<I::Id> + 'a,
+    H: Fn(&mut State, ListAction<I::Key>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<I::Key> + 'a,
 {
     list_styled(items, selection, ListStyle::default(), row_builder, handler)
 }
@@ -135,19 +135,19 @@ pub fn list_styled<'a, State, I, R, Sel, F, H>(
 ) -> impl WidgetView<State, ()> + use<'a, State, I, R, Sel, F, H>
 where
     State: 'static,
-    I: Identifiable + 'a,
-    I::Id: Clone + Send + Sync + 'static,
+    I: Keyed + 'a,
+    I::Key: Clone + Send + Sync + 'static,
     R: WidgetView<State, ()> + 'static,
     F: Fn(&I, bool) -> R + Clone + 'a,
-    H: Fn(&mut State, ListAction<I::Id>) + Clone + Send + Sync + 'static,
-    Sel: SelectionState<I::Id> + 'a,
+    H: Fn(&mut State, ListAction<I::Key>) + Clone + Send + Sync + 'static,
+    Sel: SelectionState<I::Key> + 'a,
 {
     let rows: Vec<Box<AnyWidgetView<State, ()>>> = items
         .iter()
         .map(|item| {
-            let is_selected = selection.is_selected(&item.id());
+            let is_selected = selection.is_selected(&item.key());
             let row_view = row_builder(item, is_selected);
-            let item_id = item.id();
+            let item_id = item.key();
             let handler = handler.clone();
             let hover_bg = style.hover_bg;
 
