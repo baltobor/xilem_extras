@@ -30,10 +30,23 @@ use crate::masonry::table::column_layout::{
 /// pointer-up only). This is the *only* action that reaches app state
 /// (via `TableAction::ColumnResized`) — everything else below is ephemeral
 /// UI-state broadcast, never persisted.
+///
+/// Carries *every* column's current width, not just the dragged one.
+/// `FixedViewport` mode may have compressed other columns' *rendered*
+/// widths below their previous *desired* ones to make room for the drag —
+/// persisting only the dragged column would leave those still-large
+/// desired values sitting in app state, ready to cause a visible snap the
+/// next time an *earlier* column is dragged and the protection boundary
+/// shifts to include them in the compressible set for the first time
+/// (verified: dragging column 0 after previously dragging column 1 to a
+/// wide committed value made column 1 suddenly compete for space and jump
+/// smaller, even though nothing touched it). Persisting the as-rendered
+/// width for every column on commit makes "what you see is what you get"
+/// the new baseline, so switching which divider is dragged next never
+/// causes a jump — only actually moving it does.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColumnResizeAction {
-    pub column_key: Arc<str>,
-    pub new_width: f64,
+    pub widths: Vec<(Arc<str>, f64)>,
 }
 
 /// Broadcasts the header's freshly-computed column layout — submitted from
@@ -78,27 +91,6 @@ pub struct ResizableHeader {
     /// drag ends, or releasing the pointer would recompute a different
     /// (unanchored) compression than what was just rendered live.
     last_resized_index: Option<usize>,
-    /// The RTL mirror anchor (`place_columns`'s `anchor_width`), frozen for
-    /// the duration of an active drag in RTL + `Overflow` mode.
-    ///
-    /// In `Overflow` mode this widget is typically hosted in a
-    /// content-sized `portal(...)` (see `table_styled`'s doc comment), so
-    /// `self.size.width` — normally the natural anchor — is itself derived
-    /// from the sum of the very column widths being placed. For RTL's
-    /// mirror formula (`anchor_width - local_x - width`), that makes the
-    /// anchor grow in lockstep with whichever column is being dragged,
-    /// exactly cancelling that column's own width out of its own
-    /// `x_offset` — the divider you're dragging stops tracking the
-    /// cursor entirely (verified by hand; this is *not* the same bug as
-    /// the earlier "leftover space" cancellation, which happened even with
-    /// a fixed anchor — this one is specific to a self-referential one).
-    /// Freezing the anchor at whatever `self.size.width` was immediately
-    /// before the drag started restores a stable reference for its
-    /// duration, exactly like `FixedViewport` mode already has for free
-    /// (its anchor is a real, externally-imposed container width, never
-    /// self-referential). Cleared on release, so the next resting layout
-    /// re-syncs to the table's real current width.
-    frozen_anchor_width: Option<f64>,
     drag_start_x: f64,
     drag_start_width: f64,
     /// The `(columns, active_divider)` most recently broadcast via
@@ -128,7 +120,6 @@ impl ResizableHeader {
             size: Size::ZERO,
             dragging_index: None,
             last_resized_index: None,
-            frozen_anchor_width: None,
             drag_start_x: 0.0,
             drag_start_width: 0.0,
             last_submitted: None,
@@ -211,8 +202,15 @@ impl Widget for ResizableHeader {
                     ctx.set_handled();
                     ctx.capture_pointer();
                     self.dragging_index = Some(divider_idx);
-                    self.last_resized_index = Some(divider_idx);
-                    self.frozen_anchor_width = Some(self.size.width);
+                    // `last_resized_index` is deliberately *not* set here.
+                    // It's the `FixedViewport` before/after protection
+                    // anchor — updating it on mere click (before any actual
+                    // width change) would immediately redistribute
+                    // compression around the newly-touched divider with no
+                    // drag having happened at all, visibly snapping
+                    // neighboring columns just from clicking. It's set
+                    // below, in `Move`, only once the drag has actually
+                    // produced a different width.
                     self.drag_start_x = pos.x;
                     // Read from `column_widths` (the desired/configured
                     // value), not `self.columns` (the *rendered* value) —
@@ -257,7 +255,13 @@ impl Widget for ResizableHeader {
                         // after it shifts as a block for free, since layout()
                         // recomputes every x_offset from column_widths.
                         if let Some(w) = self.column_widths.get_mut(divider_idx) {
-                            *w = new_width;
+                            if *w != new_width {
+                                *w = new_width;
+                                // Only now — an actual width change, not
+                                // just a click — does this divider become
+                                // the `FixedViewport` protection anchor.
+                                self.last_resized_index = Some(divider_idx);
+                            }
                         }
 
                         ctx.request_layout();
@@ -275,17 +279,24 @@ impl Widget for ResizableHeader {
                 }
             }
             PointerEvent::Up(..) | PointerEvent::Cancel(..) => {
-                if let Some(divider_idx) = self.dragging_index.take() {
-                    if let Some(col) = self.columns.get(divider_idx) {
-                        ctx.submit_action::<Self::Action>(ColumnResizeAction {
-                            column_key: col.key.clone(),
-                            new_width: col.width,
-                        });
+                if self.dragging_index.take().is_some() {
+                    // Bake in every column's *rendered* width (not just the
+                    // dragged one) as the new desired baseline — see
+                    // `ColumnResizeAction`'s doc comment for why this is
+                    // needed to prevent a snap the next time a different,
+                    // earlier column is dragged.
+                    let widths: Vec<(Arc<str>, f64)> = self
+                        .columns
+                        .iter()
+                        .map(|col| (col.key.clone(), col.width))
+                        .collect();
+                    for (i, col) in self.columns.iter().enumerate() {
+                        if let Some(w) = self.column_widths.get_mut(i) {
+                            *w = col.width;
+                        }
                     }
+                    ctx.submit_action::<Self::Action>(ColumnResizeAction { widths });
                 }
-                // Release the frozen anchor so the next resting layout
-                // re-syncs to the table's real current width.
-                self.frozen_anchor_width = None;
                 ctx.request_layout();
                 ctx.request_render();
             }
@@ -400,15 +411,33 @@ impl Widget for ResizableHeader {
             self.resize_mode,
         );
 
-        // RTL mirrors around `anchor_width`. While a drag is active this is
-        // `frozen_anchor_width`, not the live `size.width` — see its doc
-        // comment for why a self-referential anchor (as `size.width` is in
-        // `Overflow` mode, typically hosted in a content-sized `portal`)
-        // makes the dragged column's own width cancel out of its own
-        // position, so its divider stops tracking the cursor. Outside an
-        // active drag, `frozen_anchor_width` is `None` and this is just
-        // `size.width`, exactly as before.
-        let anchor_width = self.frozen_anchor_width.unwrap_or(size.width);
+        // RTL mirrors around `anchor_width`, which is always the live
+        // `size.width` — in both modes. This has to be live, not frozen:
+        // `TableWidget::intrinsic_max_width()` (what `Overflow` mode's
+        // `portal(...)` uses to size its scrollable content) is a plain
+        // positive sum of column widths, with no notion of RTL mirroring
+        // at all. `place_columns`'s RTL formula only ever stays inside the
+        // `[0, size.width)` range the portal assumes exists if
+        // `anchor_width` exactly equals that same sum on every frame — a
+        // frozen/stale anchor here makes an overflowing column's
+        // `x_offset` go *negative*, which the portal's scrollbar can never
+        // reach (it only ever clamps to `[0, content_size - viewport)`;
+        // confirmed against `masonry::widgets::Portal::set_viewport_pos_raw`
+        // directly, and reproduced live: growing a column indeed left the
+        // leftmost column permanently unreachable by scrolling).
+        //
+        // The unavoidable side effect of a *live* anchor: since it grows
+        // with the table's own content, every column's `x_offset` —
+        // including the "protected" ones before the dragged column —
+        // shifts by that same growth each frame, even though their own
+        // widths never changed. Compensating for that shift so the
+        // protected side stays visually fixed is `TableView::rebuild()`'s
+        // job, not this widget's: it tracks how much the total width grew
+        // since the last frame and pans the owned `Portal`'s viewport by
+        // that exact amount in RTL, canceling the shift out. This widget
+        // only needs to guarantee the *coordinate math* itself never goes
+        // negative, which a live anchor does.
+        let anchor_width = size.width;
         self.columns = column_layout::place_columns(
             &self.column_keys,
             &scaled_widths,

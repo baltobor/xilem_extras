@@ -369,7 +369,17 @@ impl TableWidget {
     ) {
         if this.widget.column_layouts != columns {
             this.widget.column_layouts = columns;
-            this.ctx.request_render();
+            // `column_layouts` feeds `intrinsic_max_width()`, which is
+            // consulted during *measure* (for the `Overflow`-mode
+            // `portal(...)` host's `MaxContent` query) — masonry only
+            // invalidates the measure cache on `request_layout`, not
+            // `request_render`. Without this, shrinking a column never
+            // shrinks the portal's reported content width (a stale,
+            // too-large measurement lingers), which is exactly what let
+            // the header's live column widths grow past the vertical
+            // scrollbar strip during a drag, and made a shrink "snap
+            // back" once something else eventually forced a re-measure.
+            this.ctx.request_layout();
         }
         if this.widget.active_divider != active_divider {
             this.widget.active_divider = active_divider;

@@ -77,8 +77,10 @@ use std::sync::Arc;
 
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::core::Widget;
+use xilem::masonry::kurbo::Vec2;
 use xilem::masonry::layout::Length;
 use xilem::masonry::peniko::Color;
+use xilem::masonry::widgets::Portal;
 use xilem::style::Style;
 use xilem::view::label;
 use xilem::{Pod, ViewCtx, WidgetView};
@@ -123,10 +125,11 @@ pub struct TableStyle {
     pub direction: Option<FlowDirection>,
     /// How columns behave once their configured widths exceed the viewport.
     /// Defaults to [`ColumnResizeMode::Overflow`] (matches Apple Numbers'
-    /// actual resize behavior — pair with `xilem::view::portal(...)` for
-    /// horizontal scrolling). [`ColumnResizeMode::FixedViewport`] instead
-    /// compresses columns after the dragged one down to their minimum and
-    /// never lets the table exceed its container.
+    /// actual resize behavior — the table scrolls horizontally via its own
+    /// internal `Portal`, no external wrapping needed).
+    /// [`ColumnResizeMode::FixedViewport`] instead compresses columns
+    /// after the dragged one down to their minimum and never lets the
+    /// table exceed its container.
     pub resize_mode: ColumnResizeMode,
     /// Whether to always show a full-height divider line at every column
     /// boundary (the same guideline normally only shown while actively
@@ -229,8 +232,15 @@ pub enum TableAction<Id> {
     Select(Id, SelectionModifiers),
     /// Row activated (double-click or Enter).
     Activate(Id),
-    /// Column resized. Key is `Arc<str>` for the same reason as `Sort`.
-    ColumnResized(Arc<str>, f64),
+    /// Column(s) resized, on drag commit. Carries every column's current
+    /// width, not just the one actually dragged — `FixedViewport` mode may
+    /// have compressed others to make room, and persisting only the
+    /// dragged column would leave stale, oversized desired widths in app
+    /// state (see `ColumnResizeAction`'s doc comment for the exact bug
+    /// this prevents: dragging a different, earlier column later would
+    /// otherwise cause a visible snap in whichever column was previously
+    /// dragged).
+    ColumnResized(Vec<(Arc<str>, f64)>),
 }
 
 /// Create the view id used for child row views.
@@ -266,6 +276,18 @@ pub struct TableViewState<RowView, RowViewState> {
     /// Divider currently being dragged in the header, mirrored down into
     /// `TableWidget` for the full-height highlight. Ephemeral.
     active_divider: Option<usize>,
+    /// Sum of `columns`' widths (+ divider gaps) as of the last rebuild —
+    /// i.e. `ResizableHeader`'s own live RTL mirror anchor for that frame.
+    /// Used to compute how much that anchor grew or shrank since last
+    /// time, so `rebuild()` can pan the owned `Portal`'s viewport by
+    /// exactly that amount in RTL — see `rebuild()`'s scroll-compensation
+    /// step for the full explanation of why this is needed (the anchor is
+    /// intentionally live now, per `ResizableHeader::layout()`'s doc
+    /// comment, so every column's `x_offset` — including the "protected"
+    /// ones before the dragged column — shifts by this same amount each
+    /// frame; compensating the viewport by it is what cancels that shift
+    /// back out visually).
+    last_total_width: Option<f64>,
     /// Per-row view states.
     children: HashMap<usize, ChildState<RowView, RowViewState>>,
 }
@@ -315,7 +337,15 @@ where
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
     Sel: SelectionState<R::Key> + 'static,
 {
-    type Element = Pod<TableWidget>;
+    // The table is always internally wrapped in a `Portal` (never left to
+    // the caller, unlike the earlier `xilem::view::portal(...)`-in-the-
+    // gallery approach) so `rebuild()` can get imperative `WidgetMut`
+    // access to it — needed to compensate the scroll position when RTL's
+    // live mirror anchor shifts every column on growth (see `rebuild()`).
+    // `FixedViewport` mode sets both `Portal` axes constrained, which
+    // makes it behave as a plain passthrough (no scrolling, no visible
+    // scrollbars) — equivalent to not being wrapped at all.
+    type Element = Pod<Portal<TableWidget>>;
     type ViewState = TableViewState<RowView, RowView::ViewState>;
 
     // `TableWidget` (masonry) owns scrolling, row virtualization, header
@@ -344,8 +374,13 @@ where
         .with_direction(direction)
         .with_show_column_dividers(self.style.column_dividers);
 
-        let pod = Pod::new(widget);
-        ctx.record_action_source(pod.new_widget.id());
+        let table_pod = Pod::new(widget);
+        ctx.record_action_source(table_pod.new_widget.id());
+
+        let portal = Portal::new(table_pod.new_widget)
+            .constrain_vertical(true)
+            .constrain_horizontal(self.style.resize_mode == ColumnResizeMode::FixedViewport);
+        let pod = ctx.create_pod(portal);
 
         // Seed a best-effort layout for the very first frame, before the
         // header's own first `layout()` pass has had a chance to broadcast
@@ -368,6 +403,7 @@ where
                 pending_action: None,
                 columns: initial_columns,
                 active_divider: None,
+                last_total_width: Some(initial_anchor),
                 children: HashMap::new(),
             },
         )
@@ -387,12 +423,54 @@ where
         mut element: Mut<'_, Self::Element>,
         app_state: &mut State,
     ) {
+        let direction = self.effective_direction();
+
+        // `Portal`-level concerns first, while `element` still refers to
+        // it — it's narrowed down to the inner `TableWidget` right after
+        // (shadowing `element`), so every existing `TableWidget::...(&mut
+        // element, ...)` call below keeps working unchanged.
+        if self.style.resize_mode != prev.style.resize_mode {
+            Portal::set_constrain_horizontal(
+                &mut element,
+                self.style.resize_mode == ColumnResizeMode::FixedViewport,
+            );
+        }
+
+        // RTL scroll compensation. `ResizableHeader`'s mirror anchor is
+        // always live now (`self.size.width`, matching
+        // `TableWidget::intrinsic_max_width()` exactly — see its doc
+        // comment for why that's required to keep every column's
+        // coordinate inside the `[0, content_size)` range `Portal`
+        // assumes exists; a stale/frozen anchor instead sends overflowing
+        // columns into *negative* coordinates that `Portal`'s scrollbar
+        // can never reach, confirmed live). The unavoidable consequence
+        // of a live anchor: as the table's total width grows or shrinks,
+        // *every* column's `x_offset` shifts by that same amount —
+        // including the columns "before" the dragged one, which are
+        // supposed to stay visually fixed. Panning the viewport by the
+        // exact same delta cancels that shift back out, so the protected
+        // side genuinely stays fixed on screen. Only meaningful in RTL:
+        // LTR's own column 0 already sits at the constant `local_x = 0`
+        // and never shifts in the first place.
+        let total_width: f64 = view_state.columns.iter().map(|c| c.width).sum::<f64>()
+            + view_state.columns.len().saturating_sub(1) as f64 * column_layout::DIVIDER_WIDTH;
+        if direction == FlowDirection::Rtl {
+            if let Some(prev_total_width) = view_state.last_total_width {
+                let delta = total_width - prev_total_width;
+                if delta != 0.0 {
+                    Portal::pan_viewport_by(&mut element, Vec2::new(delta, 0.0));
+                }
+            }
+        }
+        view_state.last_total_width = Some(total_width);
+
+        let mut element = Portal::child_mut(&mut element);
+
         // Update item count if changed
         if self.item_count != prev.item_count {
             TableWidget::set_item_count(&mut element, self.item_count);
         }
 
-        let direction = self.effective_direction();
         TableWidget::set_direction(&mut element, direction);
         TableWidget::set_show_column_dividers(&mut element, self.style.column_dividers);
 
@@ -555,14 +633,17 @@ where
         ctx: &mut ViewCtx,
         mut element: Mut<'_, Self::Element>,
     ) {
-        for (&idx, child) in &mut view_state.children {
-            ctx.with_id(view_id_for_row(idx), |ctx| {
-                if let Some(mut row_mut) = TableWidget::row_mut(&mut element, idx) {
-                    child
-                        .view
-                        .teardown(&mut child.state, ctx, row_mut.downcast());
-                }
-            });
+        {
+            let mut table_element = Portal::child_mut(&mut element);
+            for (&idx, child) in &mut view_state.children {
+                ctx.with_id(view_id_for_row(idx), |ctx| {
+                    if let Some(mut row_mut) = TableWidget::row_mut(&mut table_element, idx) {
+                        child
+                            .view
+                            .teardown(&mut child.state, ctx, row_mut.downcast());
+                    }
+                });
+            }
         }
         ctx.teardown_action_source(element);
     }
@@ -577,6 +658,7 @@ where
         // Check for child message routing
         if let Some(first) = message.take_first() {
             let child_idx = row_index_for_view_id(first);
+            let mut element = Portal::child_mut(&mut element);
             if let Some(target) = view_state.children.get_mut(&child_idx) {
                 if let Some(mut row_mut) = TableWidget::row_mut(&mut element, child_idx) {
                     return target.view.message(
@@ -637,14 +719,12 @@ where
         }
 
         // Committed resize (pointer-up): the only action that reaches app
-        // state.
+        // state. Carries every column's current width, not just the
+        // dragged one — see `ColumnResizeAction`'s doc comment.
         if let Some(resize_action) = message.take_message::<ColumnResizeAction>() {
             (self.handler)(
                 app_state,
-                TableAction::ColumnResized(
-                    resize_action.column_key.clone(),
-                    resize_action.new_width,
-                ),
+                TableAction::ColumnResized(resize_action.widths.clone()),
             );
             return MessageResult::Action(());
         }
@@ -828,12 +908,16 @@ where
 ///
 /// Same as [`table`] but accepts a [`TableStyle`] for customization.
 ///
-/// Columns render at their configured width and are never proportionally
-/// shrunk to fit — if resizing pushes the total width past the viewport, the
-/// table simply overflows. Wrap the result in
-/// `xilem::view::portal(...).constrain_vertical(true)` to get horizontal
-/// scrolling for that overflow (the table already handles its own vertical
-/// scrolling internally, so the vertical axis should stay constrained).
+/// In [`ColumnResizeMode::Overflow`] (the default), columns render at their
+/// configured width and are never proportionally shrunk to fit — if
+/// resizing pushes the total width past the viewport, the table scrolls
+/// horizontally via its own internal `Portal` (no external wrapping
+/// needed; the vertical axis stays constrained, since the table already
+/// handles its own vertical scrolling/virtualization internally).
+/// [`ColumnResizeMode::FixedViewport`] instead compresses columns to keep
+/// the table within its container, and that same internal `Portal` simply
+/// has both axes constrained (no scrolling, equivalent to not being
+/// wrapped at all).
 pub fn table_styled<'a, State, R, RowView, Sel, F, H>(
     data: &'a [R],
     columns: &'a [ColumnDef],

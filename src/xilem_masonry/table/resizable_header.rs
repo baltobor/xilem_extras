@@ -163,11 +163,21 @@ where
             }
             None => {
                 if let Some(action) = message.take_message::<ColumnResizeAction>() {
-                    return MessageResult::Action((self.callback)(
-                        app_state,
-                        action.column_key,
-                        action.new_width,
-                    ));
+                    // `widths` carries every column's current width (see
+                    // `ColumnResizeAction`'s doc comment) — this wrapper's
+                    // callback is per-column, so invoke it once per entry;
+                    // this widget always runs in `Overflow` mode (never set
+                    // by this simpler constructor), where only the actually
+                    // dragged column's width ever really changes, so the
+                    // rest are harmless no-op re-applications.
+                    let mut result = None;
+                    for (key, width) in action.widths.iter() {
+                        result = Some((self.callback)(app_state, key.clone(), *width));
+                    }
+                    return match result {
+                        Some(action) => MessageResult::Action(action),
+                        None => MessageResult::Nop,
+                    };
                 }
                 // Ephemeral column-layout broadcast: this standalone
                 // wrapper has no sibling row content to update and doesn't

@@ -10,8 +10,8 @@
 use masonry::layout::{AsUnit, Length};
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{button, checkbox, flex_col, flex_row, label, portal};
-use xilem::{AnyWidgetView, WidgetView};
+use xilem::WidgetView;
+use xilem::view::{button, checkbox, flex_col, flex_row, label};
 
 use xilem_extras::FlowDirection;
 use xilem_extras::masonry::table::ColumnResizeMode;
@@ -152,29 +152,20 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 TableAction::Sort(column, direction) => {
                     state.virtual_table_sort = SortOrder::single(&*column, direction);
                 }
-                TableAction::ColumnResized(column_key, new_width) => {
-                    state
-                        .virtual_table_column_widths
-                        .set(&column_key, new_width);
+                TableAction::ColumnResized(widths) => {
+                    for (column_key, new_width) in widths {
+                        state.virtual_table_column_widths.set(&column_key, new_width);
+                    }
                 }
             }
         },
     );
 
-    // In `Overflow` mode, columns never shrink to fit; wrap in a
-    // horizontal-only portal so resizing a column past the visible edge
-    // stays recoverable via a scrollbar instead of pushing other columns
-    // off permanently. `FixedViewport` mode is the opposite strategy — the
-    // table must actually see the real container width to compress columns
-    // against it, so it must NOT be portal-wrapped (a portal always sizes
-    // the table to its own intrinsic content width, which would make
-    // "available width" trivially always big enough and silently defeat
-    // `FixedViewport`'s compression entirely).
-    let table: Box<AnyWidgetView<AppModel>> = match model.virtual_table_resize_mode {
-        ColumnResizeMode::Overflow => portal(table).constrain_vertical(true).boxed(),
-        ColumnResizeMode::FixedViewport => table.boxed(),
-    };
-
+    // `table_styled` always wraps the table in its own internal `Portal`
+    // now (needed so it can compensate the scroll position when RTL's
+    // live mirror anchor shifts every column on growth) — `Overflow` mode
+    // leaves both axes free to scroll; `FixedViewport` mode constrains
+    // both, making it behave as a plain passthrough.
     flex_col((
         // Header
         label("Table Demo")
