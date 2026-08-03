@@ -77,6 +77,7 @@ use std::sync::Arc;
 
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::core::Widget;
+use xilem::masonry::kurbo::Point;
 use xilem::masonry::layout::Length;
 use xilem::masonry::peniko::Color;
 use xilem::masonry::widgets::Portal;
@@ -275,6 +276,11 @@ pub struct TableViewState<RowView, RowViewState> {
     /// Divider currently being dragged in the header, mirrored down into
     /// `TableWidget` for the full-height highlight. Ephemeral.
     active_divider: Option<usize>,
+    /// Set when a drag just ended; consumed (and cleared) by the next
+    /// `rebuild()`, which — in RTL — pans the owned `Portal` back to show
+    /// the protected side. See `message()`'s `ColumnLayoutAction` arm and
+    /// `rebuild()`'s use of it.
+    pending_scroll_reset: bool,
     /// Per-row view states.
     children: HashMap<usize, ChildState<RowView, RowViewState>>,
 }
@@ -390,6 +396,7 @@ where
                 pending_action: None,
                 columns: initial_columns,
                 active_divider: None,
+                pending_scroll_reset: false,
                 children: HashMap::new(),
             },
         )
@@ -434,6 +441,23 @@ where
         // just work, because the coordinate space they scroll over never
         // moves under them.
         let viewport_width = element.ctx.content_box().width();
+
+        // One-shot correction, right after a drag releases: see
+        // `TableViewState::pending_scroll_reset`'s doc comment. Only RTL
+        // ever needs this — LTR's `Portal` default (`viewport_pos = 0`)
+        // already shows column 0, since it sits at local `0` regardless
+        // of overflow.
+        if view_state.pending_scroll_reset {
+            view_state.pending_scroll_reset = false;
+            if direction == FlowDirection::Rtl {
+                let divider_space = view_state.columns.len().saturating_sub(1) as f64
+                    * column_layout::DIVIDER_WIDTH;
+                let total_content_width: f64 =
+                    view_state.columns.iter().map(|c| c.width).sum::<f64>() + divider_space;
+                let max_scroll = (total_content_width - viewport_width).max(0.0);
+                Portal::set_viewport_pos(&mut element, Point::new(max_scroll, 0.0));
+            }
+        }
 
         let mut element = Portal::child_mut(&mut element);
         TableWidget::set_viewport_width(&mut element, viewport_width);
@@ -709,6 +733,17 @@ where
         // change (window resize, `FixedViewport` recompression, etc.).
         if let Some(layout) = message.take_message::<ColumnLayoutAction>() {
             view_state.columns = layout.columns.clone();
+            // A drag just ended (`Some -> None`) — in RTL + `Overflow`,
+            // the mirror anchor may now be floored at the total content
+            // width rather than the viewport width (see
+            // `ResizableHeader::layout()`'s doc comment), which can leave
+            // the protected side off-screen at `Portal`'s default
+            // `viewport_pos = 0`. `rebuild()` corrects this once, right
+            // after release — not every frame, which is what caused the
+            // earlier jiggle.
+            if view_state.active_divider.is_some() && layout.active_divider.is_none() {
+                view_state.pending_scroll_reset = true;
+            }
             view_state.active_divider = layout.active_divider;
             return MessageResult::RequestRebuild;
         }

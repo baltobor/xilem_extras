@@ -450,7 +450,26 @@ impl Widget for ResizableHeader {
         // it's genuinely correct to do so (not yet pushed, or
         // `FixedViewport` mode / the standalone `ResizableHeaderView`,
         // neither of which is ever hosted in a self-sizing `Portal`).
-        let anchor_width = self.viewport_width.unwrap_or(size.width);
+        //
+        // Floored at the total content width (never just `viewport_width`
+        // alone): once columns overflow the viewport, mirroring around a
+        // value *smaller* than the actual content sends the overflowing
+        // column's `x_offset` negative — a coordinate `Portal`'s scrollbar
+        // can never reach (it only ever clamps to `[0, content_size -
+        // portal_size]`; confirmed directly against
+        // `masonry::widgets::Portal::set_viewport_pos_raw`, and reproduced
+        // live: a wide enough column became permanently unreachable).
+        // `.max(total_content_width)` guarantees the widest column's own
+        // trailing edge lands at exactly local `0`, never past it, while
+        // staying identical to plain `viewport_width` whenever nothing
+        // overflows (the two agree exactly at the threshold).
+        let divider_space =
+            self.column_keys.len().saturating_sub(1) as f64 * DIVIDER_WIDTH;
+        let total_content_width: f64 = scaled_widths.iter().sum::<f64>() + divider_space;
+        let anchor_width = self
+            .viewport_width
+            .map(|vw| vw.max(total_content_width))
+            .unwrap_or(size.width);
         self.columns = column_layout::place_columns(
             &self.column_keys,
             &scaled_widths,
