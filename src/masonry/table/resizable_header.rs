@@ -91,6 +91,26 @@ pub struct ResizableHeader {
     /// drag ends, or releasing the pointer would recompute a different
     /// (unanchored) compression than what was just rendered live.
     last_resized_index: Option<usize>,
+    /// The true, externally-given viewport width, pushed down from
+    /// `TableWidget::set_viewport_width` (itself fed by `TableView`
+    /// reading its owning `Portal`'s own border-box size). Used as the
+    /// RTL mirror anchor in `layout()` instead of `size.width` directly:
+    /// in `Overflow` mode `size.width` is *always* exactly the content's
+    /// own total width (a `Portal` with `constrain_horizontal(false)`
+    /// lays a `MaxContent`-measured child out at its own preferred size),
+    /// so mirroring around it is mirroring around a value that moves in
+    /// lockstep with the very content it's supposed to be a stable
+    /// reference for — every earlier RTL-overflow bug (columns snapping,
+    /// going negative/unreachable, "jiggling" when compensated for after
+    /// the fact) traced back to exactly this. `viewport_width` is never
+    /// self-referential, so no compensation of any kind is needed: it's
+    /// the same true constant LTR's own column 0 already gets for free at
+    /// `local_x = 0`. `None` (before the first push, or for the
+    /// standalone `ResizableHeaderView` which isn't wrapped in a
+    /// self-sizing `Portal` at all) falls back to `size.width`, which is
+    /// already correct in those cases — `FixedViewport` mode's own
+    /// `size.width` is a real, externally-imposed container width too.
+    viewport_width: Option<f64>,
     drag_start_x: f64,
     drag_start_width: f64,
     /// The `(columns, active_divider)` most recently broadcast via
@@ -120,6 +140,7 @@ impl ResizableHeader {
             size: Size::ZERO,
             dragging_index: None,
             last_resized_index: None,
+            viewport_width: None,
             drag_start_x: 0.0,
             drag_start_width: 0.0,
             last_submitted: None,
@@ -132,6 +153,15 @@ impl ResizableHeader {
     pub fn with_divider_color(mut self, color: Color) -> Self {
         self.divider_color = color;
         self
+    }
+
+    /// Sets the true, externally-given viewport width (see
+    /// `viewport_width`'s doc comment).
+    pub fn set_viewport_width(this: &mut WidgetMut<'_, Self>, viewport_width: f64) {
+        if this.widget.viewport_width != Some(viewport_width) {
+            this.widget.viewport_width = Some(viewport_width);
+            this.ctx.request_layout();
+        }
     }
 
     pub fn with_direction(mut self, direction: FlowDirection) -> Self {
@@ -411,33 +441,16 @@ impl Widget for ResizableHeader {
             self.resize_mode,
         );
 
-        // RTL mirrors around `anchor_width`, which is always the live
-        // `size.width` — in both modes. This has to be live, not frozen:
-        // `TableWidget::intrinsic_max_width()` (what `Overflow` mode's
-        // `portal(...)` uses to size its scrollable content) is a plain
-        // positive sum of column widths, with no notion of RTL mirroring
-        // at all. `place_columns`'s RTL formula only ever stays inside the
-        // `[0, size.width)` range the portal assumes exists if
-        // `anchor_width` exactly equals that same sum on every frame — a
-        // frozen/stale anchor here makes an overflowing column's
-        // `x_offset` go *negative*, which the portal's scrollbar can never
-        // reach (it only ever clamps to `[0, content_size - viewport)`;
-        // confirmed against `masonry::widgets::Portal::set_viewport_pos_raw`
-        // directly, and reproduced live: growing a column indeed left the
-        // leftmost column permanently unreachable by scrolling).
-        //
-        // The unavoidable side effect of a *live* anchor: since it grows
-        // with the table's own content, every column's `x_offset` —
-        // including the "protected" ones before the dragged column —
-        // shifts by that same growth each frame, even though their own
-        // widths never changed. Compensating for that shift so the
-        // protected side stays visually fixed is `TableView::rebuild()`'s
-        // job, not this widget's: it tracks how much the total width grew
-        // since the last frame and pans the owned `Portal`'s viewport by
-        // that exact amount in RTL, canceling the shift out. This widget
-        // only needs to guarantee the *coordinate math* itself never goes
-        // negative, which a live anchor does.
-        let anchor_width = size.width;
+        // RTL mirrors around `anchor_width`, which is the true,
+        // externally-given `viewport_width` when available (see its doc
+        // comment) — never `size.width` directly, since in `Overflow`
+        // mode `size.width` is always exactly the content's own total
+        // width (self-referential), not a stable reference to mirror
+        // around. `viewport_width` falls back to `size.width` only when
+        // it's genuinely correct to do so (not yet pushed, or
+        // `FixedViewport` mode / the standalone `ResizableHeaderView`,
+        // neither of which is ever hosted in a self-sizing `Portal`).
+        let anchor_width = self.viewport_width.unwrap_or(size.width);
         self.columns = column_layout::place_columns(
             &self.column_keys,
             &scaled_widths,

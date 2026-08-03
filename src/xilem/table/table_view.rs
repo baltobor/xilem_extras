@@ -77,7 +77,6 @@ use std::sync::Arc;
 
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::core::Widget;
-use xilem::masonry::kurbo::Vec2;
 use xilem::masonry::layout::Length;
 use xilem::masonry::peniko::Color;
 use xilem::masonry::widgets::Portal;
@@ -276,18 +275,6 @@ pub struct TableViewState<RowView, RowViewState> {
     /// Divider currently being dragged in the header, mirrored down into
     /// `TableWidget` for the full-height highlight. Ephemeral.
     active_divider: Option<usize>,
-    /// Sum of `columns`' widths (+ divider gaps) as of the last rebuild —
-    /// i.e. `ResizableHeader`'s own live RTL mirror anchor for that frame.
-    /// Used to compute how much that anchor grew or shrank since last
-    /// time, so `rebuild()` can pan the owned `Portal`'s viewport by
-    /// exactly that amount in RTL — see `rebuild()`'s scroll-compensation
-    /// step for the full explanation of why this is needed (the anchor is
-    /// intentionally live now, per `ResizableHeader::layout()`'s doc
-    /// comment, so every column's `x_offset` — including the "protected"
-    /// ones before the dragged column — shifts by this same amount each
-    /// frame; compensating the viewport by it is what cancels that shift
-    /// back out visually).
-    last_total_width: Option<f64>,
     /// Per-row view states.
     children: HashMap<usize, ChildState<RowView, RowViewState>>,
 }
@@ -403,7 +390,6 @@ where
                 pending_action: None,
                 columns: initial_columns,
                 active_divider: None,
-                last_total_width: Some(initial_anchor),
                 children: HashMap::new(),
             },
         )
@@ -436,35 +422,21 @@ where
             );
         }
 
-        // RTL scroll compensation. `ResizableHeader`'s mirror anchor is
-        // always live now (`self.size.width`, matching
-        // `TableWidget::intrinsic_max_width()` exactly — see its doc
-        // comment for why that's required to keep every column's
-        // coordinate inside the `[0, content_size)` range `Portal`
-        // assumes exists; a stale/frozen anchor instead sends overflowing
-        // columns into *negative* coordinates that `Portal`'s scrollbar
-        // can never reach, confirmed live). The unavoidable consequence
-        // of a live anchor: as the table's total width grows or shrinks,
-        // *every* column's `x_offset` shifts by that same amount —
-        // including the columns "before" the dragged one, which are
-        // supposed to stay visually fixed. Panning the viewport by the
-        // exact same delta cancels that shift back out, so the protected
-        // side genuinely stays fixed on screen. Only meaningful in RTL:
-        // LTR's own column 0 already sits at the constant `local_x = 0`
-        // and never shifts in the first place.
-        let total_width: f64 = view_state.columns.iter().map(|c| c.width).sum::<f64>()
-            + view_state.columns.len().saturating_sub(1) as f64 * column_layout::DIVIDER_WIDTH;
-        if direction == FlowDirection::Rtl {
-            if let Some(prev_total_width) = view_state.last_total_width {
-                let delta = total_width - prev_total_width;
-                if delta != 0.0 {
-                    Portal::pan_viewport_by(&mut element, Vec2::new(delta, 0.0));
-                }
-            }
-        }
-        view_state.last_total_width = Some(total_width);
+        // The true, stable viewport width — `Portal`'s own border-box
+        // size, dictated by whatever room its parent gives it (never
+        // self-referential, unlike `TableWidget`'s own `size.width` in
+        // `Overflow` mode, which is always exactly the content's total
+        // width since `Portal` lays a `MaxContent`-measured child out at
+        // its own preferred size). This is what makes RTL's mirror anchor
+        // a true constant — the same property LTR's column 0 already has
+        // for free at `local_x = 0` — so nothing ever needs compensating
+        // after the fact: `Portal`'s own scrollbar/wheel/drag-to-scroll
+        // just work, because the coordinate space they scroll over never
+        // moves under them.
+        let viewport_width = element.ctx.content_box().width();
 
         let mut element = Portal::child_mut(&mut element);
+        TableWidget::set_viewport_width(&mut element, viewport_width);
 
         // Update item count if changed
         if self.item_count != prev.item_count {

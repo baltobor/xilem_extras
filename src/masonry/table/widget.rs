@@ -55,6 +55,7 @@ use xilem::masonry::properties::Background;
 
 use crate::masonry::flow_direction::FlowDirection;
 use crate::masonry::table::column_layout::{self, ColumnBox, DIVIDER_HIT_AREA, DIVIDER_WIDTH};
+use crate::masonry::table::resizable_header::ResizableHeader;
 use crate::xilem::table::{TableScrollState, TableStyle};
 
 /// Scrollbar configuration.
@@ -468,6 +469,15 @@ impl TableWidget {
     /// Get mutable access to header.
     pub fn header_mut<'t>(this: &'t mut WidgetMut<'_, Self>) -> WidgetMut<'t, dyn Widget> {
         this.ctx.get_mut(&mut this.widget.header)
+    }
+
+    /// Forwards the true, externally-given viewport width down to the
+    /// header (see `ResizableHeader::set_viewport_width`'s doc comment
+    /// for why it needs this instead of its own `size.width`) — a pure
+    /// pass-through, `TableWidget` has no use for the value itself.
+    pub fn set_viewport_width(this: &mut WidgetMut<'_, Self>, viewport_width: f64) {
+        let mut header = Self::header_mut(this);
+        ResizableHeader::set_viewport_width(&mut header.downcast(), viewport_width);
     }
 
     /// Get mutable access to a row.
