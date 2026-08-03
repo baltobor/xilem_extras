@@ -181,7 +181,11 @@ pub(crate) fn divider_start(col: &ColumnBox, direction: FlowDirection) -> f64 {
 /// rendering would have capped it anyway — not just the visual output,
 /// which would otherwise let the pointer keep moving indefinitely while the
 /// header silently desyncs from the (correctly-capped) row content.
-pub(crate) fn max_dragged_width(configured: &[f64], dragged_idx: usize, available_width: f64) -> f64 {
+pub(crate) fn max_dragged_width(
+    configured: &[f64],
+    dragged_idx: usize,
+    available_width: f64,
+) -> f64 {
     let n = configured.len();
     if n == 0 {
         return MIN_COLUMN_WIDTH;
@@ -281,11 +285,16 @@ pub(crate) fn compute_rendered_widths(
             let Some(dragged_idx) = dragged_idx else {
                 // No active drag: fit everything within the viewport
                 // together, proportionally, with no protected column.
-                let total_desired: f64 =
-                    configured.iter().map(|&w| w.max(MIN_COLUMN_WIDTH)).sum::<f64>()
-                        + divider_space;
+                let total_desired: f64 = configured
+                    .iter()
+                    .map(|&w| w.max(MIN_COLUMN_WIDTH))
+                    .sum::<f64>()
+                    + divider_space;
                 if total_desired <= available_width + 0.5 {
-                    return configured.iter().map(|&w| w.max(MIN_COLUMN_WIDTH)).collect();
+                    return configured
+                        .iter()
+                        .map(|&w| w.max(MIN_COLUMN_WIDTH))
+                        .collect();
                 }
                 return distribute_with_floor(
                     configured,
@@ -376,8 +385,7 @@ mod tests {
 
             // What `TableView::rebuild()` extracts for the row builder.
             let extracted_widths: Vec<f64> = header_columns.iter().map(|c| c.width).collect();
-            let extracted_x_offsets: Vec<f64> =
-                header_columns.iter().map(|c| c.x_offset).collect();
+            let extracted_x_offsets: Vec<f64> = header_columns.iter().map(|c| c.x_offset).collect();
 
             // What `row_cells`'s View re-zips for `RowCells::new`/`set_columns`.
             let row_columns: Vec<ColumnBox> = extracted_widths
@@ -446,9 +454,11 @@ mod tests {
                             FlowDirection::Ltr => {
                                 to_screen(local_divider_gap_start, anchor, direction)
                             }
-                            FlowDirection::Rtl => {
-                                to_screen(local_divider_gap_start + DIVIDER_WIDTH, anchor, direction)
-                            }
+                            FlowDirection::Rtl => to_screen(
+                                local_divider_gap_start + DIVIDER_WIDTH,
+                                anchor,
+                                direction,
+                            ),
                         };
                         assert_eq!(divider_start(&columns[i], direction), expected);
                     }
@@ -604,8 +614,12 @@ mod tests {
 
     #[test]
     fn overflow_mode_never_shrinks() {
-        let widths =
-            compute_rendered_widths(&[300.0, 150.0, 80.0], None, 200.0, ColumnResizeMode::Overflow);
+        let widths = compute_rendered_widths(
+            &[300.0, 150.0, 80.0],
+            None,
+            200.0,
+            ColumnResizeMode::Overflow,
+        );
         assert_eq!(widths, vec![300.0, 150.0, 80.0]);
     }
 

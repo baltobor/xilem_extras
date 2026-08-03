@@ -3,5 +3,5 @@
 pub mod dropdown;
 pub mod widget;
 
-pub use widget::{DropdownSelect, DropdownSelectAction};
 pub use dropdown::SelectDropdown;
+pub use widget::{DropdownSelect, DropdownSelectAction};

@@ -80,8 +80,7 @@ where
         let mut child_states = Vec::new();
 
         for (i, cell) in self.cells.iter().enumerate() {
-            let (pod, state) =
-                ctx.with_id(ViewId::new(i as u64), |ctx| cell.build(ctx, app_state));
+            let (pod, state) = ctx.with_id(ViewId::new(i as u64), |ctx| cell.build(ctx, app_state));
             child_pods.push(pod.new_widget.erased());
             child_states.push(state);
         }

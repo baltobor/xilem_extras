@@ -12,9 +12,9 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use xilem_extras::locale::CalendarLocale;
 use xilem_extras::masonry::table::ColumnResizeMode;
+use xilem_extras::xilem::selection::{MultiSelection, SingleSelection};
 use xilem_extras::xilem::table::{ColumnDef, ColumnWidths, SortDirection, SortOrder, column};
 use xilem_extras::xilem::tree::ExpansionState;
-use xilem_extras::xilem::selection::{MultiSelection, SingleSelection};
 
 use xilem_extras::xilem::tabs::SimpleTab;
 

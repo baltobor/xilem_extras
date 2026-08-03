@@ -10,7 +10,7 @@ pub use crate::masonry::list::{
 };
 
 pub use crate::xilem_masonry::list::{
-    ListNavigableView, ListViewAction, ListViewState, ListViewStyle,
-    ListView, SectionDef, SectionedListView, SectionedListViewState, SectionedRowInfo,
-    list_navigable, list_view, list_view_sectioned, list_view_styled,
+    ListNavigableView, ListView, ListViewAction, ListViewState, ListViewStyle, SectionDef,
+    SectionedListView, SectionedListViewState, SectionedRowInfo, list_navigable, list_view,
+    list_view_sectioned, list_view_styled,
 };

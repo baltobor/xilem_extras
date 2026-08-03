@@ -2,4 +2,4 @@
 
 pub mod widget;
 
-pub use widget::{CalendarPickerWidget, CalendarAction};
+pub use widget::{CalendarAction, CalendarPickerWidget};

@@ -89,7 +89,9 @@ use super::direction_detect::detect_direction;
 use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder};
 use crate::masonry::flow_direction::FlowDirection;
 use crate::masonry::table::column_layout::{self, ColumnBox, ColumnResizeMode};
-use crate::masonry::table::resizable_header::{ColumnLayoutAction, ColumnResizeAction, ResizableHeader};
+use crate::masonry::table::resizable_header::{
+    ColumnLayoutAction, ColumnResizeAction, ResizableHeader,
+};
 use crate::masonry::table::widget::{TableRangeAction, TableWidget, TableWidgetAction};
 use crate::xilem::components::clipped;
 use crate::xilem::traits::{Keyed, SelectionModifiers, SelectionState, TableRow};
@@ -326,7 +328,10 @@ where
     R: Keyed + 'static,
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView
+        + Send
+        + Sync
+        + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
     Sel: SelectionState<R::Key> + 'static,
 {
@@ -476,9 +481,11 @@ where
         // otherwise a header-language toggle with unchanged sort order would
         // silently leave the old header widget in place.
         let columns_changed = self.columns.len() != prev.columns.len()
-            || self.columns.iter().zip(prev.columns.iter()).any(|(a, b)| {
-                a.key != b.key || a.title != b.title || a.sortable != b.sortable
-            });
+            || self
+                .columns
+                .iter()
+                .zip(prev.columns.iter())
+                .any(|(a, b)| a.key != b.key || a.title != b.title || a.sortable != b.sortable);
         if self.sort_order != prev.sort_order
             || direction != prev.effective_direction()
             || self.style.resize_mode != prev.style.resize_mode
@@ -896,7 +903,10 @@ where
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView
+        + Send
+        + Sync
+        + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     table_styled(
@@ -941,7 +951,10 @@ where
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView
+        + Send
+        + Sync
+        + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     // Compute sorted indices: maps visual_idx -> data_idx

@@ -12,9 +12,9 @@ use xilem::WidgetView;
 use xilem::style::{Padding, Style};
 use xilem::view::{flex_col, flex_row, label};
 
+use xilem_extras::xilem::dropdown_select::dropdown_select;
 use xilem_extras::xilem::menu_button::DEFAULT_ITEM_HEIGHT;
 use xilem_extras::xilem::menu_button::menu_button;
-use xilem_extras::xilem::dropdown_select::dropdown_select;
 use xilem_extras::xilem::menu_items::{group, menu_item, separator, submenu};
 use xilem_extras::xilem::theme::Theme;
 

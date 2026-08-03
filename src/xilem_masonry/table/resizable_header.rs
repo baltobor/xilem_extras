@@ -20,7 +20,9 @@ use xilem::core::MessageResult;
 use xilem::core::{MessageCtx, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::{Pod, ViewCtx, WidgetView};
 
-use crate::masonry::table::resizable_header::{ColumnLayoutAction, ColumnResizeAction, ResizableHeader};
+use crate::masonry::table::resizable_header::{
+    ColumnLayoutAction, ColumnResizeAction, ResizableHeader,
+};
 
 /// Xilem view for a resizable header row.
 pub struct ResizableHeaderView<F, State, Action, V> {

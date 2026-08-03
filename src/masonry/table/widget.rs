@@ -253,8 +253,7 @@ impl TableWidget {
         const DEFAULT_FALLBACK_WIDTH: f64 = 800.0;
 
         if self.column_layouts.len() == self.column_keys.len() && !self.column_layouts.is_empty() {
-            let divider_space =
-                self.column_layouts.len().saturating_sub(1) as f64 * DIVIDER_WIDTH;
+            let divider_space = self.column_layouts.len().saturating_sub(1) as f64 * DIVIDER_WIDTH;
             let columns_width: f64 = self.column_layouts.iter().map(|c| c.width).sum();
             columns_width + divider_space + SCROLLBAR_WIDTH
         } else if self.size.width > 0.0 {

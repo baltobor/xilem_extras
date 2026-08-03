@@ -463,8 +463,7 @@ impl Widget for ResizableHeader {
         // trailing edge lands at exactly local `0`, never past it, while
         // staying identical to plain `viewport_width` whenever nothing
         // overflows (the two agree exactly at the threshold).
-        let divider_space =
-            self.column_keys.len().saturating_sub(1) as f64 * DIVIDER_WIDTH;
+        let divider_space = self.column_keys.len().saturating_sub(1) as f64 * DIVIDER_WIDTH;
         let total_content_width: f64 = scaled_widths.iter().sum::<f64>() + divider_space;
         let anchor_width = self
             .viewport_width

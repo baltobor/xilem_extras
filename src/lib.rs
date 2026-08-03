@@ -43,11 +43,11 @@
 //! ```
 
 pub mod masonry;
-pub mod xilem_masonry;
 pub mod xilem;
+pub mod xilem_masonry;
 
 pub mod locale;
 
-pub use ::xilem as xilem_crate;
 pub use crate::masonry::flow_direction::FlowDirection;
+pub use ::xilem as xilem_crate;
 pub use masonry_winit;

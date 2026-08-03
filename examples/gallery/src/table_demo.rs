@@ -8,9 +8,9 @@
 //! Table demo - virtualized table, testing with 10,000 rows.
 
 use masonry::layout::{AsUnit, Length};
+use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::WidgetView;
 use xilem::view::{button, checkbox, flex_col, flex_row, label};
 
 use xilem_extras::FlowDirection;
@@ -114,9 +114,18 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             // reordering needed since absolute placement makes order
             // irrelevant for both LTR and RTL.
             let cells = vec![
-                table_cell(label(name).text_size(13.0).color(txt).padding(Length::px(4.0)), w0),
                 table_cell(
-                    label(route).text_size(13.0).color(txt).padding(Length::px(4.0)),
+                    label(name)
+                        .text_size(13.0)
+                        .color(txt)
+                        .padding(Length::px(4.0)),
+                    w0,
+                ),
+                table_cell(
+                    label(route)
+                        .text_size(13.0)
+                        .color(txt)
+                        .padding(Length::px(4.0)),
                     w1,
                 ),
                 table_cell(
@@ -154,7 +163,9 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 }
                 TableAction::ColumnResized(widths) => {
                     for (column_key, new_width) in widths {
-                        state.virtual_table_column_widths.set(&column_key, new_width);
+                        state
+                            .virtual_table_column_widths
+                            .set(&column_key, new_width);
                     }
                 }
             }

@@ -67,7 +67,9 @@ impl ContextMenuWidget {
         let mut menu = ContextMenuDropdown::new(ctx.widget_id());
         for label in &self.items {
             if label == "---" {
-                menu = menu.with_item(NewWidget::new(crate::masonry::menu_button::MenuSeparator::new()));
+                menu = menu.with_item(NewWidget::new(
+                    crate::masonry::menu_button::MenuSeparator::new(),
+                ));
             } else {
                 menu = menu.with_item(NewWidget::new(PulldownMenuItem::new(label.clone())));
             }

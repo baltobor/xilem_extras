@@ -70,11 +70,7 @@ pub fn row_button_with_clicks<State: 'static, Action: 'static, V: WidgetView<Sta
 }
 
 /// Create a row button that receives keyboard modifiers (for Cmd+click, Shift+click, etc.).
-pub fn row_button_with_modifiers<
-    State: 'static,
-    Action: 'static,
-    V: WidgetView<State, Action>,
->(
+pub fn row_button_with_modifiers<State: 'static, Action: 'static, V: WidgetView<State, Action>>(
     child: V,
     callback: impl Fn(&mut State, xilem::masonry::core::Modifiers) -> Action + Send + Sync + 'static,
 ) -> RowButtonView<

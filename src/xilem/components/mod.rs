@@ -22,9 +22,11 @@ pub use crate::masonry::components::{
 pub use crate::xilem_masonry::components::{
     ClickInterceptorView, ClippedView, GroupBoxView, ParamSelectorView, RowButtonView, SvgIconView,
     SynthRadio, SynthSwitch, click_interceptor, clipped, group_box, param_selector, row_button,
-    row_button_with_clicks, row_button_with_modifiers, row_button_with_press, svg_icon, synth_radio,
-    synth_switch,
+    row_button_with_clicks, row_button_with_modifiers, row_button_with_press, svg_icon,
+    synth_radio, synth_switch,
 };
 
 #[cfg(feature = "rust-logos")]
-pub use crate::xilem_masonry::components::rust_logos::{ferris, rust_gear, rust_logo, rust_logo_complete};
+pub use crate::xilem_masonry::components::rust_logos::{
+    ferris, rust_gear, rust_logo, rust_logo_complete,
+};

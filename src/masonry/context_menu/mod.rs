@@ -3,5 +3,5 @@
 pub mod dropdown;
 pub mod widget;
 
-pub use widget::{ContextMenuAction, ContextMenuWidget};
 pub use dropdown::ContextMenuDropdown;
+pub use widget::{ContextMenuAction, ContextMenuWidget};

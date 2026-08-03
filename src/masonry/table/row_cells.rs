@@ -100,7 +100,12 @@ impl Widget for RowCells {
         column_layout::place_children(ctx, &mut self.children, &self.columns, size.height);
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _painter: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        _ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        _painter: &mut Painter<'_>,
+    ) {
         // Nothing of its own to paint — children paint themselves at their
         // placed positions.
     }

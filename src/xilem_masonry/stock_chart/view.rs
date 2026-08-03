@@ -12,7 +12,9 @@ use std::marker::PhantomData;
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewMarker};
 use xilem::{Pod, ViewCtx};
 
-use crate::masonry::stock_chart::widget::{StockBar, StockChartHover, StockChartMode, StockChartStyle, StockChartWidget};
+use crate::masonry::stock_chart::widget::{
+    StockBar, StockChartHover, StockChartMode, StockChartStyle, StockChartWidget,
+};
 
 /// Stock chart view for displaying OHLCV financial data.
 ///

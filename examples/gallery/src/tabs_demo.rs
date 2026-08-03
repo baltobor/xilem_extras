@@ -237,7 +237,10 @@ pub fn tabs_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 let n = model.nav_tabs.len() + 1;
                 model
                     .nav_tabs
-                    .push(xilem_extras::xilem::tabs::SimpleTab::new(format!("Tab {}", n)));
+                    .push(xilem_extras::xilem::tabs::SimpleTab::new(format!(
+                        "Tab {}",
+                        n
+                    )));
             }),
             button(label("Remove Nav Tab"), |model: &mut AppModel| {
                 if model.nav_tabs.len() > 1 {
