@@ -86,12 +86,10 @@ use xilem::{Pod, ViewCtx, WidgetView};
 use super::direction_detect::detect_direction;
 use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder};
 use crate::masonry::flow_direction::FlowDirection;
-use crate::xilem::components::clipped;
-use crate::masonry::table::column_layout::{self, ColumnResizeMode};
-use crate::masonry::table::resizable_header::{
-    ColumnDividerHighlightAction, ColumnResizeAction, ColumnResizePreviewAction, ResizableHeader,
-};
+use crate::masonry::table::column_layout::{self, ColumnBox, ColumnResizeMode};
+use crate::masonry::table::resizable_header::{ColumnLayoutAction, ColumnResizeAction, ResizableHeader};
 use crate::masonry::table::widget::{TableRangeAction, TableWidget, TableWidgetAction};
+use crate::xilem::components::clipped;
 use crate::xilem::traits::{Keyed, SelectionModifiers, SelectionState, TableRow};
 
 /// Style configuration for the table.
@@ -255,30 +253,19 @@ struct ChildState<View, ViewState> {
 pub struct TableViewState<RowView, RowViewState> {
     /// Pending action from widget.
     pending_action: Option<TableRangeAction>,
-    /// Pending size change (new content width).
-    pending_size_change: Option<f64>,
-    /// Current content width. Only consulted in `ColumnResizeMode::FixedViewport`
-    /// (`Overflow` mode never needs to know the viewport width — columns
-    /// always render at their configured width regardless).
-    current_width: f64,
-    /// Live-preview column width override from an in-progress header drag
-    /// (column key, new width). Ephemeral — never round-tripped through app
-    /// state; cleared once the drag commits via `ColumnResizeAction`.
-    live_resize: Option<(Arc<str>, f64)>,
-    /// Key of the column most recently dragged (or currently being
-    /// dragged). Unlike `live_resize`, this is *not* cleared on commit —
-    /// `ColumnResizeMode::FixedViewport`'s "protect columns before the
-    /// dragged one" split needs a stable anchor even after release, or the
-    /// very next rebuild would fall back to no anchor at all and visibly
-    /// recompute a different (neutral, touches-everything) compression
-    /// than what was just being rendered live.
-    last_resized_key: Option<Arc<str>>,
-    /// Divider currently hovered/dragged in the header, mirrored down into
-    /// `TableWidget` for the full-height highlight. Also ephemeral.
+    /// Authoritative column layout (widths + x_offsets), received directly
+    /// from the header's `ColumnLayoutAction` broadcast. `ResizableHeader`
+    /// is the *only* place `place_columns`/`compute_rendered_widths` are
+    /// ever called — this is a pure receive-and-forward, never an
+    /// independent re-derivation, so row content and the header can never
+    /// disagree. Seeded once in `build()` with a plain best-effort layout
+    /// so the very first frame (before the header's own first `layout()`
+    /// pass has had a chance to broadcast) doesn't render degenerate
+    /// zero-offset cells; every value after that comes from the broadcast.
+    columns: Vec<ColumnBox>,
+    /// Divider currently being dragged in the header, mirrored down into
+    /// `TableWidget` for the full-height highlight. Ephemeral.
     active_divider: Option<usize>,
-    /// Last widths pushed into `TableWidget::set_column_widths`, so unrelated
-    /// rebuilds (e.g. scrolling) don't re-push unchanged widths.
-    last_pushed_widths: Vec<f64>,
     /// Per-row view states.
     children: HashMap<usize, ChildState<RowView, RowViewState>>,
 }
@@ -324,7 +311,7 @@ where
     R: Keyed + 'static,
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
     Sel: SelectionState<R::Key> + 'static,
 {
@@ -351,30 +338,36 @@ where
         let widget = TableWidget::new_with_item_count(
             header.new_widget.erased(),
             self.style.clone(),
-            column_keys,
+            column_keys.clone(),
             self.item_count,
         )
         .with_direction(direction)
-        .with_resize_mode(self.style.resize_mode)
         .with_show_column_dividers(self.style.column_dividers);
 
         let pod = Pod::new(widget);
         ctx.record_action_source(pod.new_widget.id());
 
-        // Initial width estimate (updated on first SizeChanged); only
-        // meaningful for FixedViewport mode.
-        let initial_width: f64 = self.column_widths.iter().sum();
+        // Seed a best-effort layout for the very first frame, before the
+        // header's own first `layout()` pass has had a chance to broadcast
+        // the authoritative `ColumnLayoutAction` (see `TableViewState::columns`'
+        // doc comment) — self-corrects immediately after, the same
+        // one-frame characteristic live-resize already had.
+        let divider_space =
+            column_keys.len().saturating_sub(1) as f64 * column_layout::DIVIDER_WIDTH;
+        let initial_anchor: f64 = self.column_widths.iter().sum::<f64>() + divider_space;
+        let initial_columns = column_layout::place_columns(
+            &column_keys,
+            &self.column_widths,
+            initial_anchor,
+            direction,
+        );
 
         (
             pod,
             TableViewState {
                 pending_action: None,
-                pending_size_change: None,
-                current_width: initial_width,
-                live_resize: None,
-                last_resized_key: None,
+                columns: initial_columns,
                 active_divider: None,
-                last_pushed_widths: Vec::new(),
                 children: HashMap::new(),
             },
         )
@@ -399,18 +392,8 @@ where
             TableWidget::set_item_count(&mut element, self.item_count);
         }
 
-        // Handle pending size change — only meaningful in FixedViewport
-        // mode, where compute_rendered_widths needs the real viewport
-        // width; Overflow mode ignores current_width entirely.
-        if let Some(new_width) = view_state.pending_size_change.take() {
-            view_state.current_width = new_width;
-            TableWidget::will_handle_size_change(&mut element);
-            TableWidget::did_handle_size_change(&mut element);
-        }
-
         let direction = self.effective_direction();
         TableWidget::set_direction(&mut element, direction);
-        TableWidget::set_resize_mode(&mut element, self.style.resize_mode);
         TableWidget::set_show_column_dividers(&mut element, self.style.column_dividers);
 
         // Rebuild header if sort order changed, the resolved layout
@@ -431,40 +414,18 @@ where
             TableWidget::replace_header(&mut element, new_header.new_widget.erased());
         }
 
-        // Apply any in-progress live-resize preview from the header on top
-        // of the committed column widths, so row content resizes live at
-        // drag-frame rate without waiting for the app to persist it.
-        //
-        // `dragged_idx` (the `FixedViewport` protection anchor) is resolved
-        // from `last_resized_key`, not `live_resize` — `last_resized_key`
-        // stays set after the drag commits, so the anchor doesn't change
-        // the instant the pointer is released, which would otherwise make
-        // `compute_rendered_widths` recompute a different (unanchored)
-        // compression than what was just rendered live.
-        let mut effective_widths = self.column_widths.clone();
-        let dragged_idx = view_state
-            .last_resized_key
-            .as_ref()
-            .and_then(|key| self.columns.iter().position(|c| &c.key == key));
-        if let (Some(idx), Some((_, width))) = (dragged_idx, &view_state.live_resize) {
-            effective_widths[idx] = *width;
-        }
-
-        // Resolve rendered widths for row content — mirrors what the header
-        // and TableWidget each resolve independently from the same
-        // `effective_widths`/`current_width`/`resize_mode` inputs.
-        let scaled_widths = column_layout::compute_rendered_widths(
-            &effective_widths,
-            dragged_idx,
-            view_state.current_width,
-            self.style.resize_mode,
+        // `view_state.columns` is the header's own last-broadcast layout
+        // (see its doc comment) — push it straight through to `TableWidget`
+        // (hit-testing, the full-height highlight) and derive the row
+        // builder's `widths`/`x_offsets` from it directly. No independent
+        // `place_columns`/`compute_rendered_widths` call here at all.
+        TableWidget::set_columns(
+            &mut element,
+            view_state.columns.clone(),
+            view_state.active_divider,
         );
-
-        if effective_widths != view_state.last_pushed_widths {
-            TableWidget::set_column_widths(&mut element, effective_widths.clone());
-            view_state.last_pushed_widths = effective_widths;
-        }
-        TableWidget::set_active_divider(&mut element, view_state.active_divider);
+        let widths: Vec<f64> = view_state.columns.iter().map(|c| c.width).collect();
+        let x_offsets: Vec<f64> = view_state.columns.iter().map(|c| c.x_offset).collect();
 
         // Handle pending range action
         if let Some(pending_action) = view_state.pending_action.take() {
@@ -506,7 +467,8 @@ where
                         data_idx,
                         is_selected,
                         is_striped,
-                        &scaled_widths,
+                        &widths,
+                        &x_offsets,
                         direction,
                     );
                     ctx.with_id(view_id_for_row(visual_idx), |ctx| {
@@ -528,7 +490,8 @@ where
                         data_idx,
                         is_selected,
                         is_striped,
-                        &scaled_widths,
+                        &widths,
+                        &x_offsets,
                         direction,
                     );
                     ctx.with_id(view_id_for_row(visual_idx), |ctx| {
@@ -566,7 +529,8 @@ where
                     data_idx,
                     is_selected,
                     is_striped,
-                    &scaled_widths,
+                    &widths,
+                    &x_offsets,
                     direction,
                 );
                 ctx.with_id(view_id_for_row(visual_idx), |ctx| {
@@ -636,10 +600,6 @@ where
                     view_state.pending_action = Some(range_action);
                     return MessageResult::RequestRebuild;
                 }
-                TableWidgetAction::SizeChanged { width } => {
-                    view_state.pending_size_change = Some(width);
-                    return MessageResult::RequestRebuild;
-                }
                 TableWidgetAction::RowClick(click) => {
                     let id = (self.id_getter)(click.row_index);
                     let action = if click.click_count >= 2 {
@@ -676,16 +636,9 @@ where
             }
         }
 
-        // Committed resize (pointer-up): clear any live-preview override so
-        // the next rebuild uses the freshly-persisted app-state width, then
-        // hand off to the app like any other action. `last_resized_key`
-        // deliberately stays set — it remains the `FixedViewport` anchor
-        // after release, so the very next rebuild computes the identical
-        // before/after split as the live drag did, instead of falling back
-        // to "no anchor" and visibly recomputing a different compression.
+        // Committed resize (pointer-up): the only action that reaches app
+        // state.
         if let Some(resize_action) = message.take_message::<ColumnResizeAction>() {
-            view_state.live_resize = None;
-            view_state.last_resized_key = Some(resize_action.column_key.clone());
             (self.handler)(
                 app_state,
                 TableAction::ColumnResized(
@@ -696,32 +649,15 @@ where
             return MessageResult::Action(());
         }
 
-        // Live-preview resize (every pointer-move during a drag): cheap
-        // self-diff rebuild only, never a full app-logic re-invocation —
-        // this is what makes row content resize in real time.
-        if let Some(preview) = message.take_message::<ColumnResizePreviewAction>() {
-            view_state.live_resize = Some((preview.column_key.clone(), preview.new_width));
-            view_state.last_resized_key = Some(preview.column_key.clone());
-            return MessageResult::RequestRebuild;
-        }
-
-        // Divider hover/drag highlight: purely ephemeral UI feedback, never
-        // touches app state. Also updates `last_resized_key` immediately
-        // (not just on the first `ColumnResizePreviewAction`) — this fires
-        // on `Down`, the instant a *new* divider is grabbed, closing a
-        // window where a stale `last_resized_key` (from a previous drag on
-        // a different column) would otherwise be used as the
-        // `FixedViewport` protection anchor for one rebuild before the
-        // first width-changing `Move` corrects it — visible as the
-        // previously-dragged column briefly, incorrectly losing its
-        // protection.
-        if let Some(highlight) = message.take_message::<ColumnDividerHighlightAction>() {
-            view_state.active_divider = highlight.0;
-            if let Some(idx) = highlight.0 {
-                if let Some(col) = self.columns.get(idx) {
-                    view_state.last_resized_key = Some(col.key.clone());
-                }
-            }
+        // The header's column-layout broadcast (see `ColumnLayoutAction`'s
+        // doc comment) — the *only* place row widths/x_offsets come from;
+        // fires on every pointer-move during a drag (cheap self-diff
+        // rebuild, never a full app-logic re-invocation, which is what
+        // makes row content track the drag live) and on any other layout
+        // change (window resize, `FixedViewport` recompression, etc.).
+        if let Some(layout) = message.take_message::<ColumnLayoutAction>() {
+            view_state.columns = layout.columns.clone();
+            view_state.active_divider = layout.active_divider;
             return MessageResult::RequestRebuild;
         }
 
@@ -822,10 +758,12 @@ where
 /// * `columns` - Column definitions
 /// * `selection` - Selection state
 /// * `sort_order` - Current sort state
-/// * `row_builder` - Function that builds a view for each row: `(state, index, is_selected, is_striped, column_widths, direction) -> RowView`.
-///   In RTL, reorder cells to match the header's visual order via
-///   `xilem_extras::masonry::table::visual_index` (see `table_cell`'s doc
-///   comment for an example).
+/// * `row_builder` - Function that builds a view for each row: `(state, index, is_selected, is_striped, column_widths, column_x_offsets, direction) -> RowView`.
+///   Place cells at their exact `column_x_offsets` via
+///   `xilem_extras::xilem::table::row_cells` — the same mechanism the
+///   header uses for its own cells — rather than a sequential layout like
+///   `flex_row`, which cannot reproduce the header's positions in RTL (see
+///   `table_cell`'s doc comment for an example).
 /// * `handler` - Function that handles table actions
 ///
 /// # Example
@@ -842,7 +780,7 @@ where
 ///     ],
 ///     &model.selection,
 ///     &model.sort_order,
-///     |state, idx, is_selected, is_striped, _widths, _direction| {
+///     |state, idx, is_selected, is_striped, _widths, _x_offsets, _direction| {
 ///         let employee = &state.employees[idx];
 ///         // Build row view...
 ///     },
@@ -871,7 +809,7 @@ where
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     table_styled(
@@ -912,7 +850,7 @@ where
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     // Compute sorted indices: maps visual_idx -> data_idx

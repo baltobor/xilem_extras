@@ -20,9 +20,7 @@ use xilem::core::MessageResult;
 use xilem::core::{MessageCtx, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::{Pod, ViewCtx, WidgetView};
 
-use crate::masonry::table::resizable_header::{
-    ColumnDividerHighlightAction, ColumnResizeAction, ColumnResizePreviewAction, ResizableHeader,
-};
+use crate::masonry::table::resizable_header::{ColumnLayoutAction, ColumnResizeAction, ResizableHeader};
 
 /// Xilem view for a resizable header row.
 pub struct ResizableHeaderView<F, State, Action, V> {
@@ -171,17 +169,11 @@ where
                         action.new_width,
                     ));
                 }
-                // Ephemeral live-resize/highlight signals: this standalone
+                // Ephemeral column-layout broadcast: this standalone
                 // wrapper has no sibling row content to update and doesn't
                 // persist column widths itself, so there's nothing to do
-                // with them — just don't log them as stale/unexpected.
-                if message.take_message::<ColumnResizePreviewAction>().is_some() {
-                    return MessageResult::Nop;
-                }
-                if message
-                    .take_message::<ColumnDividerHighlightAction>()
-                    .is_some()
-                {
+                // with it — just don't log it as stale/unexpected.
+                if message.take_message::<ColumnLayoutAction>().is_some() {
                     return MessageResult::Nop;
                 }
                 MessageResult::Stale

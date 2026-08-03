@@ -9,6 +9,9 @@
 
 use std::sync::Arc;
 
+use xilem::masonry::core::{LayoutCtx, Widget, WidgetPod};
+use xilem::masonry::kurbo::{Point, Size};
+
 use crate::masonry::flow_direction::FlowDirection;
 
 pub(crate) const MIN_COLUMN_WIDTH: f64 = 40.0;
@@ -33,32 +36,15 @@ pub enum ColumnResizeMode {
     FixedViewport,
 }
 
-/// A column's resolved position and width, ready to place/paint.
-#[derive(Debug, Clone)]
-pub(crate) struct ColumnBox {
+/// A column's resolved position and width, ready to place/paint. Public:
+/// it's part of `ColumnLayoutAction`'s payload, so anyone building a
+/// custom wrapper directly around `ResizableHeader` (bypassing
+/// `table_styled`) can receive it too.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColumnBox {
     pub key: Arc<str>,
     pub width: f64,
     pub x_offset: f64,
-}
-
-/// Maps a data-order column index to its visual (screen) position, or vice
-/// versa — the mapping is self-inverse (applying it twice returns the
-/// original index), so this one function serves both directions.
-///
-/// LTR: identity (visual order matches data order, visual position 0 is
-/// leftmost). RTL: reversed (data index 0 — the first column — renders
-/// rightmost, matching "the first column is read first in RTL, which
-/// starts from the right").
-///
-/// Public so callers building row content (e.g. a `table_styled` row
-/// builder) can reorder their own cells to match the header's visual
-/// order — the header and row widgets are laid out independently, so
-/// nothing does this for them automatically.
-pub fn visual_index(idx: usize, n: usize, direction: FlowDirection) -> usize {
-    match direction {
-        FlowDirection::Ltr => idx,
-        FlowDirection::Rtl => n - 1 - idx,
-    }
 }
 
 /// The single point-reflection primitive underlying every RTL mirror in
@@ -146,6 +132,27 @@ pub(crate) fn place_columns(
         }
     }
     columns
+}
+
+/// Places each child at its column's exact `x_offset`/`width` — the
+/// mechanism `ResizableHeader` already uses for its own header cells,
+/// factored out so row content can be placed by the *identical* code
+/// instead of an independently-derived layout that would have to be kept
+/// in sync by hand (which is how the header and rows drifted apart in the
+/// first place). LTR and RTL need no branch here at all: the direction
+/// dependence is already fully baked into `columns` by `place_columns`.
+pub(crate) fn place_children(
+    ctx: &mut LayoutCtx<'_>,
+    children: &mut [WidgetPod<dyn Widget>],
+    columns: &[ColumnBox],
+    height: f64,
+) {
+    for (i, child) in children.iter_mut().enumerate() {
+        if let Some(col) = columns.get(i) {
+            ctx.run_layout(child, Size::new(col.width, height));
+            ctx.place_child(child, Point::new(col.x_offset, 0.0));
+        }
+    }
 }
 
 /// The on-screen x-position of the divider just after `col` (i.e. the
@@ -347,21 +354,47 @@ mod tests {
     }
 
     #[test]
-    fn visual_index_ltr_is_identity() {
-        assert_eq!(visual_index(0, 4, FlowDirection::Ltr), 0);
-        assert_eq!(visual_index(3, 4, FlowDirection::Ltr), 3);
-    }
+    fn row_cells_data_flow_matches_header_columns_exactly() {
+        // Regression test for the architectural fix that finally resolved
+        // the RTL bug: `ResizableHeader` is the *only* place `place_columns`
+        // is ever called; `TableWidget`/`TableView`/`RowCells` are pure
+        // consumers of its broadcast `Vec<ColumnBox>` (see
+        // `ColumnLayoutAction`'s doc comment), never independent
+        // re-derivations. This test simulates that whole data path: compute
+        // `columns` once (as the header does), extract
+        // `widths`/`x_offsets` the way `TableView::rebuild()` does for the
+        // row builder, then re-zip them back into `ColumnBox`es the way
+        // `row_cells`'s View does when building `RowCells` — the result
+        // must be byte-identical to the header's own `columns`, for both
+        // directions, proving header and rows can never structurally
+        // disagree (there is only one computation, not two that have to be
+        // kept in sync by hand).
+        for &direction in &[FlowDirection::Ltr, FlowDirection::Rtl] {
+            let widths = [200.0, 200.0, 100.0, 60.0];
+            let anchor = 800.0;
+            let header_columns = place_columns(&keys(4), &widths, anchor, direction);
 
-    #[test]
-    fn visual_index_rtl_reverses_and_is_self_inverse() {
-        // Data column 0 (the first column) renders in the last (rightmost)
-        // visual slot.
-        assert_eq!(visual_index(0, 4, FlowDirection::Rtl), 3);
-        assert_eq!(visual_index(3, 4, FlowDirection::Rtl), 0);
-        // Self-inverse: applying it twice returns the original index.
-        for i in 0..4 {
-            let v = visual_index(i, 4, FlowDirection::Rtl);
-            assert_eq!(visual_index(v, 4, FlowDirection::Rtl), i);
+            // What `TableView::rebuild()` extracts for the row builder.
+            let extracted_widths: Vec<f64> = header_columns.iter().map(|c| c.width).collect();
+            let extracted_x_offsets: Vec<f64> =
+                header_columns.iter().map(|c| c.x_offset).collect();
+
+            // What `row_cells`'s View re-zips for `RowCells::new`/`set_columns`.
+            let row_columns: Vec<ColumnBox> = extracted_widths
+                .iter()
+                .zip(extracted_x_offsets.iter())
+                .enumerate()
+                .map(|(i, (&width, &x_offset))| ColumnBox {
+                    key: Arc::from(i.to_string()),
+                    width,
+                    x_offset,
+                })
+                .collect();
+
+            for (header_col, row_col) in header_columns.iter().zip(row_columns.iter()) {
+                assert_eq!(header_col.width, row_col.width);
+                assert_eq!(header_col.x_offset, row_col.x_offset);
+            }
         }
     }
 

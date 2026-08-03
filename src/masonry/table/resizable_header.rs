@@ -27,31 +27,39 @@ use crate::masonry::table::column_layout::{
 };
 
 /// Action emitted when a column is resized (final, committed value — on
-/// pointer-up only).
+/// pointer-up only). This is the *only* action that reaches app state
+/// (via `TableAction::ColumnResized`) — everything else below is ephemeral
+/// UI-state broadcast, never persisted.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColumnResizeAction {
     pub column_key: Arc<str>,
     pub new_width: f64,
 }
 
-/// Ephemeral, non-persisted action emitted on every pointer-move while a
-/// column is being dragged, so sibling row content can resize live. Submitted
-/// via `submit_untyped_action` (not `submit_action`) since it isn't
-/// `ResizableHeader::Action` — see `TableView::message` for the receiving end.
+/// Broadcasts the header's freshly-computed column layout — submitted from
+/// `layout()` every time `self.columns` actually changes (not just during a
+/// drag: also window resizes, `FixedViewport` recompression, etc.), so both
+/// `TableWidget` (hit-testing, the full-height highlight) and `TableView`
+/// (row content placement) always see the *exact* numbers the header is
+/// about to paint. Submitted via `submit_untyped_action` since it isn't
+/// `ResizableHeader::Action`.
+///
+/// This is deliberately the *only* place `place_columns`/
+/// `compute_rendered_widths` are ever called in the whole table stack —
+/// `TableWidget` and `TableView` are pure consumers of this payload, never
+/// independent re-derivations of it. Three independent copies of this same
+/// computation (one per widget layer) is what caused header/row/hit-test
+/// disagreements to keep recurring; a single source pushed downward removes
+/// the class of bug entirely rather than re-deriving the formula again.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ColumnResizePreviewAction {
-    pub column_key: Arc<str>,
-    pub new_width: f64,
+pub struct ColumnLayoutAction {
+    pub columns: Vec<ColumnBox>,
+    /// Divider currently being *dragged* (not merely hovered — hover only
+    /// drives the local, header-height highlight painted directly in
+    /// `paint()`). `Some` only for the duration of an active drag, so
+    /// `TableWidget`'s full-height guideline is drag-only feedback.
+    pub active_divider: Option<usize>,
 }
-
-/// Ephemeral, non-persisted signal for which divider is currently being
-/// *dragged* (not merely hovered — hover only drives the local, header-height
-/// highlight painted directly in `paint()`), purely so a full-height
-/// guideline can be painted outside the header's own bounds during an active
-/// drag (see `TableWidget::post_paint`). Also submitted via
-/// `submit_untyped_action`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ColumnDividerHighlightAction(pub Option<usize>);
 
 /// A header row widget with draggable column dividers.
 pub struct ResizableHeader {
@@ -93,7 +101,11 @@ pub struct ResizableHeader {
     frozen_anchor_width: Option<f64>,
     drag_start_x: f64,
     drag_start_width: f64,
-    last_preview_width: Option<f64>,
+    /// The `(columns, active_divider)` most recently broadcast via
+    /// `ColumnLayoutAction`, so `layout()` only submits when something
+    /// actually changed — it runs on every layout pass, not just during a
+    /// drag, and most of those passes are no-ops for this purpose.
+    last_submitted: Option<(Vec<ColumnBox>, Option<usize>)>,
     divider_color: Color,
     divider_hover_color: Color,
     hovered_divider: Option<usize>,
@@ -119,7 +131,7 @@ impl ResizableHeader {
             frozen_anchor_width: None,
             drag_start_x: 0.0,
             drag_start_width: 0.0,
-            last_preview_width: None,
+            last_submitted: None,
             divider_color: Color::from_rgb8(120, 118, 115),
             divider_hover_color: Color::from_rgb8(100, 150, 255),
             hovered_divider: None,
@@ -209,10 +221,11 @@ impl Widget for ResizableHeader {
                     // column before it; a fresh drag should continue from
                     // the user's real preference, not a rendering artifact.
                     self.drag_start_width = self.column_widths[divider_idx];
-                    self.last_preview_width = None;
-                    ctx.submit_untyped_action(Box::new(ColumnDividerHighlightAction(Some(
-                        divider_idx,
-                    ))));
+                    // `active_divider` changed (None -> Some) — `layout()`
+                    // broadcasts `ColumnLayoutAction` once it recomputes
+                    // `self.columns` for this new frame; no need to submit
+                    // anything here directly.
+                    ctx.request_layout();
                     ctx.request_render();
                 }
             }
@@ -243,21 +256,8 @@ impl Widget for ResizableHeader {
                         // Only the dragged column changes width; everything
                         // after it shifts as a block for free, since layout()
                         // recomputes every x_offset from column_widths.
-                        if let Some(col) = self.columns.get_mut(divider_idx) {
-                            col.width = new_width;
-                        }
                         if let Some(w) = self.column_widths.get_mut(divider_idx) {
                             *w = new_width;
-                        }
-
-                        if self.last_preview_width != Some(new_width) {
-                            self.last_preview_width = Some(new_width);
-                            if let Some(key) = self.column_keys.get(divider_idx) {
-                                ctx.submit_untyped_action(Box::new(ColumnResizePreviewAction {
-                                    column_key: key.clone(),
-                                    new_width,
-                                }));
-                            }
                         }
 
                         ctx.request_layout();
@@ -266,7 +266,7 @@ impl Widget for ResizableHeader {
                     // Hover-only: update the local (header-height) highlight
                     // but don't notify TableWidget — the full-height
                     // highlight is drag-only feedback, not a hover one (see
-                    // `ColumnDividerHighlightAction`'s doc comment).
+                    // `ColumnLayoutAction::active_divider`'s doc comment).
                     let new_hovered = self.hit_test_divider(pos.x);
                     if new_hovered != self.hovered_divider {
                         self.hovered_divider = new_hovered;
@@ -282,11 +282,11 @@ impl Widget for ResizableHeader {
                             new_width: col.width,
                         });
                     }
-                    ctx.submit_untyped_action(Box::new(ColumnDividerHighlightAction(None)));
                 }
                 // Release the frozen anchor so the next resting layout
                 // re-syncs to the table's real current width.
                 self.frozen_anchor_width = None;
+                ctx.request_layout();
                 ctx.request_render();
             }
             PointerEvent::Leave(..) => {
@@ -416,12 +416,24 @@ impl Widget for ResizableHeader {
             self.direction,
         );
 
-        for (i, child) in self.children.iter_mut().enumerate() {
-            if let Some(col) = self.columns.get(i) {
-                let child_size = Size::new(col.width, size.height);
-                ctx.run_layout(child, child_size);
-                ctx.place_child(child, Point::new(col.x_offset, 0.0));
-            }
+        column_layout::place_children(ctx, &mut self.children, &self.columns, size.height);
+
+        // Broadcast the freshly-computed layout to `TableWidget`/`TableView`
+        // (see `ColumnLayoutAction`'s doc comment) — this is the *only*
+        // place that ever happens, and it happens on every layout pass that
+        // actually changes something, not just during a drag, so window
+        // resizes and `FixedViewport` recompression propagate too. Deduped
+        // against `last_submitted` since `layout()` runs on passes that
+        // don't change anything for this widget far more often than it
+        // changes something.
+        let broadcast = (self.columns.clone(), self.dragging_index);
+        if self.last_submitted.as_ref() != Some(&broadcast) {
+            let (columns, active_divider) = broadcast.clone();
+            ctx.submit_untyped_action(Box::new(ColumnLayoutAction {
+                columns,
+                active_divider,
+            }));
+            self.last_submitted = Some(broadcast);
         }
     }
 

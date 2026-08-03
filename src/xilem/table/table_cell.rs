@@ -25,16 +25,24 @@ use crate::xilem::components::ClippedView;
 /// # Example
 ///
 /// ```ignore
-/// use xilem_extras::table_cell;
+/// use xilem_extras::xilem::table::{row_cells, table_cell};
 ///
-/// // In a row builder:
-/// flex_row((
-///     table_cell(label(name).text_size(13.0).padding(4.0), w0),
-///     table_cell(label(route).text_size(13.0).padding(4.0), w1),
-///     table_cell(label(distance).text_size(13.0).padding(4.0), w2),
-/// ))
-/// .gap(2.px())
+/// // In a row builder, given `widths: &[f64]` and `x_offsets: &[f64]`:
+/// row_cells(
+///     vec![
+///         table_cell(label(name).text_size(13.0).padding(4.0), widths[0]),
+///         table_cell(label(route).text_size(13.0).padding(4.0), widths[1]),
+///     ],
+///     widths,
+///     x_offsets,
+/// )
 /// ```
+///
+/// `row_cells` places each cell at its exact `x_offset` — the same
+/// mechanism the header uses for its own cells — rather than a sequential
+/// layout like `flex_row`, which cannot reproduce the header's positions
+/// in RTL (a plain sequential layout can't make a column's growth shift a
+/// column that comes before it in iteration order).
 pub fn table_cell<State: 'static, Action: 'static, V: WidgetView<State, Action>>(
     content: V,
     width: f64,

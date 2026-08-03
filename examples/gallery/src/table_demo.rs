@@ -14,9 +14,9 @@ use xilem::view::{button, checkbox, flex_col, flex_row, label, portal};
 use xilem::{AnyWidgetView, WidgetView};
 
 use xilem_extras::FlowDirection;
-use xilem_extras::masonry::table::{ColumnResizeMode, visual_index};
+use xilem_extras::masonry::table::ColumnResizeMode;
 use xilem_extras::xilem::table::{
-    SortDirection, SortOrder, TableAction, TableStyle, table_cell, table_styled,
+    SortDirection, SortOrder, TableAction, TableStyle, row_cells, table_cell, table_styled,
 };
 use xilem_extras::xilem::theme::Theme;
 use xilem_extras::xilem::traits::SelectionState;
@@ -80,13 +80,14 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         TableStyle::default()
             .resize_mode(model.virtual_table_resize_mode)
             .column_divider(model.virtual_table_column_dividers),
-        // Row builder: (state, idx, is_selected, is_striped, column_widths, direction) -> RowView
+        // Row builder: (state, idx, is_selected, is_striped, column_widths, column_x_offsets, direction) -> RowView
         move |state: &mut AppModel,
               idx: usize,
               is_selected: bool,
               is_striped: bool,
               widths: &[f64],
-              direction: FlowDirection| {
+              x_offsets: &[f64],
+              _direction: FlowDirection| {
             let cyclist = &state.virtual_cyclists[idx];
 
             let row_bg = if is_selected {
@@ -97,8 +98,8 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 Color::TRANSPARENT
             };
 
-            // Use column widths from the table (supports resize)
-            let w0 = widths.get(0).copied().unwrap_or(200.0);
+            // Use column widths from the table (supports resize).
+            let w0 = widths.first().copied().unwrap_or(200.0);
             let w1 = widths.get(1).copied().unwrap_or(200.0);
             let w2 = widths.get(2).copied().unwrap_or(100.0);
             let w3 = widths.get(3).copied().unwrap_or(60.0);
@@ -107,54 +108,34 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
             let name = cyclist_display_name(cyclist, content_language);
             let route = cyclist_display_route(cyclist, content_language);
 
-            // Reorder cells to match the header's visual order (RTL renders
-            // data column 0 rightmost) — the same `visual_index` mapping
-            // the header itself uses, so row cells line up under their
-            // matching header cell.
-            let n = 4;
-            let mut ordered_cells: Vec<(usize, Box<AnyWidgetView<AppModel>>)> = vec![
-                (
-                    visual_index(0, n, direction),
-                    table_cell(label(name).text_size(13.0).color(txt).padding(Length::px(4.0)), w0)
-                        .boxed(),
+            // Cells are placed at their absolute x-offsets — the exact
+            // mechanism the header uses for its own cells (see
+            // `row_cells`'s doc comment) — in natural data order; no
+            // reordering needed since absolute placement makes order
+            // irrelevant for both LTR and RTL.
+            let cells = vec![
+                table_cell(label(name).text_size(13.0).color(txt).padding(Length::px(4.0)), w0),
+                table_cell(
+                    label(route).text_size(13.0).color(txt).padding(Length::px(4.0)),
+                    w1,
                 ),
-                (
-                    visual_index(1, n, direction),
-                    table_cell(
-                        label(route).text_size(13.0).color(txt).padding(Length::px(4.0)),
-                        w1,
-                    )
-                    .boxed(),
+                table_cell(
+                    label(format!("{:.1} km", cyclist.distance_km))
+                        .text_size(13.0)
+                        .color(txt)
+                        .padding(Length::px(4.0)),
+                    w2,
                 ),
-                (
-                    visual_index(2, n, direction),
-                    table_cell(
-                        label(format!("{:.1} km", cyclist.distance_km))
-                            .text_size(13.0)
-                            .color(txt)
-                            .padding(Length::px(4.0)),
-                        w2,
-                    )
-                    .boxed(),
-                ),
-                (
-                    visual_index(3, n, direction),
-                    table_cell(
-                        label(format!("{}/10", cyclist.joy_level))
-                            .text_size(13.0)
-                            .color(txt)
-                            .padding(Length::px(4.0)),
-                        w3,
-                    )
-                    .boxed(),
+                table_cell(
+                    label(format!("{}/10", cyclist.joy_level))
+                        .text_size(13.0)
+                        .color(txt)
+                        .padding(Length::px(4.0)),
+                    w3,
                 ),
             ];
-            ordered_cells.sort_by_key(|(visual_idx, _)| *visual_idx);
-            let cells: Vec<Box<AnyWidgetView<AppModel>>> =
-                ordered_cells.into_iter().map(|(_, cell)| cell).collect();
 
-            flex_row(cells)
-                .gap(2.px())
+            row_cells(cells, widths, x_offsets)
                 .background_color(row_bg)
                 .height(28.px())
         },
