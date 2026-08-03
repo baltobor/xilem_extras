@@ -11,13 +11,14 @@ use chrono::NaiveDate;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use xilem_extras::locale::CalendarLocale;
+use xilem_extras::masonry::table::ColumnResizeMode;
 use xilem_extras::xilem::table::{ColumnDef, ColumnWidths, SortDirection, SortOrder, column};
 use xilem_extras::xilem::tree::ExpansionState;
 use xilem_extras::xilem::selection::{MultiSelection, SingleSelection};
 
 use xilem_extras::xilem::tabs::SimpleTab;
 
-use crate::mock_data::{Contact, Cyclist, FileNode};
+use crate::mock_data::{Contact, Cyclist, FileNode, Language};
 use crate::tabs_demo::{DemoTab, create_demo_tabs};
 
 // Channel for menu commands (macOS/Windows only)
@@ -52,7 +53,6 @@ pub enum Page {
     List,
     SectionedList,
     Table,
-    VirtualTable,
     Tabs,
     Menu,
     AppMenu,
@@ -86,18 +86,20 @@ pub struct AppModel {
     pub sectioned_list_selection: MultiSelection<u64>,
 
     // Table demo state
-    pub cyclists: Vec<Cyclist>,
-    pub table_selection: MultiSelection<u64>,
-    pub table_sort: SortOrder,
-    pub table_column_widths: ColumnWidths,
     pub last_click_mods: String,
 
-    // Virtual Table demo state (10,000 rows)
+    // Table demo state (virtualized, 10,000 rows)
     pub virtual_cyclists: Vec<Cyclist>,
     pub virtual_table_selection: MultiSelection<u64>,
     pub virtual_table_sort: SortOrder,
     pub virtual_table_columns: Vec<ColumnDef>,
     pub virtual_table_column_widths: ColumnWidths,
+    pub virtual_table_resize_mode: ColumnResizeMode,
+    /// Column header title language — drives `FlowDirection` auto-detection.
+    /// Row content follows this directly (Arabic header ⇒ Arabic content).
+    pub virtual_table_header_language: Language,
+    /// Whether every column boundary always shows its divider line.
+    pub virtual_table_column_dividers: bool,
 
     // Tabs demo state
     pub demo_tabs: Vec<DemoTab>,
@@ -201,18 +203,9 @@ impl AppModel {
             sectioned_list_selection: MultiSelection::new(),
 
             // Table
-            cyclists: mock_data::mock_cyclists(),
-            table_selection: MultiSelection::new(),
-            table_sort: SortOrder::single("name", SortDirection::Ascending),
-            table_column_widths: ColumnWidths::from_columns(&[
-                ("name", 120.0),
-                ("route", 120.0),
-                ("distance_km", 80.0),
-                ("joy_level", 60.0),
-            ]),
             last_click_mods: "(click a row)".to_string(),
 
-            // Virtual Table (10,000 rows for performance testing)
+            // Table (virtualized, 10,000 rows for performance testing)
             virtual_cyclists: mock_data::mock_cyclists_large(10_000),
             virtual_table_selection: MultiSelection::new(),
             virtual_table_sort: SortOrder::single("name", SortDirection::Ascending),
@@ -228,6 +221,9 @@ impl AppModel {
                 ("distance_km", 100.0),
                 ("joy_level", 60.0),
             ]),
+            virtual_table_resize_mode: ColumnResizeMode::default(),
+            virtual_table_header_language: Language::default(),
+            virtual_table_column_dividers: false,
 
             // Tabs
             demo_tabs: create_demo_tabs(),

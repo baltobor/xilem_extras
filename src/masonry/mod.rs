@@ -5,6 +5,7 @@ pub mod chart;
 pub mod components;
 pub mod context_menu;
 pub mod dropdown_select;
+pub mod flow_direction;
 pub mod list;
 pub mod menu_button;
 pub mod progress;

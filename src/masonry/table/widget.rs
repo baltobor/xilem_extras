@@ -53,6 +53,10 @@ use xilem::masonry::layout::{LenReq, Length};
 use xilem::masonry::peniko::Color;
 use xilem::masonry::properties::Background;
 
+use crate::masonry::flow_direction::FlowDirection;
+use crate::masonry::table::column_layout::{
+    self, ColumnBox, ColumnResizeMode, DIVIDER_HIT_AREA, DIVIDER_WIDTH, MIN_COLUMN_WIDTH,
+};
 use crate::xilem::table::{TableScrollState, TableStyle};
 
 /// Scrollbar configuration.
@@ -106,14 +110,6 @@ pub enum TableWidgetAction {
     SizeChanged { width: f64 },
 }
 
-/// Column layout info for hit testing.
-#[derive(Debug, Clone)]
-struct ColumnLayout {
-    key: Arc<str>,
-    x_start: f64,
-    width: f64,
-}
-
 /// Virtualized table widget.
 ///
 /// Manages internal scrolling and only renders visible rows.
@@ -135,8 +131,39 @@ pub struct TableWidget {
     style: TableStyle,
     /// Column keys for header click detection.
     column_keys: Vec<Arc<str>>,
+    /// Real per-column widths, pushed down from the view (same source of
+    /// truth the header uses). Falls back to equal-width columns until the
+    /// first rebuild reaches us.
+    configured_column_widths: Vec<f64>,
+    /// Layout direction, kept in sync with the header's.
+    direction: FlowDirection,
+    /// Divider currently hovered/dragged in the header, for the full-height
+    /// highlight painted in `post_paint`. Cleared on release (drag-only
+    /// visual feedback, by design).
+    active_divider: Option<usize>,
+    /// Index of the column most recently dragged (or currently being
+    /// dragged), mirroring `ResizableHeader::last_resized_index`. Unlike
+    /// `active_divider`, never cleared on release — `FixedViewport`'s
+    /// protection anchor needs to stay stable after the drag ends, or
+    /// `update_column_layouts` would recompute a different (unanchored)
+    /// split than what the header/rows are using.
+    last_resized_index: Option<usize>,
+    /// Mirrors `ResizableHeader::frozen_anchor_width` — frozen for the
+    /// duration of an active drag (tracked via `active_divider` going from
+    /// `None` to `Some`, since this widget has no `Down` event of its own)
+    /// so the RTL mirror anchor used for hit-testing/the full-height
+    /// highlight doesn't self-reference the dragged column's own width in
+    /// `Overflow` mode. See `ResizableHeader::frozen_anchor_width`'s doc
+    /// comment for the full derivation.
+    frozen_available_width: Option<f64>,
     /// Computed column layouts for hit testing.
-    column_layouts: Vec<ColumnLayout>,
+    column_layouts: Vec<ColumnBox>,
+    /// How columns behave once their configured widths exceed the
+    /// viewport, kept in sync with the header's.
+    resize_mode: ColumnResizeMode,
+    /// Whether to always show a full-height divider line at every column
+    /// boundary, not just the actively-dragged one.
+    show_column_dividers: bool,
     /// Whether we're waiting for view to handle range action.
     action_pending: bool,
     /// Whether we're waiting for view to handle size change.
@@ -183,6 +210,13 @@ impl TableWidget {
             last_layout_width: None,
             style,
             column_keys,
+            configured_column_widths: Vec::new(),
+            direction: FlowDirection::Ltr,
+            resize_mode: ColumnResizeMode::default(),
+            show_column_dividers: false,
+            active_divider: None,
+            last_resized_index: None,
+            frozen_available_width: None,
             column_layouts: Vec::new(),
             action_pending: false,
             size_change_pending: false,
@@ -197,15 +231,15 @@ impl TableWidget {
         }
     }
 
-    /// Updates column layout info for hit testing (called after header layout).
+    /// Updates column layout info for hit testing and the full-height
+    /// divider highlight (called after header layout).
     ///
-    /// TODO: This always accumulates `x` left-to-right, i.e. it assumes an
-    /// LTR (left-to-right) reading order. Right-to-left languages such as
-    /// Arabic conventionally expect column resizing to push columns on the
-    /// left away instead of the right. We need to ask a native speaker
-    /// (or someone with real RTL UX experience) how column resize should
-    /// behave in an RTL table before implementing this, since it's not
-    /// just a simple mirroring of `x`.
+    /// Mirrors `ResizableHeader::layout`'s scale-to-fit + direction-aware
+    /// placement exactly, using the real per-column widths pushed down from
+    /// the view (same source of truth the header uses), so hit-testing and
+    /// the highlight line up with what's actually drawn. Falls back to
+    /// equal-width columns only if `configured_column_widths` hasn't been
+    /// populated yet (i.e. before the first rebuild reaches us).
     fn update_column_layouts(&mut self) {
         self.column_layouts.clear();
         let available_width = self.size.width - SCROLLBAR_WIDTH;
@@ -214,18 +248,46 @@ impl TableWidget {
             return;
         }
 
-        // Simple equal-width columns for now
-        // TODO: Use actual column widths from style/definitions
-        let col_width = available_width / column_count as f64;
-        let mut x = 0.0;
-        for key in &self.column_keys {
-            self.column_layouts.push(ColumnLayout {
-                key: key.clone(),
-                x_start: x,
-                width: col_width,
-            });
-            x += col_width;
+        if self.configured_column_widths.len() != column_count {
+            let col_width = available_width / column_count as f64;
+            let mut x = 0.0;
+            for key in &self.column_keys {
+                self.column_layouts.push(ColumnBox {
+                    key: key.clone(),
+                    x_offset: x,
+                    width: col_width,
+                });
+                x += col_width;
+            }
+            return;
         }
+
+        // Real per-column widths, resolved the same way the header resolves
+        // them (`ResizableHeader::layout`), so hit-testing and the
+        // highlight agree with what's actually drawn. `last_resized_index`
+        // (not `active_divider`, which intentionally clears on release for
+        // the drag-only highlight) is the protection anchor, mirroring
+        // `ResizableHeader::last_resized_index` — kept stable after release
+        // so this doesn't recompute a different split than the header/rows.
+        let scaled_widths = column_layout::compute_rendered_widths(
+            &self.configured_column_widths,
+            self.last_resized_index,
+            available_width,
+            self.resize_mode,
+        );
+
+        // RTL anchors to the actual available width, mirroring
+        // `ResizableHeader::layout`'s anchoring, so hit-testing and the
+        // highlight agree with the header exactly — including freezing it
+        // during an active drag (`frozen_available_width`) for the same
+        // self-referential-anchor reason `ResizableHeader` does.
+        let anchor_width = self.frozen_available_width.unwrap_or(available_width);
+        self.column_layouts = column_layout::place_columns(
+            &self.column_keys,
+            &scaled_widths,
+            anchor_width,
+            self.direction,
+        );
     }
 
     /// Report a finite intrinsic width so a horizontal-scrolling
@@ -256,28 +318,15 @@ impl TableWidget {
     ///
     /// # The fix
     ///
-    /// Report the table's most recent actual size as the intrinsic
-    /// max. That's effectively "I am as wide as I was the last
-    /// time someone laid me out." Two cases:
-    ///
-    /// 1. The table has been laid out at least once — return that
-    ///    size's width. The portal then knows exactly how much
-    ///    content to scroll over; if the user later resizes the
-    ///    surrounding window, the next layout pass updates the
-    ///    cached width and the portal re-syncs.
-    ///
-    /// 2. First layout hasn't happened yet — return a reasonable
-    ///    fallback (`DEFAULT_FALLBACK_WIDTH` below). One frame
-    ///    later the cache is populated and the next measure call
-    ///    returns the real value.
-    ///
-    /// This is intentionally a one-frame approximation. A more
-    /// precise answer would require the widget to know its column
-    /// widths individually (today it only knows column keys —
-    /// widths flow through the row-builder closure in
-    /// `table_view.rs`), which is a bigger refactor. Reporting the
-    /// last known layout width is enough to satisfy the
-    /// "finiteness" contract Masonry requires.
+    /// When `configured_column_widths` has arrived (pushed down from
+    /// `TableView::rebuild()`, same source of truth `update_column_layouts`
+    /// uses), compute the exact content width directly: the sum of each
+    /// column's width (clamped to `MIN_COLUMN_WIDTH`, matching
+    /// `update_column_layouts`), plus divider gaps, plus the scrollbar
+    /// strip (`self.size.width` always includes it). Before the first
+    /// rebuild reaches the widget, fall back to the last laid-out
+    /// `size.width`, or `DEFAULT_FALLBACK_WIDTH` if no layout has happened
+    /// yet — a one-frame approximation until real widths arrive.
     fn intrinsic_max_width(&self) -> f64 {
         /// First-frame fallback when no layout has happened yet.
         /// 800 px is wider than `MinContent` (200) and matches the
@@ -286,7 +335,19 @@ impl TableWidget {
         /// a brand-new portal sees a reasonable initial content
         /// size before the first real layout settles.
         const DEFAULT_FALLBACK_WIDTH: f64 = 800.0;
-        if self.size.width > 0.0 {
+
+        if self.configured_column_widths.len() == self.column_keys.len()
+            && !self.configured_column_widths.is_empty()
+        {
+            let divider_space =
+                self.configured_column_widths.len().saturating_sub(1) as f64 * DIVIDER_WIDTH;
+            let columns_width: f64 = self
+                .configured_column_widths
+                .iter()
+                .map(|&w| w.max(MIN_COLUMN_WIDTH))
+                .sum();
+            columns_width + divider_space + SCROLLBAR_WIDTH
+        } else if self.size.width > 0.0 {
             self.size.width
         } else {
             DEFAULT_FALLBACK_WIDTH
@@ -296,7 +357,7 @@ impl TableWidget {
     /// Hit test for header column.
     fn hit_test_header_column(&self, x: f64) -> Option<(usize, Arc<str>)> {
         for (i, col) in self.column_layouts.iter().enumerate() {
-            if x >= col.x_start && x < col.x_start + col.width {
+            if x >= col.x_offset && x < col.x_offset + col.width {
                 return Some((i, col.key.clone()));
             }
         }
@@ -341,6 +402,102 @@ impl TableWidget {
     pub fn set_row_height(this: &mut WidgetMut<'_, Self>, height: f64) {
         this.widget.state.row_height = height;
         this.ctx.request_layout();
+    }
+
+    /// Sets the layout direction, used for the same-direction column layout
+    /// this widget computes independently (for hit-testing and the
+    /// full-height divider highlight).
+    pub fn with_direction(mut self, direction: FlowDirection) -> Self {
+        self.direction = direction;
+        self
+    }
+
+    /// Sets the layout direction.
+    pub fn set_direction(this: &mut WidgetMut<'_, Self>, direction: FlowDirection) {
+        if this.widget.direction != direction {
+            this.widget.direction = direction;
+            this.ctx.request_layout();
+        }
+    }
+
+    /// Sets how columns behave once their configured widths exceed the
+    /// viewport, used for the same-mode column layout this widget computes
+    /// independently (for hit-testing and the full-height divider
+    /// highlight).
+    pub fn with_resize_mode(mut self, mode: ColumnResizeMode) -> Self {
+        self.resize_mode = mode;
+        self
+    }
+
+    /// Sets the resize mode.
+    pub fn set_resize_mode(this: &mut WidgetMut<'_, Self>, mode: ColumnResizeMode) {
+        if this.widget.resize_mode != mode {
+            this.widget.resize_mode = mode;
+            this.ctx.request_layout();
+        }
+    }
+
+    /// Always shows a full-height divider line at every column boundary
+    /// (the same guideline normally only shown while actively dragging a
+    /// divider), instead of just the actively-dragged one.
+    pub fn with_show_column_dividers(mut self, enabled: bool) -> Self {
+        self.show_column_dividers = enabled;
+        self
+    }
+
+    /// Sets whether every column boundary always shows its divider line.
+    pub fn set_show_column_dividers(this: &mut WidgetMut<'_, Self>, enabled: bool) {
+        if this.widget.show_column_dividers != enabled {
+            this.widget.show_column_dividers = enabled;
+            this.ctx.request_render();
+        }
+    }
+
+    /// Paints one full-height divider guideline at `col`'s trailing edge.
+    fn paint_divider_line(
+        col: &ColumnBox,
+        direction: FlowDirection,
+        height: f64,
+        color: Color,
+        painter: &mut Painter<'_>,
+    ) {
+        let x = column_layout::divider_start(col, direction);
+        let rect = Rect::new(x, 0.0, x + DIVIDER_WIDTH, height);
+        painter.fill(rect, color).draw();
+    }
+
+    /// Sets the real, unscaled per-column widths (same source of truth the
+    /// header uses), replacing the naive equal-width fallback.
+    pub fn set_column_widths(this: &mut WidgetMut<'_, Self>, widths: Vec<f64>) {
+        this.widget.configured_column_widths = widths;
+        this.ctx.request_layout();
+    }
+
+    /// Sets which divider (if any) is currently hovered/dragged in the
+    /// header, so the full-height highlight in `post_paint` tracks it.
+    pub fn set_active_divider(this: &mut WidgetMut<'_, Self>, divider: Option<usize>) {
+        if this.widget.active_divider != divider {
+            // Freeze/release `frozen_available_width` on the same
+            // None<->Some transition that marks a drag starting/ending —
+            // this widget has no `Down`/`Up` event of its own, so
+            // `active_divider` (mirrored down from the header) is the only
+            // signal it has for "a drag just started" / "just ended". See
+            // `frozen_available_width`'s doc comment for why this matters.
+            if this.widget.active_divider.is_none() && divider.is_some() {
+                this.widget.frozen_available_width =
+                    Some(this.widget.size.width - SCROLLBAR_WIDTH);
+            } else if divider.is_none() {
+                this.widget.frozen_available_width = None;
+            }
+            this.widget.active_divider = divider;
+            this.ctx.request_render();
+        }
+        // `last_resized_index` mirrors `active_divider` while a divider is
+        // active, but — unlike it — is never reset to `None`, so it stays
+        // the `FixedViewport` protection anchor after release too.
+        if let Some(idx) = divider {
+            this.widget.last_resized_index = Some(idx);
+        }
     }
 
     /// Replaces the header widget.
@@ -539,13 +696,21 @@ impl Widget for TableWidget {
     ) {
         match event {
             PointerEvent::Scroll(PointerScrollEvent { delta, .. }) => {
-                // Handle mouse wheel scrolling
+                // Handle mouse wheel/trackpad vertical scrolling.
                 // Negate delta to match OS scroll direction (natural scrolling)
                 let scroll_delta = -Self::scroll_delta_to_pixels(delta);
-                self.state.scroll_by(scroll_delta);
-                ctx.request_layout();
-                ctx.request_compose();
-                ctx.set_handled();
+                // Only claim the event if it actually has a vertical
+                // component. A purely-horizontal delta (e.g. a two-finger
+                // trackpad swipe) has nothing for this widget's own
+                // (vertical-only) scroll state to act on — leave it
+                // unhandled so it bubbles up to an ancestor `portal(...)`,
+                // which is the only thing that can pan horizontally.
+                if scroll_delta != 0.0 {
+                    self.state.scroll_by(scroll_delta);
+                    ctx.request_layout();
+                    ctx.request_compose();
+                    ctx.set_handled();
+                }
             }
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 let pos = ctx.local_position(state.position);
@@ -860,13 +1025,66 @@ impl Widget for TableWidget {
         let _ = content_rect;
     }
 
+    fn post_paint(
+        &mut self,
+        _ctx: &mut PaintCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
+        // Full-height divider guideline(s): painted after children (rows
+        // and header) so they aren't drawn underneath their (often opaque)
+        // backgrounds. Span the whole visible table height, unlike the
+        // header's own local highlight which only covers its own bounds.
+        if self.show_column_dividers {
+            // Permanent mode: every boundary, always — the active one (if
+            // any) is already covered by this, no separate draw needed.
+            let n = self.column_layouts.len();
+            for (i, col) in self.column_layouts.iter().enumerate() {
+                if i < n - 1 {
+                    Self::paint_divider_line(
+                        col,
+                        self.direction,
+                        self.size.height,
+                        self.style.divider_color,
+                        painter,
+                    );
+                }
+            }
+        } else if let Some(idx) = self.active_divider {
+            if let Some(col) = self.column_layouts.get(idx) {
+                Self::paint_divider_line(
+                    col,
+                    self.direction,
+                    self.size.height,
+                    self.style.divider_color,
+                    painter,
+                );
+            }
+        }
+    }
+
     fn get_cursor(&self, ctx: &QueryCtx<'_>, pos: Point) -> CursorIcon {
         let local_pos = ctx.to_local(pos);
         if self.scrollbar_hit_test(local_pos) {
-            CursorIcon::Default
-        } else {
-            CursorIcon::Default
+            return CursorIcon::Default;
         }
+        // Defensive correctness: keep the cursor consistent with the
+        // full-height highlight during an active drag. In practice this
+        // rarely matters — while dragging, the pointer is captured by
+        // ResizableHeader, whose own get_cursor already returns EwResize
+        // unconditionally for the whole drag regardless of pointer
+        // position — but this makes TableWidget's own answer correct too
+        // rather than the previous always-Default stub.
+        if let Some(idx) = self.active_divider {
+            if let Some(col) = self.column_layouts.get(idx) {
+                let divider_start = column_layout::divider_start(col, self.direction);
+                let divider_center = divider_start + DIVIDER_WIDTH / 2.0;
+                if (local_pos.x - divider_center).abs() <= DIVIDER_HIT_AREA {
+                    return CursorIcon::EwResize;
+                }
+            }
+        }
+        CursorIcon::Default
     }
 
     fn accessibility_role(&self) -> Role {

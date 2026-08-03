@@ -78,14 +78,148 @@ use std::sync::Arc;
 use xilem::core::{MessageCtx, MessageResult, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::masonry::core::Widget;
 use xilem::masonry::layout::Length;
+use xilem::masonry::peniko::Color;
 use xilem::style::Style;
 use xilem::view::label;
 use xilem::{Pod, ViewCtx, WidgetView};
 
-use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder, TableStyle};
-use crate::masonry::table::resizable_header::{ColumnResizeAction, ResizableHeader};
+use super::direction_detect::detect_direction;
+use super::{ColumnDef, ColumnWidth, ColumnWidths, SortDirection, SortOrder};
+use crate::masonry::flow_direction::FlowDirection;
+use crate::xilem::components::clipped;
+use crate::masonry::table::column_layout::{self, ColumnResizeMode};
+use crate::masonry::table::resizable_header::{
+    ColumnDividerHighlightAction, ColumnResizeAction, ColumnResizePreviewAction, ResizableHeader,
+};
 use crate::masonry::table::widget::{TableRangeAction, TableWidget, TableWidgetAction};
 use crate::xilem::traits::{Keyed, SelectionModifiers, SelectionState, TableRow};
+
+/// Style configuration for the table.
+#[derive(Debug, Clone)]
+pub struct TableStyle {
+    /// Background color on hover.
+    pub hover_bg: Color,
+    /// Background color for selected rows.
+    pub selected_bg: Color,
+    /// Background color for alternating rows (if striped).
+    pub stripe_bg: Color,
+    /// Header background color.
+    pub header_bg: Color,
+    /// Header text color.
+    pub header_text_color: Color,
+    /// Cell text color.
+    pub text_color: Color,
+    /// Column divider color.
+    pub divider_color: Color,
+    /// Row height in pixels.
+    pub row_height: f64,
+    /// Header height in pixels.
+    pub header_height: f64,
+    /// Whether to show alternating row backgrounds.
+    pub striped: bool,
+    /// Gap between columns.
+    pub column_gap: f64,
+    /// Layout direction override. `None` (the default) auto-detects from
+    /// column header titles at build time (see `direction_detect`); `Some(_)`
+    /// forces a specific direction instead.
+    pub direction: Option<FlowDirection>,
+    /// How columns behave once their configured widths exceed the viewport.
+    /// Defaults to [`ColumnResizeMode::Overflow`] (matches Apple Numbers'
+    /// actual resize behavior — pair with `xilem::view::portal(...)` for
+    /// horizontal scrolling). [`ColumnResizeMode::FixedViewport`] instead
+    /// compresses columns after the dragged one down to their minimum and
+    /// never lets the table exceed its container.
+    pub resize_mode: ColumnResizeMode,
+    /// Whether to always show a full-height divider line at every column
+    /// boundary (the same guideline normally only shown while actively
+    /// dragging a divider). Defaults to `false`.
+    pub column_dividers: bool,
+}
+
+impl Default for TableStyle {
+    fn default() -> Self {
+        Self {
+            hover_bg: Color::from_rgba8(55, 53, 50, 255),
+            selected_bg: Color::from_rgba8(65, 62, 58, 255),
+            stripe_bg: Color::from_rgba8(45, 43, 40, 255),
+            header_bg: Color::from_rgba8(50, 48, 45, 255),
+            header_text_color: Color::from_rgba8(180, 178, 175, 255),
+            text_color: Color::from_rgba8(220, 218, 214, 255),
+            divider_color: Color::from_rgba8(80, 78, 75, 255),
+            row_height: 28.0,
+            header_height: 32.0,
+            striped: false,
+            column_gap: 8.0,
+            direction: None,
+            resize_mode: ColumnResizeMode::default(),
+            column_dividers: false,
+        }
+    }
+}
+
+impl TableStyle {
+    /// Creates a new `TableStyle` with default values.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the hover background color.
+    pub fn hover_bg(mut self, color: Color) -> Self {
+        self.hover_bg = color;
+        self
+    }
+
+    /// Sets the selected row background color.
+    pub fn selected_bg(mut self, color: Color) -> Self {
+        self.selected_bg = color;
+        self
+    }
+
+    /// Sets the header background color.
+    pub fn header_bg(mut self, color: Color) -> Self {
+        self.header_bg = color;
+        self
+    }
+
+    /// Sets the row height.
+    pub fn row_height(mut self, height: f64) -> Self {
+        self.row_height = height;
+        self
+    }
+
+    /// Sets the header height.
+    pub fn header_height(mut self, height: f64) -> Self {
+        self.header_height = height;
+        self
+    }
+
+    /// Enables alternating row backgrounds (zebra stripes).
+    pub fn striped(mut self, striped: bool) -> Self {
+        self.striped = striped;
+        self
+    }
+
+    /// Overrides the auto-detected layout direction.
+    pub fn direction(mut self, direction: FlowDirection) -> Self {
+        self.direction = Some(direction);
+        self
+    }
+
+    /// Sets how columns behave once their configured widths exceed the
+    /// viewport.
+    pub fn resize_mode(mut self, mode: ColumnResizeMode) -> Self {
+        self.resize_mode = mode;
+        self
+    }
+
+    /// Always shows a full-height divider line at every column boundary
+    /// (the same guideline normally only shown while actively dragging a
+    /// divider). Defaults to `false`.
+    pub fn column_divider(mut self, enabled: bool) -> Self {
+        self.column_dividers = enabled;
+        self
+    }
+}
 
 /// Actions that can occur on virtual table rows or columns.
 #[derive(Debug, Clone, PartialEq)]
@@ -117,17 +251,34 @@ struct ChildState<View, ViewState> {
     state: ViewState,
 }
 
-/// Divider width between columns (must match resizable_header.rs DIVIDER_WIDTH)
-const DIVIDER_WIDTH: f64 = 2.0;
-
 /// Internal view state for VirtualTable.
 pub struct TableViewState<RowView, RowViewState> {
     /// Pending action from widget.
     pending_action: Option<TableRangeAction>,
     /// Pending size change (new content width).
     pending_size_change: Option<f64>,
-    /// Current content width for scaling.
+    /// Current content width. Only consulted in `ColumnResizeMode::FixedViewport`
+    /// (`Overflow` mode never needs to know the viewport width — columns
+    /// always render at their configured width regardless).
     current_width: f64,
+    /// Live-preview column width override from an in-progress header drag
+    /// (column key, new width). Ephemeral — never round-tripped through app
+    /// state; cleared once the drag commits via `ColumnResizeAction`.
+    live_resize: Option<(Arc<str>, f64)>,
+    /// Key of the column most recently dragged (or currently being
+    /// dragged). Unlike `live_resize`, this is *not* cleared on commit —
+    /// `ColumnResizeMode::FixedViewport`'s "protect columns before the
+    /// dragged one" split needs a stable anchor even after release, or the
+    /// very next rebuild would fall back to no anchor at all and visibly
+    /// recompute a different (neutral, touches-everything) compression
+    /// than what was just being rendered live.
+    last_resized_key: Option<Arc<str>>,
+    /// Divider currently hovered/dragged in the header, mirrored down into
+    /// `TableWidget` for the full-height highlight. Also ephemeral.
+    active_divider: Option<usize>,
+    /// Last widths pushed into `TableWidget::set_column_widths`, so unrelated
+    /// rebuilds (e.g. scrolling) don't re-push unchanged widths.
+    last_pushed_widths: Vec<f64>,
     /// Per-row view states.
     children: HashMap<usize, ChildState<RowView, RowViewState>>,
 }
@@ -173,7 +324,7 @@ where
     R: Keyed + 'static,
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64]) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
     Sel: SelectionState<R::Key> + 'static,
 {
@@ -188,8 +339,10 @@ where
     // `build_header`) gets type-erased into a widget masonry can store
     // without knowing it came from a xilem view at all.
     fn build(&self, ctx: &mut ViewCtx, app_state: &mut State) -> (Self::Element, Self::ViewState) {
+        let direction = self.effective_direction();
+
         // Build header widget
-        let header = self.build_header(ctx, app_state);
+        let header = self.build_header(ctx, app_state, direction);
 
         // Extract column keys for hit testing
         let column_keys: Vec<Arc<str>> = self.columns.iter().map(|c| c.key.clone()).collect();
@@ -200,12 +353,16 @@ where
             self.style.clone(),
             column_keys,
             self.item_count,
-        );
+        )
+        .with_direction(direction)
+        .with_resize_mode(self.style.resize_mode)
+        .with_show_column_dividers(self.style.column_dividers);
 
         let pod = Pod::new(widget);
         ctx.record_action_source(pod.new_widget.id());
 
-        // Initial width estimate (will be updated on first SizeChanged)
+        // Initial width estimate (updated on first SizeChanged); only
+        // meaningful for FixedViewport mode.
         let initial_width: f64 = self.column_widths.iter().sum();
 
         (
@@ -214,6 +371,10 @@ where
                 pending_action: None,
                 pending_size_change: None,
                 current_width: initial_width,
+                live_resize: None,
+                last_resized_key: None,
+                active_divider: None,
+                last_pushed_widths: Vec::new(),
                 children: HashMap::new(),
             },
         )
@@ -238,23 +399,72 @@ where
             TableWidget::set_item_count(&mut element, self.item_count);
         }
 
-        // Handle pending size change
+        // Handle pending size change — only meaningful in FixedViewport
+        // mode, where compute_rendered_widths needs the real viewport
+        // width; Overflow mode ignores current_width entirely.
         if let Some(new_width) = view_state.pending_size_change.take() {
             view_state.current_width = new_width;
             TableWidget::will_handle_size_change(&mut element);
             TableWidget::did_handle_size_change(&mut element);
         }
 
-        // Compute scaled column widths to match header layout
-        // Header uses: available_width = size.width - divider_space
-        //              scale = available_width / sum(base_widths)
-        let scaled_widths = self.compute_scaled_widths(view_state.current_width);
+        let direction = self.effective_direction();
+        TableWidget::set_direction(&mut element, direction);
+        TableWidget::set_resize_mode(&mut element, self.style.resize_mode);
+        TableWidget::set_show_column_dividers(&mut element, self.style.column_dividers);
 
-        // Rebuild header if sort order changed
-        if self.sort_order != prev.sort_order {
-            let new_header = self.build_header(ctx, app_state);
+        // Rebuild header if sort order changed, the resolved layout
+        // direction changed (e.g. header titles flipped language), or the
+        // column definitions themselves changed (title/key/sortable) —
+        // otherwise a header-language toggle with unchanged sort order would
+        // silently leave the old header widget in place.
+        let columns_changed = self.columns.len() != prev.columns.len()
+            || self.columns.iter().zip(prev.columns.iter()).any(|(a, b)| {
+                a.key != b.key || a.title != b.title || a.sortable != b.sortable
+            });
+        if self.sort_order != prev.sort_order
+            || direction != prev.effective_direction()
+            || self.style.resize_mode != prev.style.resize_mode
+            || columns_changed
+        {
+            let new_header = self.build_header(ctx, app_state, direction);
             TableWidget::replace_header(&mut element, new_header.new_widget.erased());
         }
+
+        // Apply any in-progress live-resize preview from the header on top
+        // of the committed column widths, so row content resizes live at
+        // drag-frame rate without waiting for the app to persist it.
+        //
+        // `dragged_idx` (the `FixedViewport` protection anchor) is resolved
+        // from `last_resized_key`, not `live_resize` — `last_resized_key`
+        // stays set after the drag commits, so the anchor doesn't change
+        // the instant the pointer is released, which would otherwise make
+        // `compute_rendered_widths` recompute a different (unanchored)
+        // compression than what was just rendered live.
+        let mut effective_widths = self.column_widths.clone();
+        let dragged_idx = view_state
+            .last_resized_key
+            .as_ref()
+            .and_then(|key| self.columns.iter().position(|c| &c.key == key));
+        if let (Some(idx), Some((_, width))) = (dragged_idx, &view_state.live_resize) {
+            effective_widths[idx] = *width;
+        }
+
+        // Resolve rendered widths for row content — mirrors what the header
+        // and TableWidget each resolve independently from the same
+        // `effective_widths`/`current_width`/`resize_mode` inputs.
+        let scaled_widths = column_layout::compute_rendered_widths(
+            &effective_widths,
+            dragged_idx,
+            view_state.current_width,
+            self.style.resize_mode,
+        );
+
+        if effective_widths != view_state.last_pushed_widths {
+            TableWidget::set_column_widths(&mut element, effective_widths.clone());
+            view_state.last_pushed_widths = effective_widths;
+        }
+        TableWidget::set_active_divider(&mut element, view_state.active_divider);
 
         // Handle pending range action
         if let Some(pending_action) = view_state.pending_action.take() {
@@ -297,6 +507,7 @@ where
                         is_selected,
                         is_striped,
                         &scaled_widths,
+                        direction,
                     );
                     ctx.with_id(view_id_for_row(visual_idx), |ctx| {
                         if let Some(mut row_mut) = TableWidget::row_mut(&mut element, visual_idx) {
@@ -318,6 +529,7 @@ where
                         is_selected,
                         is_striped,
                         &scaled_widths,
+                        direction,
                     );
                     ctx.with_id(view_id_for_row(visual_idx), |ctx| {
                         let (new_element, child_state) = new_view.build(ctx, app_state);
@@ -355,6 +567,7 @@ where
                     is_selected,
                     is_striped,
                     &scaled_widths,
+                    direction,
                 );
                 ctx.with_id(view_id_for_row(visual_idx), |ctx| {
                     if let Some(mut row_mut) = TableWidget::row_mut(&mut element, visual_idx) {
@@ -463,8 +676,16 @@ where
             }
         }
 
-        // Handle ColumnResizeAction from ResizableHeader
+        // Committed resize (pointer-up): clear any live-preview override so
+        // the next rebuild uses the freshly-persisted app-state width, then
+        // hand off to the app like any other action. `last_resized_key`
+        // deliberately stays set — it remains the `FixedViewport` anchor
+        // after release, so the very next rebuild computes the identical
+        // before/after split as the live drag did, instead of falling back
+        // to "no anchor" and visibly recomputing a different compression.
         if let Some(resize_action) = message.take_message::<ColumnResizeAction>() {
+            view_state.live_resize = None;
+            view_state.last_resized_key = Some(resize_action.column_key.clone());
             (self.handler)(
                 app_state,
                 TableAction::ColumnResized(
@@ -473,6 +694,35 @@ where
                 ),
             );
             return MessageResult::Action(());
+        }
+
+        // Live-preview resize (every pointer-move during a drag): cheap
+        // self-diff rebuild only, never a full app-logic re-invocation —
+        // this is what makes row content resize in real time.
+        if let Some(preview) = message.take_message::<ColumnResizePreviewAction>() {
+            view_state.live_resize = Some((preview.column_key.clone(), preview.new_width));
+            view_state.last_resized_key = Some(preview.column_key.clone());
+            return MessageResult::RequestRebuild;
+        }
+
+        // Divider hover/drag highlight: purely ephemeral UI feedback, never
+        // touches app state. Also updates `last_resized_key` immediately
+        // (not just on the first `ColumnResizePreviewAction`) — this fires
+        // on `Down`, the instant a *new* divider is grabbed, closing a
+        // window where a stale `last_resized_key` (from a previous drag on
+        // a different column) would otherwise be used as the
+        // `FixedViewport` protection anchor for one rebuild before the
+        // first width-changing `Move` corrects it — visible as the
+        // previously-dragged column briefly, incorrectly losing its
+        // protection.
+        if let Some(highlight) = message.take_message::<ColumnDividerHighlightAction>() {
+            view_state.active_divider = highlight.0;
+            if let Some(idx) = highlight.0 {
+                if let Some(col) = self.columns.get(idx) {
+                    view_state.last_resized_key = Some(col.key.clone());
+                }
+            }
+            return MessageResult::RequestRebuild;
         }
 
         tracing::error!(?message, "Wrong message type in VirtualTable::message");
@@ -485,40 +735,13 @@ where
     State: 'static,
     R: Keyed,
 {
-    /// Compute column widths to match header layout exactly.
-    ///
-    /// Mirrors `ResizableHeader::layout`: use configured widths when they fit,
-    /// only scale down when available_width is narrower than the column sum.
-    ///
-    /// TODO: `column_widths` is laid out assuming LTR (left-to-right) order,
-    /// so resizing a column pushes columns on the right away. Right-to-left
-    /// languages such as Arabic likely need the mirrored behavior (pushing
-    /// columns on the left instead). We need to ask a native speaker (or
-    /// someone with real RTL UX experience) how this should work before
-    /// implementing it.
-    fn compute_scaled_widths(&self, available_width: f64) -> Vec<f64> {
-        let column_count = self.column_widths.len();
-        if column_count == 0 {
-            return Vec::new();
-        }
-
-        let divider_count = column_count.saturating_sub(1);
-        let divider_space = divider_count as f64 * DIVIDER_WIDTH;
-        let configured_total: f64 = self.column_widths.iter().sum();
-        let configured_with_dividers = configured_total + divider_space;
-
-        // Match header: scale only when columns don't fit, never scale up.
-        let use_configured = available_width + 0.5 >= configured_with_dividers;
-        let scale = if !use_configured && configured_total > 0.0 {
-            ((available_width - divider_space) / configured_total).min(1.0)
-        } else {
-            1.0
-        };
-
-        self.column_widths
-            .iter()
-            .map(|&w| (w * scale).max(40.0)) // 40.0 is MIN_COLUMN_WIDTH
-            .collect()
+    /// Effective layout direction: the app's override if set, otherwise
+    /// auto-detected from the column header titles (never row/cell content —
+    /// an Arabic user's habits are RTL even if the table's data isn't).
+    fn effective_direction(&self) -> FlowDirection {
+        self.style
+            .direction
+            .unwrap_or_else(|| detect_direction(self.columns.iter().map(|c| c.title.as_str())))
     }
 
     /// Build the header widget using ResizableHeader for column resize support.
@@ -527,7 +750,12 @@ where
     /// `WidgetView<State, Action>` would work the same way — see the
     /// `erased()` call below and `ResizableHeaderView::build` for why
     /// `ResizableHeader` doesn't need to know what view built its children.
-    fn build_header(&self, ctx: &mut ViewCtx, app_state: &mut State) -> Pod<ResizableHeader> {
+    fn build_header(
+        &self,
+        ctx: &mut ViewCtx,
+        app_state: &mut State,
+        direction: FlowDirection,
+    ) -> Pod<ResizableHeader> {
         use xilem::masonry::core::NewWidget;
         use xilem::masonry::properties::Background;
 
@@ -550,11 +778,18 @@ where
                 .unwrap_or("");
             let title = format!("{}{}", col.title, sort_indicator);
 
-            // Build the label widget
-            let lbl = label(title)
-                .text_size(13.0)
-                .color(text_color)
-                .padding(Length::px(4.0));
+            // Build the label widget, clipped to its cell — `ResizableHeader`
+            // hard-constrains each child to its column width via
+            // `ctx.run_layout` in its own `layout()`, so `clipped(...)`
+            // (the same wrapper `table_cell` uses for row content) truncates
+            // overlong titles to that width instead of letting them paint
+            // past the column boundary into neighboring cells.
+            let lbl = clipped(
+                label(title)
+                    .text_size(13.0)
+                    .color(text_color)
+                    .padding(Length::px(4.0)),
+            );
 
             // Build the view to get a widget - use View trait bound to help inference
             let (pod, _view_state) = View::<State, (), ViewCtx>::build(&lbl, ctx, app_state);
@@ -564,7 +799,9 @@ where
 
         // Create ResizableHeader with current column widths
         let header = ResizableHeader::new(children, column_keys, self.column_widths.clone())
-            .with_divider_color(self.style.divider_color);
+            .with_divider_color(self.style.divider_color)
+            .with_direction(direction)
+            .with_resize_mode(self.style.resize_mode);
 
         // Wrap in a Pod with background property
         let pod = Pod::new_with_props(header, Background::Color(header_bg));
@@ -585,7 +822,10 @@ where
 /// * `columns` - Column definitions
 /// * `selection` - Selection state
 /// * `sort_order` - Current sort state
-/// * `row_builder` - Function that builds a view for each row: `(state, index, is_selected, is_striped) -> RowView`
+/// * `row_builder` - Function that builds a view for each row: `(state, index, is_selected, is_striped, column_widths, direction) -> RowView`.
+///   In RTL, reorder cells to match the header's visual order via
+///   `xilem_extras::masonry::table::visual_index` (see `table_cell`'s doc
+///   comment for an example).
 /// * `handler` - Function that handles table actions
 ///
 /// # Example
@@ -602,7 +842,7 @@ where
 ///     ],
 ///     &model.selection,
 ///     &model.sort_order,
-///     |state, idx, is_selected, is_striped| {
+///     |state, idx, is_selected, is_striped, _widths, _direction| {
 ///         let employee = &state.employees[idx];
 ///         // Build row view...
 ///     },
@@ -631,7 +871,7 @@ where
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64]) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     table_styled(
@@ -649,6 +889,13 @@ where
 /// Creates a high-performance virtualized table view with custom styling.
 ///
 /// Same as [`table`] but accepts a [`TableStyle`] for customization.
+///
+/// Columns render at their configured width and are never proportionally
+/// shrunk to fit — if resizing pushes the total width past the viewport, the
+/// table simply overflows. Wrap the result in
+/// `xilem::view::portal(...).constrain_vertical(true)` to get horizontal
+/// scrolling for that overflow (the table already handles its own vertical
+/// scrolling internally, so the vertical axis should stay constrained).
 pub fn table_styled<'a, State, R, RowView, Sel, F, H>(
     data: &'a [R],
     columns: &'a [ColumnDef],
@@ -665,7 +912,7 @@ where
     R::Key: Clone + Send + Sync + 'static,
     RowView: WidgetView<State, ()> + 'static,
     Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64]) -> RowView + Send + Sync + 'static,
+    F: Fn(&mut State, usize, bool, bool, &[f64], FlowDirection) -> RowView + Send + Sync + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
     // Compute sorted indices: maps visual_idx -> data_idx

@@ -49,4 +49,5 @@ pub mod xilem;
 pub mod locale;
 
 pub use ::xilem as xilem_crate;
+pub use crate::masonry::flow_direction::FlowDirection;
 pub use masonry_winit;

@@ -2,7 +2,7 @@
 
 mod column;
 mod column_widths;
-mod legacy_table;
+mod direction_detect;
 mod sort_state;
 mod state;
 mod table_cell;
@@ -14,12 +14,10 @@ pub use sort_state::{SortDescriptor, SortDirection, SortOrder};
 pub use state::TableScrollState;
 
 pub use table_cell::table_cell;
-pub use table_view::{TableAction, TableView, TableViewState, table, table_styled};
-
-pub use legacy_table::{LegacyTableAction, TableStyle, legacy_table, legacy_table_styled};
+pub use table_view::{TableAction, TableStyle, TableView, TableViewState, table, table_styled};
 
 pub use crate::masonry::table::{
-    ColumnResizeAction, ResizableHeader, TableHeaderClickAction, TableRangeAction,
-    TableRowClickAction, TableWidget, TableWidgetAction,
+    ColumnDividerHighlightAction, ColumnResizeAction, ColumnResizePreviewAction, ResizableHeader,
+    TableHeaderClickAction, TableRangeAction, TableRowClickAction, TableWidget, TableWidgetAction,
 };
 pub use crate::xilem_masonry::table::{ResizableHeaderView, resizable_header};

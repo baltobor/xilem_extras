@@ -11,6 +11,16 @@
 
 use xilem_extras::xilem::traits::{CellValue, Keyed, ListItem, TableRow, TreeNode};
 
+/// Display language for the table demo's column header titles — the
+/// table's layout direction (`FlowDirection`) is auto-detected from these
+/// titles alone, never from row/cell content.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Language {
+    #[default]
+    Latin,
+    Arabic,
+}
+
 /// A node in the file tree.
 #[derive(Debug, Clone)]
 pub struct FileNode {
@@ -189,61 +199,6 @@ impl TableRow for Cyclist {
     }
 }
 
-/// Creates mock cyclists - happy people on two wheels.
-pub fn mock_cyclists() -> Vec<Cyclist> {
-    vec![
-        Cyclist {
-            id: 1,
-            name: "Luna Park".into(),
-            route: "Riverside Trail".into(),
-            distance_km: 25.5,
-            joy_level: 10,
-        },
-        Cyclist {
-            id: 2,
-            name: "Felix Walker".into(),
-            route: "Mountain Loop".into(),
-            distance_km: 42.0,
-            joy_level: 9,
-        },
-        Cyclist {
-            id: 3,
-            name: "Maya Sunshine".into(),
-            route: "Beach Path".into(),
-            distance_km: 15.2,
-            joy_level: 10,
-        },
-        Cyclist {
-            id: 4,
-            name: "River Stone".into(),
-            route: "Forest Circuit".into(),
-            distance_km: 33.7,
-            joy_level: 8,
-        },
-        Cyclist {
-            id: 5,
-            name: "Sage Meadow".into(),
-            route: "City Greenway".into(),
-            distance_km: 18.9,
-            joy_level: 9,
-        },
-        Cyclist {
-            id: 6,
-            name: "Willow Creek".into(),
-            route: "Lakeside Route".into(),
-            distance_km: 28.4,
-            joy_level: 10,
-        },
-        Cyclist {
-            id: 7,
-            name: "Jack Pearse".into(),
-            route: "Vennbahnweg".into(),
-            distance_km: 125.0,
-            joy_level: 10,
-        },
-    ]
-}
-
 /// First names for generating cyclists.
 const FIRST_NAMES: &[&str] = &[
     "Luna",
@@ -335,6 +290,59 @@ const ROUTES: &[&str] = &[
     "Woodland Trail",
     "Seaside Promenade",
 ];
+
+/// Arabic equivalents of `FIRST_NAMES`, same length and order — used to
+/// derive an Arabic display name for a cyclist without regenerating the
+/// underlying (English) data, since sort/selection are keyed by `id`, not
+/// by name text.
+const FIRST_NAMES_AR: &[&str] = &[
+    "لونا", "فيليكس", "مايا", "ريفر", "سيج", "ويلو", "جاك", "إيما", "ليام", "أوليفيا", "نوح",
+    "آفا", "إيثان", "صوفيا", "ميسون", "إيزابيلا", "لوغان", "ميا", "لوكاس", "شارلوت", "ألكسندر",
+    "أميليا", "بنجامين", "هاربر", "إيلايجا", "إيفلين", "جيمس", "أبيغيل", "ويليام", "إيميلي",
+];
+
+/// Arabic equivalents of `LAST_NAMES`, same length and order.
+const LAST_NAMES_AR: &[&str] = &[
+    "بارك", "ووكر", "صنشاين", "ستون", "ميدو", "كريك", "بيرس", "سميث", "جونسون", "براون",
+    "ديفيس", "ميلر", "ويلسون", "مور", "تايلور", "أندرسون", "توماس", "جاكسون", "وايت", "هاريس",
+    "مارتن", "تومسون", "غارسيا", "مارتينيز", "روبنسون", "كلارك", "رودريغيز", "لويس", "لي", "هول",
+];
+
+/// Arabic equivalents of `ROUTES`, same length and order.
+const ROUTES_AR: &[&str] = &[
+    "مسار النهر", "حلقة الجبل", "طريق الشاطئ", "دائرة الغابة", "الممر الأخضر", "طريق البحيرة",
+    "فينباهنفيغ", "ممر جبال الألب", "الطريق الساحلي", "طريق الوادي", "شارع الغروب", "جسر الميناء",
+    "طريق القناة", "جولة الكروم", "الطريق التاريخي", "زقاق المروج", "دائرة التلة", "معبر النهر",
+    "مسار الغابة", "ممشى الشاطئ",
+];
+
+/// Returns `cyclist`'s display name in the given language. Recomputes the
+/// Arabic name from the same deterministic index formula `mock_cyclists_large`
+/// used to generate the English one, keyed off `cyclist.id` — no need to
+/// store a second copy of the data.
+pub fn cyclist_display_name(cyclist: &Cyclist, lang: Language) -> String {
+    match lang {
+        Language::Latin => cyclist.name.clone(),
+        Language::Arabic => {
+            let i = (cyclist.id - 1) as usize;
+            let first_idx = (i * 7 + 3) % FIRST_NAMES_AR.len();
+            let last_idx = (i * 11 + 5) % LAST_NAMES_AR.len();
+            format!("{} {}", FIRST_NAMES_AR[first_idx], LAST_NAMES_AR[last_idx])
+        }
+    }
+}
+
+/// Returns `cyclist`'s display route in the given language.
+pub fn cyclist_display_route(cyclist: &Cyclist, lang: Language) -> String {
+    match lang {
+        Language::Latin => cyclist.route.clone(),
+        Language::Arabic => {
+            let i = (cyclist.id - 1) as usize;
+            let route_idx = (i * 13 + 7) % ROUTES_AR.len();
+            ROUTES_AR[route_idx].to_string()
+        }
+    }
+}
 
 /// Creates a large dataset of cyclists for performance testing.
 ///

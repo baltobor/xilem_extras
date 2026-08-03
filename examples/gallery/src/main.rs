@@ -25,7 +25,6 @@ mod table_demo;
 mod tabs_demo;
 mod tree_demo;
 mod tree_view_demo;
-mod virtual_table_demo;
 mod widgets_demo;
 
 use masonry::layout::{AsUnit, Length};
@@ -136,11 +135,8 @@ fn build_menu_bar(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
                     menu_item("Sectioned List", |model: &mut AppModel| {
                         model.page = Page::SectionedList;
                     }),
-                    menu_item("Table View", |model: &mut AppModel| {
+                    menu_item("Table (10k)", |model: &mut AppModel| {
                         model.page = Page::Table;
-                    }),
-                    menu_item("Virtual Table (10k)", |model: &mut AppModel| {
-                        model.page = Page::VirtualTable;
                     }),
                     menu_item("Tabs", |model: &mut AppModel| {
                         model.page = Page::Tabs;
@@ -318,7 +314,6 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             nav_button("List", Page::List, current_page, theme),
             nav_button("Sectioned List", Page::SectionedList, current_page, theme),
             nav_button("Table", Page::Table, current_page, theme),
-            nav_button("Virtual Table", Page::VirtualTable, current_page, theme),
             nav_button("Tabs", Page::Tabs, current_page, theme),
             nav_button("Menu", Page::Menu, current_page, theme),
             nav_button("App Menu", Page::AppMenu, current_page, theme),
@@ -339,7 +334,6 @@ fn app_logic(model: &mut AppModel) -> impl WidgetView<AppModel> + use<> {
             Page::List => list_demo::list_demo(model).boxed(),
             Page::SectionedList => sectioned_list_demo::sectioned_list_demo(model).boxed(),
             Page::Table => table_demo::table_demo(model).boxed(),
-            Page::VirtualTable => virtual_table_demo::virtual_table_demo(model).boxed(),
             Page::Tabs => tabs_demo::tabs_demo(model).boxed(),
             Page::Menu => menu_demo::menu_demo(model).boxed(),
             Page::AppMenu => app_menu_demo::app_menu_demo(model).boxed(),
@@ -415,7 +409,6 @@ mod menu_ids {
     pub const LIST: &str = "list";
     pub const SECTIONED_LIST: &str = "sectioned_list";
     pub const TABLE: &str = "table";
-    pub const VIRTUAL_TABLE: &str = "virtual_table";
     pub const TABS: &str = "tabs";
     pub const MENU: &str = "menu";
     pub const APP_MENU: &str = "app_menu";
@@ -500,15 +493,7 @@ fn build_native_menu() -> Menu {
     examples_menu
         .append(&MenuItem::with_id(
             TABLE,
-            "Table View",
-            true,
-            None::<Accelerator>,
-        ))
-        .ok();
-    examples_menu
-        .append(&MenuItem::with_id(
-            VIRTUAL_TABLE,
-            "Virtual Table (10k)",
+            "Table (10k)",
             true,
             None::<Accelerator>,
         ))
@@ -732,7 +717,6 @@ impl ApplicationHandler<MasonryUserEvent> for GalleryApp {
                     LIST => Some(MenuCommand::GotoPage(Page::List)),
                     SECTIONED_LIST => Some(MenuCommand::GotoPage(Page::SectionedList)),
                     TABLE => Some(MenuCommand::GotoPage(Page::Table)),
-                    VIRTUAL_TABLE => Some(MenuCommand::GotoPage(Page::VirtualTable)),
                     TABS => Some(MenuCommand::GotoPage(Page::Tabs)),
                     MENU => Some(MenuCommand::GotoPage(Page::Menu)),
                     APP_MENU => Some(MenuCommand::GotoPage(Page::AppMenu)),

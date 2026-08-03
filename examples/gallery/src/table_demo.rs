@@ -5,254 +5,265 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-//! Table widget demo - celebrating active mobility.
-
-use std::sync::Arc;
+//! Table demo - virtualized table, testing with 10,000 rows.
 
 use masonry::layout::{AsUnit, Length};
-use xilem::WidgetView;
 use xilem::masonry::peniko::Color;
 use xilem::style::Style;
-use xilem::view::{CrossAxisAlignment, button, flex_col, flex_row, label, sized_box};
+use xilem::view::{button, checkbox, flex_col, flex_row, label, portal};
+use xilem::{AnyWidgetView, WidgetView};
 
-use xilem_extras::xilem::components::{row_button, row_button_with_modifiers};
-use xilem_extras::xilem::table::{SortDirection, SortOrder, resizable_header};
+use xilem_extras::FlowDirection;
+use xilem_extras::masonry::table::{ColumnResizeMode, visual_index};
+use xilem_extras::xilem::table::{
+    SortDirection, SortOrder, TableAction, TableStyle, table_cell, table_styled,
+};
 use xilem_extras::xilem::theme::Theme;
-use xilem_extras::xilem::traits::{SelectionModifiers, SelectionState};
-use xilem_material_icons::{FONT_FAMILY, ICON_SIZE_SM, icons};
+use xilem_extras::xilem::traits::SelectionState;
 
 use crate::app_model::AppModel;
-use crate::mock_data::Cyclist;
+use crate::mock_data::{Language, cyclist_display_name, cyclist_display_route};
 
-const ICON_COL_WIDTH: f64 = 24.0;
-
-const BIKE_COLOR: Color = Color::from_rgb8(100, 180, 100);
-
-fn sort_indicator(sort_order: &SortOrder, column: &str) -> &'static str {
-    match sort_order.direction_for(column) {
-        Some(SortDirection::Ascending) => icons::ARROW_UPWARD,
-        Some(SortDirection::Descending) => icons::ARROW_DOWNWARD,
-        None => "",
+/// English/Arabic title for each column key, used by the header-language
+/// toggle. Keys stay stable (data lookups depend on them); only the title
+/// swaps, exercising `detect_direction`'s live auto-detection from real
+/// header content.
+fn column_title(key: &str, lang: Language) -> &'static str {
+    match (key, lang) {
+        ("name", Language::Latin) => "Name",
+        ("name", Language::Arabic) => "الاسم",
+        ("route", Language::Latin) => "Route",
+        ("route", Language::Arabic) => "المسار",
+        ("distance_km", Language::Latin) => "Distance",
+        ("distance_km", Language::Arabic) => "المسافة",
+        ("joy_level", Language::Latin) => "Joy",
+        ("joy_level", Language::Arabic) => "البهجة",
+        _ => "?",
     }
-}
-
-fn column_header<'a>(
-    title: &'a str,
-    column_key: &'a str,
-    width: f64,
-    sort_order: &'a SortOrder,
-    theme: Theme,
-) -> impl WidgetView<AppModel> + use<'a> {
-    let indicator = sort_indicator(sort_order, column_key);
-    let col_key = column_key.to_string();
-
-    let row = flex_row((
-        label(title.to_string())
-            .text_size(12.0)
-            .weight(xilem::FontWeight::BOLD)
-            .color(theme.text()),
-        label(indicator.to_string())
-            .font(FONT_FAMILY)
-            .text_size(ICON_SIZE_SM)
-            .color(theme.text()),
-    ))
-    .gap(4.px())
-    .padding(Length::px(8.0))
-    .width((width as i32).px());
-
-    row_button(row, move |model: &mut AppModel| {
-        model.table_sort.toggle_column(&col_key, false);
-    })
-    .hover_bg(theme.hover_bg())
-    .background_color(theme.nav_bg())
-}
-
-fn table_cell(value: String, width: f64, theme: Theme) -> impl WidgetView<AppModel> {
-    label(value)
-        .text_size(13.0)
-        .color(theme.text())
-        .padding(Length::px(8.0))
-        .width((width as i32).px())
-}
-
-fn cyclist_row<'a>(
-    cyclist: &'a Cyclist,
-    is_selected: bool,
-    is_striped: bool,
-    col_widths: &'a xilem_extras::xilem::table::ColumnWidths,
-    theme: Theme,
-) -> impl WidgetView<AppModel> + use<'a> {
-    let id = cyclist.id;
-    let row_bg = if is_selected {
-        theme.active_bg()
-    } else if is_striped {
-        theme.section_bg()
-    } else {
-        Color::TRANSPARENT
-    };
-
-    let name_w = col_widths.get("name");
-    let route_w = col_widths.get("route");
-    let dist_w = col_widths.get("distance_km");
-    let joy_w = col_widths.get("joy_level");
-    let total_width = ICON_COL_WIDTH + name_w + route_w + dist_w + joy_w;
-
-    let row = flex_row((
-        label(icons::PEDAL_BIKE.to_string())
-            .font(FONT_FAMILY)
-            .text_size(ICON_SIZE_SM)
-            .color(BIKE_COLOR)
-            .width((ICON_COL_WIDTH as i32).px()),
-        table_cell(cyclist.name.clone(), name_w, theme),
-        table_cell(cyclist.route.clone(), route_w, theme),
-        table_cell(format!("{:.1} km", cyclist.distance_km), dist_w, theme),
-        table_cell(format!("{}/10", cyclist.joy_level), joy_w, theme),
-    ))
-    .gap(0.px());
-
-    sized_box(
-        row_button_with_modifiers(row, move |model: &mut AppModel, modifiers| {
-            // Store modifier state for UI feedback
-            model.last_click_mods = format!(
-                "meta={}, ctrl={}, shift={}, alt={}",
-                modifiers.meta(),
-                modifiers.ctrl(),
-                modifiers.shift(),
-                modifiers.alt()
-            );
-            let sel_mods = SelectionModifiers::from_modifiers(modifiers);
-            model.table_selection.select(id, sel_mods);
-        })
-        .hover_bg(theme.hover_bg())
-        .background_color(row_bg),
-    )
-    .width((total_width as i32).px())
 }
 
 pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     let theme = Theme::from_dark(model.dark_mode);
-    // Sort the data
-    let sorted_cyclists = model.table_sort.sorted(&model.cyclists);
+    let row_count = model.virtual_cyclists.len();
+    let selection_count = model.virtual_table_selection.count();
+    // Row content follows the header language directly — there's no
+    // independent content toggle; an Arabic header means Arabic content.
+    let content_language = model.virtual_table_header_language;
 
-    // Update selection item order for shift+click range selection
-    let sorted_ids: Vec<u64> = sorted_cyclists.iter().map(|c| c.id).collect();
-    model.table_selection.set_items(sorted_ids);
-
-    // Get column widths
-    let name_w = model.table_column_widths.get("name");
-    let route_w = model.table_column_widths.get("route");
-    let dist_w = model.table_column_widths.get("distance_km");
-    let joy_w = model.table_column_widths.get("joy_level");
-    let total_width = ICON_COL_WIDTH + name_w + route_w + dist_w + joy_w;
-
-    // Build rows
-    let rows: Vec<_> = sorted_cyclists
+    // Compute sorted IDs for shift-selection to work
+    use xilem_extras::xilem::traits::Keyed;
+    let sorted_indices = model
+        .virtual_table_sort
+        .sort_indices(&model.virtual_cyclists);
+    let sorted_ids: Vec<u64> = sorted_indices
         .iter()
-        .enumerate()
-        .map(|(idx, cyclist)| {
-            let is_selected = model.table_selection.is_selected(&cyclist.id);
-            let is_striped = idx % 2 == 1;
-            cyclist_row(
-                cyclist,
-                is_selected,
-                is_striped,
-                &model.table_column_widths,
-                theme,
-            )
-            .boxed()
-        })
+        .map(|&idx| model.virtual_cyclists[idx].key())
         .collect();
+    model.virtual_table_selection.set_items(sorted_ids);
 
-    // Build resizable header columns
-    let header_columns = vec![
-        column_header("Name", "name", name_w, &model.table_sort, theme).boxed(),
-        column_header("Route", "route", route_w, &model.table_sort, theme).boxed(),
-        column_header("Distance", "distance_km", dist_w, &model.table_sort, theme).boxed(),
-        column_header("Joy", "joy_level", joy_w, &model.table_sort, theme).boxed(),
-    ];
+    // Column titles follow the header-language toggle independently of the
+    // row content language below. Updated in place on the model-owned Vec
+    // (rather than building a new temporary one) so the borrow passed to
+    // `table_styled` below lives as long as the returned view needs it to.
+    let header_language = model.virtual_table_header_language;
+    for col in model.virtual_table_columns.iter_mut() {
+        col.title = column_title(&col.key, header_language).to_string();
+    }
 
-    let resizable_hdr = resizable_header(
-        &[
-            ("name", name_w),
-            ("route", route_w),
-            ("distance_km", dist_w),
-            ("joy_level", joy_w),
-        ],
-        header_columns,
-        |model: &mut AppModel, column_key: Arc<str>, new_width: f64| {
-            model.table_column_widths.set(&column_key, new_width);
+    // Build the virtual table using columns from model
+    let table = table_styled(
+        &model.virtual_cyclists,
+        &model.virtual_table_columns,
+        &model.virtual_table_column_widths,
+        &model.virtual_table_selection,
+        &model.virtual_table_sort,
+        TableStyle::default()
+            .resize_mode(model.virtual_table_resize_mode)
+            .column_divider(model.virtual_table_column_dividers),
+        // Row builder: (state, idx, is_selected, is_striped, column_widths, direction) -> RowView
+        move |state: &mut AppModel,
+              idx: usize,
+              is_selected: bool,
+              is_striped: bool,
+              widths: &[f64],
+              direction: FlowDirection| {
+            let cyclist = &state.virtual_cyclists[idx];
+
+            let row_bg = if is_selected {
+                theme.active_bg()
+            } else if is_striped {
+                theme.section_bg()
+            } else {
+                Color::TRANSPARENT
+            };
+
+            // Use column widths from the table (supports resize)
+            let w0 = widths.get(0).copied().unwrap_or(200.0);
+            let w1 = widths.get(1).copied().unwrap_or(200.0);
+            let w2 = widths.get(2).copied().unwrap_or(100.0);
+            let w3 = widths.get(3).copied().unwrap_or(60.0);
+
+            let txt = theme.text();
+            let name = cyclist_display_name(cyclist, content_language);
+            let route = cyclist_display_route(cyclist, content_language);
+
+            // Reorder cells to match the header's visual order (RTL renders
+            // data column 0 rightmost) — the same `visual_index` mapping
+            // the header itself uses, so row cells line up under their
+            // matching header cell.
+            let n = 4;
+            let mut ordered_cells: Vec<(usize, Box<AnyWidgetView<AppModel>>)> = vec![
+                (
+                    visual_index(0, n, direction),
+                    table_cell(label(name).text_size(13.0).color(txt).padding(Length::px(4.0)), w0)
+                        .boxed(),
+                ),
+                (
+                    visual_index(1, n, direction),
+                    table_cell(
+                        label(route).text_size(13.0).color(txt).padding(Length::px(4.0)),
+                        w1,
+                    )
+                    .boxed(),
+                ),
+                (
+                    visual_index(2, n, direction),
+                    table_cell(
+                        label(format!("{:.1} km", cyclist.distance_km))
+                            .text_size(13.0)
+                            .color(txt)
+                            .padding(Length::px(4.0)),
+                        w2,
+                    )
+                    .boxed(),
+                ),
+                (
+                    visual_index(3, n, direction),
+                    table_cell(
+                        label(format!("{}/10", cyclist.joy_level))
+                            .text_size(13.0)
+                            .color(txt)
+                            .padding(Length::px(4.0)),
+                        w3,
+                    )
+                    .boxed(),
+                ),
+            ];
+            ordered_cells.sort_by_key(|(visual_idx, _)| *visual_idx);
+            let cells: Vec<Box<AnyWidgetView<AppModel>>> =
+                ordered_cells.into_iter().map(|(_, cell)| cell).collect();
+
+            flex_row(cells)
+                .gap(2.px())
+                .background_color(row_bg)
+                .height(28.px())
+        },
+        // Action handler
+        |state: &mut AppModel, action| {
+            match action {
+                TableAction::Select(id, mods) => {
+                    state.virtual_table_selection.select(id, mods);
+                }
+                TableAction::Activate(id) => {
+                    // Double-click: could open details
+                    state.last_click_mods = format!("Activated cyclist #{}", id);
+                }
+                TableAction::Sort(column, direction) => {
+                    state.virtual_table_sort = SortOrder::single(&*column, direction);
+                }
+                TableAction::ColumnResized(column_key, new_width) => {
+                    state
+                        .virtual_table_column_widths
+                        .set(&column_key, new_width);
+                }
+            }
         },
     );
 
+    // In `Overflow` mode, columns never shrink to fit; wrap in a
+    // horizontal-only portal so resizing a column past the visible edge
+    // stays recoverable via a scrollbar instead of pushing other columns
+    // off permanently. `FixedViewport` mode is the opposite strategy — the
+    // table must actually see the real container width to compress columns
+    // against it, so it must NOT be portal-wrapped (a portal always sizes
+    // the table to its own intrinsic content width, which would make
+    // "available width" trivially always big enough and silently defeat
+    // `FixedViewport`'s compression entirely).
+    let table: Box<AnyWidgetView<AppModel>> = match model.virtual_table_resize_mode {
+        ColumnResizeMode::Overflow => portal(table).constrain_vertical(true).boxed(),
+        ColumnResizeMode::FixedViewport => table.boxed(),
+    };
+
     flex_col((
-        label("Cyclists")
+        // Header
+        label("Table Demo")
             .text_size(16.0)
             .weight(xilem::FontWeight::BOLD)
             .color(theme.text()),
-        label("Click column headers to sort, drag dividers to resize")
-            .text_size(12.0)
-            .color(theme.text_secondary()),
-        label("Outdated. Please use the virtualized table.")
-            .text_size(12.0)
-            .color(theme.text_secondary()),
-        // Table (header + rows)
-        flex_col((
-            // Table header with icon column + resizable columns
-            sized_box(
-                flex_row((
-                    label(icons::PEDAL_BIKE.to_string())
-                        .font(FONT_FAMILY)
-                        .text_size(ICON_SIZE_SM)
-                        .color(BIKE_COLOR)
-                        .width((ICON_COL_WIDTH as i32).px())
-                        .background_color(theme.nav_bg()),
-                    resizable_hdr,
-                ))
-                .gap(0.px())
-                .background_color(theme.nav_bg()),
-            )
-            .width((total_width as i32).px()),
-            // Table rows
-            flex_col(rows)
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .gap(0.px()),
+        label(format!(
+            "{} rows - only visible rows are rendered",
+            row_count
         ))
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .gap(0.px()),
-        // Info and actions
-        flex_col((
-            flex_row((
-                label(format!(
-                    "Sort: {} {}",
-                    model.table_sort.primary_column().unwrap_or("none"),
-                    match model.table_sort.direction() {
-                        Some(SortDirection::Ascending) => "(asc)",
-                        Some(SortDirection::Descending) => "(desc)",
-                        None => "",
-                    }
-                ))
-                .text_size(12.0)
-                .color(theme.text_secondary()),
-                label(format!(
-                    "Selected: {} cyclists",
-                    model.table_selection.count()
-                ))
-                .text_size(12.0)
-                .color(theme.text_secondary()),
+        .text_size(12.0)
+        .color(theme.text_secondary()),
+        // The virtualized table
+        table,
+        // Info
+        flex_col((flex_row((
+            label(format!(
+                "Sort: {} {}",
+                model.virtual_table_sort.primary_column().unwrap_or("none"),
+                match model.virtual_table_sort.direction() {
+                    Some(SortDirection::Ascending) => "(asc)",
+                    Some(SortDirection::Descending) => "(desc)",
+                    None => "",
+                }
             ))
-            .gap(16.px()),
-            label(format!("Last click modifiers: {}", model.last_click_mods))
+            .text_size(12.0)
+            .color(theme.text_secondary()),
+            label(format!("Selected: {} cyclists", selection_count))
                 .text_size(12.0)
                 .color(theme.text_secondary()),
         ))
+        .gap(16.px()),))
         .gap(4.px()),
+        // Actions
         flex_row((
-            button(label("Clear Sort"), |model: &mut AppModel| {
-                model.table_sort.clear();
-            }),
             button(label("Clear Selection"), |model: &mut AppModel| {
-                model.table_selection.clear();
+                model.virtual_table_selection.clear();
             }),
+            button(
+                label(match model.virtual_table_resize_mode {
+                    ColumnResizeMode::Overflow => "Resize: Overflow",
+                    ColumnResizeMode::FixedViewport => "Resize: Fixed Viewport",
+                }),
+                |model: &mut AppModel| {
+                    model.virtual_table_resize_mode = match model.virtual_table_resize_mode {
+                        ColumnResizeMode::Overflow => ColumnResizeMode::FixedViewport,
+                        ColumnResizeMode::FixedViewport => ColumnResizeMode::Overflow,
+                    };
+                },
+            ),
+            button(
+                label(match model.virtual_table_header_language {
+                    Language::Latin => "Header: Latin",
+                    Language::Arabic => "Header: Arabic",
+                }),
+                |model: &mut AppModel| {
+                    model.virtual_table_header_language = match model.virtual_table_header_language
+                    {
+                        Language::Latin => Language::Arabic,
+                        Language::Arabic => Language::Latin,
+                    };
+                },
+            ),
+            checkbox(
+                "Divider",
+                model.virtual_table_column_dividers,
+                |model: &mut AppModel, checked: bool| {
+                    model.virtual_table_column_dividers = checked;
+                },
+            ),
         ))
         .gap(8.px()),
     ))

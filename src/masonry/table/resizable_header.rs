@@ -21,35 +21,79 @@ use xilem::masonry::kurbo::Axis;
 use xilem::masonry::layout::{LayoutSize, LenReq, Length};
 use xilem::masonry::properties::Background;
 
-const DIVIDER_HIT_AREA: f64 = 8.0;
-pub(crate) const MIN_COLUMN_WIDTH: f64 = 40.0;
-pub(crate) const DIVIDER_WIDTH: f64 = 2.0;
+use crate::masonry::flow_direction::FlowDirection;
+use crate::masonry::table::column_layout::{
+    self, ColumnBox, ColumnResizeMode, DIVIDER_HIT_AREA, DIVIDER_WIDTH, MIN_COLUMN_WIDTH,
+};
 
-/// Action emitted when a column is resized.
+/// Action emitted when a column is resized (final, committed value — on
+/// pointer-up only).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColumnResizeAction {
     pub column_key: Arc<str>,
     pub new_width: f64,
 }
 
-#[derive(Debug, Clone)]
-struct ColumnInfo {
-    key: Arc<str>,
-    width: f64,
-    x_offset: f64,
+/// Ephemeral, non-persisted action emitted on every pointer-move while a
+/// column is being dragged, so sibling row content can resize live. Submitted
+/// via `submit_untyped_action` (not `submit_action`) since it isn't
+/// `ResizableHeader::Action` — see `TableView::message` for the receiving end.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColumnResizePreviewAction {
+    pub column_key: Arc<str>,
+    pub new_width: f64,
 }
+
+/// Ephemeral, non-persisted signal for which divider is currently being
+/// *dragged* (not merely hovered — hover only drives the local, header-height
+/// highlight painted directly in `paint()`), purely so a full-height
+/// guideline can be painted outside the header's own bounds during an active
+/// drag (see `TableWidget::post_paint`). Also submitted via
+/// `submit_untyped_action`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColumnDividerHighlightAction(pub Option<usize>);
 
 /// A header row widget with draggable column dividers.
 pub struct ResizableHeader {
     pub(crate) children: Vec<WidgetPod<dyn Widget>>,
     pub(crate) column_keys: Vec<Arc<str>>,
     pub(crate) column_widths: Vec<f64>,
-    pub(crate) columns: Vec<ColumnInfo>,
+    pub(crate) columns: Vec<ColumnBox>,
+    direction: FlowDirection,
+    resize_mode: ColumnResizeMode,
     size: Size,
     dragging_index: Option<usize>,
+    /// Index of the column most recently dragged (or currently being
+    /// dragged). Unlike `dragging_index`, this is never cleared on
+    /// release — `ColumnResizeMode::FixedViewport`'s "protect columns
+    /// before the dragged one" split needs a stable anchor even after the
+    /// drag ends, or releasing the pointer would recompute a different
+    /// (unanchored) compression than what was just rendered live.
+    last_resized_index: Option<usize>,
+    /// The RTL mirror anchor (`place_columns`'s `anchor_width`), frozen for
+    /// the duration of an active drag in RTL + `Overflow` mode.
+    ///
+    /// In `Overflow` mode this widget is typically hosted in a
+    /// content-sized `portal(...)` (see `table_styled`'s doc comment), so
+    /// `self.size.width` — normally the natural anchor — is itself derived
+    /// from the sum of the very column widths being placed. For RTL's
+    /// mirror formula (`anchor_width - local_x - width`), that makes the
+    /// anchor grow in lockstep with whichever column is being dragged,
+    /// exactly cancelling that column's own width out of its own
+    /// `x_offset` — the divider you're dragging stops tracking the
+    /// cursor entirely (verified by hand; this is *not* the same bug as
+    /// the earlier "leftover space" cancellation, which happened even with
+    /// a fixed anchor — this one is specific to a self-referential one).
+    /// Freezing the anchor at whatever `self.size.width` was immediately
+    /// before the drag started restores a stable reference for its
+    /// duration, exactly like `FixedViewport` mode already has for free
+    /// (its anchor is a real, externally-imposed container width, never
+    /// self-referential). Cleared on release, so the next resting layout
+    /// re-syncs to the table's real current width.
+    frozen_anchor_width: Option<f64>,
     drag_start_x: f64,
     drag_start_width: f64,
-    drag_start_adjacent_width: f64,
+    last_preview_width: Option<f64>,
     divider_color: Color,
     divider_hover_color: Color,
     hovered_divider: Option<usize>,
@@ -67,11 +111,15 @@ impl ResizableHeader {
             column_keys,
             column_widths,
             columns: Vec::new(),
+            direction: FlowDirection::Ltr,
+            resize_mode: ColumnResizeMode::default(),
             size: Size::ZERO,
             dragging_index: None,
+            last_resized_index: None,
+            frozen_anchor_width: None,
             drag_start_x: 0.0,
             drag_start_width: 0.0,
-            drag_start_adjacent_width: 0.0,
+            last_preview_width: None,
             divider_color: Color::from_rgb8(120, 118, 115),
             divider_hover_color: Color::from_rgb8(100, 150, 255),
             hovered_divider: None,
@@ -83,10 +131,20 @@ impl ResizableHeader {
         self
     }
 
+    pub fn with_direction(mut self, direction: FlowDirection) -> Self {
+        self.direction = direction;
+        self
+    }
+
+    pub fn with_resize_mode(mut self, mode: ColumnResizeMode) -> Self {
+        self.resize_mode = mode;
+        self
+    }
+
     fn hit_test_divider(&self, x: f64) -> Option<usize> {
         for (i, col) in self.columns.iter().enumerate() {
             if i < self.columns.len() - 1 {
-                let divider_start = col.x_offset + col.width;
+                let divider_start = column_layout::divider_start(col, self.direction);
                 let divider_center = divider_start + DIVIDER_WIDTH / 2.0;
                 if (x - divider_center).abs() <= DIVIDER_HIT_AREA {
                     return Some(i);
@@ -97,21 +155,15 @@ impl ResizableHeader {
     }
 
     pub(crate) fn update_column_layout(&mut self) {
-        self.columns.clear();
-        let mut x = 0.0;
-        for (i, key) in self.column_keys.iter().enumerate() {
-            let width = self.column_widths.get(i).copied().unwrap_or(100.0);
-            self.columns.push(ColumnInfo {
-                key: key.clone(),
-                width,
-                x_offset: x,
-            });
-            if i < self.column_keys.len() - 1 {
-                x += width + DIVIDER_WIDTH;
-            } else {
-                x += width;
-            }
-        }
+        let n = self.column_keys.len();
+        let divider_space = n.saturating_sub(1) as f64 * DIVIDER_WIDTH;
+        let configured_total: f64 = self.column_widths.iter().sum::<f64>() + divider_space;
+        self.columns = column_layout::place_columns(
+            &self.column_keys,
+            &self.column_widths,
+            configured_total,
+            self.direction,
+        );
     }
 
     pub fn set_column_widths(this: &mut WidgetMut<'_, Self>, widths: Vec<f64>) {
@@ -147,13 +199,20 @@ impl Widget for ResizableHeader {
                     ctx.set_handled();
                     ctx.capture_pointer();
                     self.dragging_index = Some(divider_idx);
+                    self.last_resized_index = Some(divider_idx);
+                    self.frozen_anchor_width = Some(self.size.width);
                     self.drag_start_x = pos.x;
-                    self.drag_start_width = self.columns[divider_idx].width;
-                    self.drag_start_adjacent_width = self
-                        .columns
-                        .get(divider_idx + 1)
-                        .map(|c| c.width)
-                        .unwrap_or(0.0);
+                    // Read from `column_widths` (the desired/configured
+                    // value), not `self.columns` (the *rendered* value) —
+                    // in `FixedViewport` mode a column can be compressed
+                    // below its desired width by an unrelated drag on a
+                    // column before it; a fresh drag should continue from
+                    // the user's real preference, not a rendering artifact.
+                    self.drag_start_width = self.column_widths[divider_idx];
+                    self.last_preview_width = None;
+                    ctx.submit_untyped_action(Box::new(ColumnDividerHighlightAction(Some(
+                        divider_idx,
+                    ))));
                     ctx.request_render();
                 }
             }
@@ -162,41 +221,52 @@ impl Widget for ResizableHeader {
 
                 if ctx.is_active() {
                     if let Some(divider_idx) = self.dragging_index {
-                        let delta = pos.x - self.drag_start_x;
+                        let raw_delta = pos.x - self.drag_start_x;
+                        let signed_delta = column_layout::flip_delta(raw_delta, self.direction);
+                        let mut new_width =
+                            (self.drag_start_width + signed_delta).max(MIN_COLUMN_WIDTH);
+                        if self.resize_mode == ColumnResizeMode::FixedViewport {
+                            // Clamp the drag itself, not just the rendered
+                            // output — otherwise the pointer keeps moving
+                            // indefinitely past the point where columns
+                            // after this one are already at their floor,
+                            // and the header visibly desyncs from the
+                            // (correctly-capped) row content.
+                            let max_width = column_layout::max_dragged_width(
+                                &self.column_widths,
+                                divider_idx,
+                                self.size.width,
+                            );
+                            new_width = new_width.min(max_width);
+                        }
 
-                        let new_left_width = (self.drag_start_width + delta).max(MIN_COLUMN_WIDTH);
-                        let new_right_width =
-                            (self.drag_start_adjacent_width - delta).max(MIN_COLUMN_WIDTH);
-
-                        let actual_left_delta = new_left_width - self.drag_start_width;
-                        let actual_right_delta = self.drag_start_adjacent_width - new_right_width;
-
-                        let clamped_delta = if actual_left_delta.abs() < actual_right_delta.abs() {
-                            actual_left_delta
-                        } else {
-                            actual_right_delta
-                        };
-
-                        let final_left_width = self.drag_start_width + clamped_delta;
-                        let final_right_width = self.drag_start_adjacent_width - clamped_delta;
-
+                        // Only the dragged column changes width; everything
+                        // after it shifts as a block for free, since layout()
+                        // recomputes every x_offset from column_widths.
                         if let Some(col) = self.columns.get_mut(divider_idx) {
-                            col.width = final_left_width;
+                            col.width = new_width;
                         }
                         if let Some(w) = self.column_widths.get_mut(divider_idx) {
-                            *w = final_left_width;
+                            *w = new_width;
                         }
 
-                        if let Some(col) = self.columns.get_mut(divider_idx + 1) {
-                            col.width = final_right_width;
-                        }
-                        if let Some(w) = self.column_widths.get_mut(divider_idx + 1) {
-                            *w = final_right_width;
+                        if self.last_preview_width != Some(new_width) {
+                            self.last_preview_width = Some(new_width);
+                            if let Some(key) = self.column_keys.get(divider_idx) {
+                                ctx.submit_untyped_action(Box::new(ColumnResizePreviewAction {
+                                    column_key: key.clone(),
+                                    new_width,
+                                }));
+                            }
                         }
 
                         ctx.request_layout();
                     }
                 } else {
+                    // Hover-only: update the local (header-height) highlight
+                    // but don't notify TableWidget — the full-height
+                    // highlight is drag-only feedback, not a hover one (see
+                    // `ColumnDividerHighlightAction`'s doc comment).
                     let new_hovered = self.hit_test_divider(pos.x);
                     if new_hovered != self.hovered_divider {
                         self.hovered_divider = new_hovered;
@@ -212,13 +282,11 @@ impl Widget for ResizableHeader {
                             new_width: col.width,
                         });
                     }
-                    if let Some(col) = self.columns.get(divider_idx + 1) {
-                        ctx.submit_action::<Self::Action>(ColumnResizeAction {
-                            column_key: col.key.clone(),
-                            new_width: col.width,
-                        });
-                    }
+                    ctx.submit_untyped_action(Box::new(ColumnDividerHighlightAction(None)));
                 }
+                // Release the frozen anchor so the next resting layout
+                // re-syncs to the table's real current width.
+                self.frozen_anchor_width = None;
                 ctx.request_render();
             }
             PointerEvent::Leave(..) => {
@@ -249,7 +317,20 @@ impl Widget for ResizableHeader {
 
     fn update(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, event: &Update) {
         match event {
-            Update::HoveredChanged(_) | Update::ActiveChanged(_) => {
+            Update::HoveredChanged(_) => {
+                // Authoritative backstop for clearing the hover highlight:
+                // `PointerEvent::Leave` should already handle this, but
+                // masonry's own hover tracking is the ground truth for
+                // "is the pointer still anywhere over this widget" — if it
+                // says no, the local marker must not stay lit (e.g. when
+                // the pointer leaves the header vertically, into the row
+                // area below, rather than sideways past its edge).
+                if !ctx.is_hovered() && self.hovered_divider.is_some() {
+                    self.hovered_divider = None;
+                }
+                ctx.request_render();
+            }
+            Update::ActiveChanged(_) => {
                 ctx.request_render();
             }
             _ => {}
@@ -303,38 +384,37 @@ impl Widget for ResizableHeader {
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         self.size = size;
 
-        let divider_count = self.column_widths.len().saturating_sub(1);
-        let divider_space = divider_count as f64 * DIVIDER_WIDTH;
-        let configured_total: f64 = self.column_widths.iter().sum();
-        let configured_with_dividers = configured_total + divider_space;
-        let available_width = size.width;
-        let use_configured = available_width + 0.5 >= configured_with_dividers;
-        let scale = if !use_configured && configured_total > 0.0 {
-            ((available_width - divider_space) / configured_total).min(1.0)
-        } else {
-            1.0
-        };
+        // In `Overflow` mode (the default), columns render at their
+        // configured width, clamped only to `MIN_COLUMN_WIDTH` — never
+        // proportionally shrunk to fit the box; if the configured total
+        // exceeds `size.width` the header simply overflows. In
+        // `FixedViewport` mode, columns after the dragged one compress
+        // toward their floor instead. `last_resized_index` (not
+        // `dragging_index`) is the protection anchor — it stays set after
+        // release so this computation doesn't change the instant the
+        // pointer is lifted.
+        let scaled_widths = column_layout::compute_rendered_widths(
+            &self.column_widths,
+            self.last_resized_index,
+            size.width,
+            self.resize_mode,
+        );
 
-        self.columns.clear();
-        let mut x = 0.0;
-        for (i, key) in self.column_keys.iter().enumerate() {
-            let base_width = self.column_widths.get(i).copied().unwrap_or(100.0);
-            let column_width = if use_configured {
-                base_width.max(MIN_COLUMN_WIDTH)
-            } else {
-                (base_width * scale).max(MIN_COLUMN_WIDTH)
-            };
-            self.columns.push(ColumnInfo {
-                key: key.clone(),
-                width: column_width,
-                x_offset: x,
-            });
-            if i < self.column_keys.len() - 1 {
-                x += column_width + DIVIDER_WIDTH;
-            } else {
-                x += column_width;
-            }
-        }
+        // RTL mirrors around `anchor_width`. While a drag is active this is
+        // `frozen_anchor_width`, not the live `size.width` — see its doc
+        // comment for why a self-referential anchor (as `size.width` is in
+        // `Overflow` mode, typically hosted in a content-sized `portal`)
+        // makes the dragged column's own width cancel out of its own
+        // position, so its divider stops tracking the cursor. Outside an
+        // active drag, `frozen_anchor_width` is `None` and this is just
+        // `size.width`, exactly as before.
+        let anchor_width = self.frozen_anchor_width.unwrap_or(size.width);
+        self.columns = column_layout::place_columns(
+            &self.column_keys,
+            &scaled_widths,
+            anchor_width,
+            self.direction,
+        );
 
         for (i, child) in self.children.iter_mut().enumerate() {
             if let Some(col) = self.columns.get(i) {
@@ -365,10 +445,11 @@ impl Widget for ResizableHeader {
                 let is_hovered = self.hovered_divider == Some(i) || self.dragging_index == Some(i);
 
                 if is_hovered {
+                    let divider_start = column_layout::divider_start(col, self.direction);
                     let divider_rect = Rect::new(
-                        col.x_offset + col.width,
+                        divider_start,
                         0.0,
-                        col.x_offset + col.width + DIVIDER_WIDTH,
+                        divider_start + DIVIDER_WIDTH,
                         self.size.height,
                     );
                     painter.fill(divider_rect, self.divider_hover_color).draw();
@@ -417,5 +498,59 @@ impl Widget for ResizableHeader {
 
     fn make_trace_span(&self, id: WidgetId) -> Span {
         trace_span!("ResizableHeader", id = id.trace())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn keys(n: usize) -> Vec<Arc<str>> {
+        (0..n).map(|i| Arc::from(format!("col{i}"))).collect()
+    }
+
+    // `place_columns`/`divider_start`/`compute_rendered_widths` are pure
+    // functions now covered directly in `column_layout`'s own tests; only
+    // `ResizableHeader`-specific behavior is tested here.
+
+    #[test]
+    fn drag_resizes_only_the_dragged_column() {
+        // Regression test for the fixed resize semantics: dragging divider 0
+        // must only change column_widths[0], never column_widths[1].
+        let mut header = ResizableHeader::new(Vec::new(), keys(3), vec![100.0, 150.0, 80.0]);
+        header.update_column_layout();
+
+        let divider_idx = 0;
+        header.drag_start_width = header.columns[divider_idx].width;
+        let signed_delta = 20.0; // simulates dragging right by 20px in LTR
+        let new_width = (header.drag_start_width + signed_delta).max(MIN_COLUMN_WIDTH);
+
+        header.columns[divider_idx].width = new_width;
+        header.column_widths[divider_idx] = new_width;
+
+        assert_eq!(header.column_widths[0], 120.0);
+        assert_eq!(header.column_widths[1], 150.0); // untouched
+        assert_eq!(header.column_widths[2], 80.0); // untouched
+    }
+
+    #[test]
+    fn hit_test_divider_rtl_resolves_to_correct_data_index() {
+        // 4 columns (Name, Route, Distance, Joy) at [200,200,100,60] —
+        // final user-confirmed spec: divider `i` always resizes data
+        // column `i`, unconditionally, same rule as LTR — no
+        // direction-specific remapping. Screen order (left to right) is
+        // Joy, Distance, Route, Name.
+        let mut header = ResizableHeader::new(Vec::new(), keys(4), vec![200.0, 200.0, 100.0, 60.0])
+            .with_direction(FlowDirection::Rtl);
+        header.update_column_layout();
+
+        // Divider between Name and Route (rightmost divider on screen,
+        // divider index 0): resizes Name (data index 0).
+        assert_eq!(header.hit_test_divider(365.0), Some(0));
+        // Divider between Route and Distance (divider index 1): resizes
+        // Route (data index 1).
+        assert_eq!(header.hit_test_divider(163.0), Some(1));
+        // No divider past Name's own right edge (nothing further right).
+        assert_eq!(header.hit_test_divider(999.0), None);
     }
 }

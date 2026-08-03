@@ -7,12 +7,12 @@
 
 //! Xilem view for the resizable header widget.
 //!
-//! TODO: Column resizing here assumes an LTR (left-to-right) layout, where
-//! dragging a divider grows the column on the left and pushes the columns
-//! on the right away. Right-to-left languages such as Arabic likely expect
-//! the mirrored behavior. We need to ask a native speaker (or someone with
-//! real RTL UX experience) how this should behave before implementing it,
-//! since it's not necessarily a simple mirror of the x-axis.
+//! `ResizableHeader` (the underlying masonry widget) supports RTL layout via
+//! `FlowDirection`, auto-detected from column titles where it's used by the
+//! main `table()` view (see `xilem::table::table_view::build_header`). This
+//! standalone convenience wrapper always uses the widget's default
+//! (`FlowDirection::Ltr`) since it has no column titles of its own to detect
+//! from — pass a direction through here too if that's ever needed.
 
 use std::sync::Arc;
 
@@ -20,7 +20,9 @@ use xilem::core::MessageResult;
 use xilem::core::{MessageCtx, Mut, View, ViewId, ViewMarker, ViewPathTracker};
 use xilem::{Pod, ViewCtx, WidgetView};
 
-use crate::masonry::table::resizable_header::{ColumnResizeAction, ResizableHeader};
+use crate::masonry::table::resizable_header::{
+    ColumnDividerHighlightAction, ColumnResizeAction, ColumnResizePreviewAction, ResizableHeader,
+};
 
 /// Xilem view for a resizable header row.
 pub struct ResizableHeaderView<F, State, Action, V> {
@@ -161,14 +163,29 @@ where
                 }
                 MessageResult::Stale
             }
-            None => match message.take_message::<ColumnResizeAction>() {
-                Some(action) => MessageResult::Action((self.callback)(
-                    app_state,
-                    action.column_key,
-                    action.new_width,
-                )),
-                None => MessageResult::Stale,
-            },
+            None => {
+                if let Some(action) = message.take_message::<ColumnResizeAction>() {
+                    return MessageResult::Action((self.callback)(
+                        app_state,
+                        action.column_key,
+                        action.new_width,
+                    ));
+                }
+                // Ephemeral live-resize/highlight signals: this standalone
+                // wrapper has no sibling row content to update and doesn't
+                // persist column widths itself, so there's nothing to do
+                // with them — just don't log them as stale/unexpected.
+                if message.take_message::<ColumnResizePreviewAction>().is_some() {
+                    return MessageResult::Nop;
+                }
+                if message
+                    .take_message::<ColumnDividerHighlightAction>()
+                    .is_some()
+                {
+                    return MessageResult::Nop;
+                }
+                MessageResult::Stale
+            }
         }
     }
 }
