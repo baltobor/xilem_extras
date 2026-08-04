@@ -25,14 +25,17 @@ pub enum ColumnResizeMode {
     /// Columns always render at their configured width; if the total
     /// exceeds the viewport, the table simply overflows (typically paired
     /// with wrapping the table in a horizontal-scrolling `portal(...)`).
-    /// Matches Apple Numbers' actual resize behavior.
+    /// The portal then grows and the currently dragged columns is moved out of
+    /// the screen. The scrollbar grows.
     #[default]
     Overflow,
     /// The table never exceeds its container: resizing a column compresses
     /// the columns *after* it (never before) down to `MIN_COLUMN_WIDTH`
     /// each, and further growth simply stops once they're all at that
     /// floor. Matches AG Grid's per-column `suppressSizeToFit`-style "fit
-    /// to viewport" behavior.
+    /// to viewport" behavior (javascript).
+    /// This style is useful, if you display i.e. financial data in a view port
+    /// where each columns has to be always visible on the screen.
     FixedViewport,
 }
 
@@ -47,18 +50,19 @@ pub struct ColumnBox {
     pub x_offset: f64,
 }
 
-/// The single point-reflection primitive underlying every RTL mirror in
-/// this module — "the same basis with the x-axis pointing the other way."
-/// LTR: identity. RTL: reflects a point around `anchor_width`.
+/// Converts a local x-coordinate to a screen x-coordinate.
 ///
-/// Nothing else in this module independently re-derives RTL mirroring:
-/// `place_columns` applies this to a column's *local* (direction-agnostic,
-/// always-left-to-right-accumulated) edge to get its screen edge;
-/// `divider_start` and `flip_delta` are both provably consequences of the
-/// same reflection (see their doc comments) rather than separately
-/// maintained formulas. That's what keeps the header, the row-width
-/// computation, and hit-testing from being able to silently drift apart —
-/// they all bottom out at this one function.
+/// Columns are always laid out left-to-right internally, regardless of
+/// direction — `local_x` is a position in that internal space. In LTR,
+/// screen space matches local space, so this is the identity. In RTL,
+/// the layout is mirrored around `anchor_width`, so this flips `local_x`
+/// to the other side: `anchor_width - local_x`.
+///
+/// This is the only place that mirroring logic lives. `place_columns`,
+/// `divider_start`, and `flip_delta` all build on this function instead
+/// of re-deriving the flip themselves — that's what keeps the header,
+/// row layout, and hit-testing from ever drifting out of sync with each
+/// other. (Ltr = left to right, Rtl = right to left)
 fn to_screen(local_x: f64, anchor_width: f64, direction: FlowDirection) -> f64 {
     match direction {
         FlowDirection::Ltr => local_x,
@@ -66,15 +70,16 @@ fn to_screen(local_x: f64, anchor_width: f64, direction: FlowDirection) -> f64 {
     }
 }
 
-/// How a *delta* (the distance the pointer has moved during a drag) maps
-/// through the same reflection as `to_screen`. `to_screen` is affine with
-/// slope `+1` (LTR) or `-1` (RTL); a delta is a difference between two
-/// points, so it inherits exactly that slope — unchanged in LTR, negated
-/// in RTL. This is not an independent sign choice: it is *required* to be
-/// consistent with `to_screen`, or the divider would stop tracking the
-/// cursor 1:1 (verified by hand and by `column_layout`'s own tests —
-/// see the plan file for the full derivation of why RTL needs exactly this
-/// sign, no more, no less).
+/// Converts a pointer-movement delta from local space to screen space.
+///
+/// In LTR the pointer and the local x-axis move the same way, so the
+/// delta passes through unchanged. In RTL, `to_screen` mirrors positions
+/// (`anchor_width - local_x`), so moving right in local space moves left
+/// on screen — the delta must flip sign to match. This isn't a separate
+/// design choice; it's the same mirroring `to_screen` already applies,
+/// just for a distance instead of a point. Getting the sign wrong here
+/// would make the divider stop tracking the cursor 1:1 while dragging.
+/// (Ltr = left to right, Rtl = right to left)
 pub(crate) fn flip_delta(local_delta: f64, direction: FlowDirection) -> f64 {
     match direction {
         FlowDirection::Ltr => local_delta,
@@ -85,24 +90,37 @@ pub(crate) fn flip_delta(local_delta: f64, direction: FlowDirection) -> f64 {
 /// Computes each column's `x_offset` (and passes through `width`) given
 /// per-column widths and the anchor width of the box they're placed in.
 ///
-/// Columns accumulate in **local** coordinates identically for both
-/// directions — this loop never branches on content, only on which local
-/// edge becomes the screen-space left edge. A column occupies the local
-/// interval `[local_x, local_x + width)`; reflecting an interval through
-/// `to_screen` swaps its endpoints (the local *right* edge becomes the
-/// screen *left* edge) in RTL, while LTR's `to_screen` is the identity, so
-/// the local left edge already *is* the screen left edge. Concretely:
-/// `x_offset(RTL) = to_screen(local_x + width) = anchor_width - local_x -
-/// width` — `width` appears *inside* the reflection because it's part of
-/// which endpoint gets reflected, not a separate adjustment. This is what
-/// lets "divider `i` always resizes data column `i`" (the same rule as
-/// LTR, unconditionally, no remapping) coexist with correct 1:1 cursor
-/// tracking (`flip_delta` above). An earlier version of this function
-/// instead reordered the *iteration* to place columns by visual position —
-/// that made a column's leading edge independent of its own width, which
-/// structurally prevents the lower-data-index column of any divider from
-/// ever being draggable with correct cursor tracking. Reverted; see the
-/// plan file for the full derivation.
+/// Columns always accumulate left-to-right in **local** coordinates, the
+/// same way for both directions — this loop never branches on content,
+/// only on which local edge becomes the screen's left edge. Each column
+/// occupies the local interval:
+///
+/// ```text
+/// [local_left, local_right)  where local_right = local_left + width
+/// ```
+///
+/// LTR keeps the local left edge as the screen left edge (`to_screen` is
+/// the identity there). RTL mirrors the interval, so its *right* edge
+/// becomes the screen's left edge instead:
+///
+/// ```text
+/// x_offset(LTR) = to_screen(local_left)
+/// x_offset(RTL) = to_screen(local_right)
+///               = anchor_width - local_left - width
+/// ```
+///
+/// Note that `width` ends up inside the RTL reflection, not added on
+/// afterward — it's part of *which* edge gets reflected, not a separate
+/// correction. That's what lets "divider `i` always resizes data column
+/// `i`" hold unconditionally in both directions, while `flip_delta` (above)
+/// keeps the cursor tracking that divider 1:1 while dragging.
+///
+/// An earlier version reordered the *iteration* itself to place columns
+/// by visual position instead of mirroring the interval. That broke the
+/// invariant above — a column's leading edge became independent of its
+/// own width, which made the lower-data-index column of any divider
+/// undraggable with correct cursor tracking. Reverted; see the plan file
+/// for the full derivation.
 pub(crate) fn place_columns(
     keys: &[Arc<str>],
     widths: &[f64],
@@ -198,18 +216,32 @@ pub(crate) fn max_dragged_width(
     (available_width - divider_space - before_total - after_min_total).max(MIN_COLUMN_WIDTH)
 }
 
-/// Distributes `budget` proportionally across `desired`, flooring each
-/// entry at `floor`, via water-filling: a naive single-pass `w * scale`
-/// can push a narrower entry below `floor` while a wider one still has
-/// slack, which silently breaks the total-equals-budget invariant (the
-/// narrow one gets clamped up to `floor`, past what the scale allowed, and
-/// nothing gives that space back). Water-filling pins any entry that would
-/// go below `floor` right at `floor`, removes it from the pool, and
-/// re-derives the scale for the remaining entries against the remaining
-/// budget — repeating until stable. If `budget` can't even cover
-/// `desired.len() * floor`, every entry is simply floored (the caller is
-/// expected to have already capped the driving/dragged column so this
-/// doesn't happen, but it degrades safely either way).
+/// Distributes `budget` proportionally across `desired`, with no entry
+/// ever going below `floor`. The result always sums to `budget` (unless
+/// `budget` is too small to fit even the floors — see below).
+///
+/// The obvious approach — scale every entry by the same factor,
+/// `w * (budget / desired.sum())` — doesn't work on its own: a narrow
+/// entry can get scaled below `floor`, and clamping it back up afterward
+/// throws off the total, since nothing shrinks to compensate.
+///
+/// This uses "water-filling" instead, which fixes that by iterating:
+///
+/// 1. Scale all remaining entries proportionally against the remaining
+///    budget.
+/// 2. Any entry that would land below `floor` is pinned at `floor`
+///    instead, and removed from the pool.
+/// 3. Its share of the budget is removed too, and the rest is
+///    re-scaled — go back to step 1.
+///
+/// This repeats until every remaining entry's scaled value is already
+/// `>= floor`, so nothing more needs pinning.
+///
+/// If `budget` can't even cover `desired.len() * floor`, every entry is
+/// just floored — the total then falls short of `budget`, which is
+/// expected: callers are supposed to have already capped the
+/// driving/dragged column so this doesn't happen, but this keeps the
+/// function itself safe if that assumption is ever violated.
 fn distribute_with_floor(desired: &[f64], budget: f64, floor: f64) -> Vec<f64> {
     let n = desired.len();
     let mut result = vec![0.0; n];
@@ -246,24 +278,29 @@ fn distribute_with_floor(desired: &[f64], budget: f64, floor: f64) -> Vec<f64> {
 }
 
 /// Resolves each column's *rendered* width from its *configured* (desired)
-/// width, the column currently being interactively dragged (if any), the
-/// available viewport width, and the resize mode.
+/// width, the available viewport width, and the resize mode.
 ///
-/// Pure function of current state, recomputed fresh each call — not
-/// incremental deltas — so e.g. shrinking a dragged column back always
-/// restores previously-compressed columns immediately, with no "ratchet"
-/// state to get out of sync.
+/// This is a pure function of the current state — it's recomputed fresh
+/// on every call, never applied as an incremental delta. That means
+/// shrinking a dragged column back always restores previously-compressed
+/// columns immediately; there's no "ratchet" state that could get stuck
+/// out of sync.
 ///
-/// `dragged_idx` is the index of the column currently being interactively
-/// resized, if any — `configured[dragged_idx]` is already its live
-/// (uncapped) drag target, kept up to date by the caller on every
-/// pointer-move; everything before it is protected (untouched), everything
-/// after it compresses to make room. When `None` (no active drag — initial
-/// layout, or right after a commit, where only the just-dragged column's
-/// desired width was persisted and the rest may momentarily not all fit
-/// together), no column is arbitrarily protected — all columns compress
-/// together proportionally instead, since there's no drag in progress to
-/// justify treating any one of them as a fixed pivot.
+/// `dragged_idx`, if set, is the column currently being interactively
+/// resized. `configured[dragged_idx]` is already its live (uncapped) drag
+/// target, kept up to date by the caller on every pointer-move. This
+/// splits the columns into two groups:
+///
+/// - Columns *before* it are protected — rendered at their configured
+///   width, untouched.
+/// - Columns *after* it compress to make room, down to `MIN_COLUMN_WIDTH`
+///   each.
+///
+/// When `dragged_idx` is `None` — no drag in progress, e.g. initial
+/// layout, or right after a commit where only the just-dragged column's
+/// width was persisted and the rest may momentarily not all fit — there's
+/// no column to single out as a fixed pivot. All columns compress
+/// together proportionally instead.
 pub(crate) fn compute_rendered_widths(
     configured: &[f64],
     dragged_idx: Option<usize>,

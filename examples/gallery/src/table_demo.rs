@@ -27,7 +27,7 @@ use crate::mock_data::{Language, cyclist_display_name, cyclist_display_route};
 /// English/Arabic title for each column key, used by the header-language
 /// toggle. Keys stay stable (data lookups depend on them); only the title
 /// swaps, exercising `detect_direction`'s live auto-detection from real
-/// header content.
+/// header content. (Left to Right or Right to left)
 fn column_title(key: &str, lang: Language) -> &'static str {
     match (key, lang) {
         ("name", Language::Latin) => "Name",
