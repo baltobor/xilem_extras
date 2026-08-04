@@ -5,14 +5,22 @@
 //! Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 //! (compatible with the Xilem licence).
 
-use xilem::AnyWidgetView;
 use xilem::masonry::peniko::Color;
-use xilem_material_icons::{ICON_SIZE_SM, icon, icons};
+use xilem::{AnyWidgetView, WidgetView};
+
+use crate::masonry::components::chevron;
+use crate::xilem_masonry::components::svg_icon;
+
+/// Default icon size, matching `xilem_material_icons::ICON_SIZE_SM` (the
+/// size this component used before switching to a vector chevron).
+const DEFAULT_SIZE: f32 = 16.0;
 
 /// A disclosure indicator (chevron) for expand/collapse.
 ///
-/// Renders as a right-pointing chevron when collapsed,
-/// and a downward-pointing chevron when expanded.
+/// Renders as a right-pointing chevron when collapsed, and the same
+/// chevron rotated 90° (pointing down) when expanded — a single vector
+/// path drawn directly, not a glyph from an icon font. That avoids the
+/// expand/collapse arrow depending on a font's outlines being loaded.
 #[derive(Debug, Clone)]
 pub struct Disclosure {
     is_expanded: bool,
@@ -25,7 +33,7 @@ impl Disclosure {
     pub fn new(is_expanded: bool) -> Self {
         Self {
             is_expanded,
-            size: ICON_SIZE_SM,
+            size: DEFAULT_SIZE,
             color: None,
         }
     }
@@ -47,13 +55,10 @@ impl Disclosure {
         self.is_expanded
     }
 
-    /// Returns the codepoint for the current state.
-    pub fn codepoint(&self) -> &'static str {
-        if self.is_expanded {
-            icons::EXPAND_MORE
-        } else {
-            icons::CHEVRON_RIGHT
-        }
+    /// Returns the chevron's rotation for the current state: 0° pointing
+    /// right (collapsed), 90° pointing down (expanded).
+    pub fn rotation_degrees(&self) -> f64 {
+        if self.is_expanded { 90.0 } else { 0.0 }
     }
 
     /// Returns the configured size.
@@ -68,11 +73,13 @@ impl Disclosure {
 
     /// Builds the disclosure as a xilem view.
     pub fn build<State: 'static, Action: 'static>(self) -> Box<AnyWidgetView<State, Action>> {
-        let mut ic = icon(self.codepoint()).size(self.size);
+        let mut ic = chevron()
+            .size(self.size as f64)
+            .rotation_degrees(self.rotation_degrees());
         if let Some(color) = self.color {
             ic = ic.color(color);
         }
-        ic.build()
+        svg_icon(ic).boxed()
     }
 }
 
@@ -105,7 +112,7 @@ mod tests {
     #[test]
     fn disclosure_default_size() {
         let d = disclosure(false);
-        assert_eq!(d.size, ICON_SIZE_SM);
+        assert_eq!(d.size, DEFAULT_SIZE);
     }
 
     #[test]
@@ -119,6 +126,12 @@ mod tests {
         let red = Color::from_rgb8(255, 0, 0);
         let d = disclosure(false).color(red);
         assert!(d.color.is_some());
+    }
+
+    #[test]
+    fn disclosure_rotation_matches_expanded_state() {
+        assert_eq!(disclosure(false).rotation_degrees(), 0.0);
+        assert_eq!(disclosure(true).rotation_degrees(), 90.0);
     }
 
     #[test]

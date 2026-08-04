@@ -45,7 +45,8 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for SvgIconVi
         let dimensions_changed = self.icon.size != prev.icon.size
             || self.icon.scale_mode != prev.icon.scale_mode
             || self.icon.color != prev.icon.color
-            || self.icon.stroke_width != prev.icon.stroke_width;
+            || self.icon.stroke_width != prev.icon.stroke_width
+            || self.icon.rotation_degrees != prev.icon.rotation_degrees;
 
         if dimensions_changed {
             element.widget.set_icon(self.icon.clone());

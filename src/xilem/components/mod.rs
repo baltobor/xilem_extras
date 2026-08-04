@@ -16,7 +16,7 @@ pub use styled_text_input::*;
 pub use crate::masonry::components::{
     ClickInterceptorWidget, ClippedWidget, GroupBox, LabelAlign, ParamSelectorWidget, RadioToggled,
     RadioWidget, RowButton, RowButtonPress, ScaleMode, SvgIcon, SvgIconWidget, SwitchToggled,
-    SwitchWidget, inverse_contrast_color,
+    SwitchWidget, chevron, inverse_contrast_color,
 };
 
 pub use crate::xilem_masonry::components::{

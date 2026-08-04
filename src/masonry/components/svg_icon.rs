@@ -39,6 +39,7 @@ pub struct SvgIcon {
     pub color: Color,
     pub stroke_width: Option<f64>,
     pub scale_mode: ScaleMode,
+    pub rotation_degrees: f64,
 }
 
 impl SvgIcon {
@@ -51,6 +52,7 @@ impl SvgIcon {
             color: Color::WHITE,
             stroke_width: None,
             scale_mode: ScaleMode::default(),
+            rotation_degrees: 0.0,
         }
     }
 
@@ -76,6 +78,16 @@ impl SvgIcon {
 
     pub fn scale_mode(mut self, mode: ScaleMode) -> Self {
         self.scale_mode = mode;
+        self
+    }
+
+    /// Rotates the icon clockwise around its own center, in degrees.
+    ///
+    /// Lets one path serve multiple orientations — e.g. a right-pointing
+    /// chevron rotated 90° becomes a downward-pointing one — instead of
+    /// needing a separate path (or a separate font glyph) per direction.
+    pub fn rotation_degrees(mut self, degrees: f64) -> Self {
+        self.rotation_degrees = degrees;
         self
     }
 
@@ -106,7 +118,9 @@ impl SvgIcon {
     }
 
     pub fn scaled_path(&self) -> BezPath {
-        let transform = Affine::scale(self.scale());
+        let center = (self.viewbox_width / 2.0, self.viewbox_height / 2.0);
+        let rotate = Affine::rotate_about(self.rotation_degrees.to_radians(), center);
+        let transform = Affine::scale(self.scale()) * rotate;
         let mut scaled = BezPath::new();
         for el in self.path.elements() {
             scaled.push(transform * *el);

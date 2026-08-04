@@ -1,5 +1,6 @@
 //! Masonry widget implementations for components.
 
+pub mod chevron;
 pub mod click_interceptor;
 pub mod clipped;
 pub mod group_box;
@@ -9,6 +10,7 @@ pub mod row_button;
 pub mod svg_icon;
 pub mod switch_widget;
 
+pub use chevron::chevron;
 pub use click_interceptor::ClickInterceptorWidget;
 pub use clipped::ClippedWidget;
 pub use group_box::{GroupBox, inverse_contrast_color};

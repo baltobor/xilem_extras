@@ -14,7 +14,7 @@ use xilem::style::Style;
 use xilem::view::{CrossAxisAlignment, flex_col, flex_row, label, portal};
 use xilem::{AnyWidgetView, WidgetView};
 
-use xilem_extras::xilem::components::{ferris, rust_gear, svg_icon};
+use xilem_extras::xilem::components::{chevron, ferris, rust_gear, svg_icon};
 use xilem_extras::xilem::menu_items::{menu_item, separator};
 use xilem_extras::xilem::theme::Theme;
 use xilem_extras::xilem::tree::{TreeAction, TreeStyle, tree_group_with_context_menu};
@@ -42,12 +42,8 @@ fn build_tree_row(
     let text_color = theme.text();
 
     if node.is_dir {
-        // Directory row with chevron and folder icon
-        let chevron = if is_expanded {
-            icons::EXPAND_MORE
-        } else {
-            icons::CHEVRON_RIGHT
-        };
+        // Directory row with chevron (vector, no font needed) and folder icon
+        let chevron_rotation = if is_expanded { 90.0 } else { 0.0 };
 
         let folder_icon = if is_expanded {
             icons::FOLDER_OPEN
@@ -56,10 +52,12 @@ fn build_tree_row(
         };
 
         flex_row((
-            label(chevron.to_string())
-                .font(FONT_FAMILY)
-                .text_size(ICON_SIZE_SM)
-                .color(text_color),
+            svg_icon(
+                chevron()
+                    .size(ICON_SIZE_SM as f64)
+                    .rotation_degrees(chevron_rotation)
+                    .color(text_color),
+            ),
             label(folder_icon.to_string())
                 .font(FONT_FAMILY)
                 .text_size(ICON_SIZE_SM)
