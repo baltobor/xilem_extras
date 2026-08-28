@@ -237,7 +237,7 @@ impl TableWidget {
     /// content width directly from it: the sum of each column's rendered
     /// width, plus divider gaps, plus the scrollbar strip (`self.size.width`
     /// always includes it). In `Overflow` mode (the only mode this matters
-    /// for — see `table_styled`'s doc comment) the rendered width already
+    /// for — see `TableStyle::resize_mode`'s doc comment) the rendered width already
     /// equals the configured width clamped to `MIN_COLUMN_WIDTH`, so this is
     /// exact, not an approximation. Before the first rebuild reaches the
     /// widget, fall back to the last laid-out `size.width`, or

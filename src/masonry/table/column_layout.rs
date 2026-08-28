@@ -42,7 +42,7 @@ pub enum ColumnResizeMode {
 /// A column's resolved position and width, ready to place/paint. Public:
 /// it's part of `ColumnLayoutAction`'s payload, so anyone building a
 /// custom wrapper directly around `ResizableHeader` (bypassing
-/// `table_styled`) can receive it too.
+/// `table`) can receive it too.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColumnBox {
     pub key: Arc<str>,

@@ -16,7 +16,7 @@ use xilem::view::{button, checkbox, flex_col, flex_row, label};
 use xilem_extras::FlowDirection;
 use xilem_extras::masonry::table::ColumnResizeMode;
 use xilem_extras::xilem::table::{
-    SortDirection, SortOrder, TableAction, TableStyle, row_cells, table_cell, table_styled,
+    SortDirection, SortOrder, TableAction, row_cells, table, table_cell,
 };
 use xilem_extras::xilem::theme::Theme;
 use xilem_extras::xilem::traits::SelectionState;
@@ -64,22 +64,20 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
     // Column titles follow the header-language toggle independently of the
     // row content language below. Updated in place on the model-owned Vec
     // (rather than building a new temporary one) so the borrow passed to
-    // `table_styled` below lives as long as the returned view needs it to.
+    // `table` below lives as long as the returned view needs it to.
     let header_language = model.virtual_table_header_language;
     for col in model.virtual_table_columns.iter_mut() {
         col.title = column_title(&col.key, header_language).to_string();
     }
 
-    // Build the virtual table using columns from model
-    let table = table_styled(
+    // Build the virtual table using columns from model. Style knobs are
+    // chained onto the constructor as SwiftUI-style modifiers.
+    let table_view = table(
         &model.virtual_cyclists,
         &model.virtual_table_columns,
         &model.virtual_table_column_widths,
         &model.virtual_table_selection,
         &model.virtual_table_sort,
-        TableStyle::default()
-            .resize_mode(model.virtual_table_resize_mode)
-            .column_divider(model.virtual_table_column_dividers),
         // Row builder: (state, idx, is_selected, is_striped, column_widths, column_x_offsets, direction) -> RowView
         move |state: &mut AppModel,
               idx: usize,
@@ -170,13 +168,15 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
                 }
             }
         },
-    );
+    )
+    .resize_mode(model.virtual_table_resize_mode)
+    .column_divider(model.virtual_table_column_dividers);
 
-    // `table_styled` always wraps the table in its own internal `Portal`
-    // now (needed so it can compensate the scroll position when RTL's
-    // live mirror anchor shifts every column on growth) — `Overflow` mode
-    // leaves both axes free to scroll; `FixedViewport` mode constrains
-    // both, making it behave as a plain passthrough.
+    // `table` always wraps itself in its own internal `Portal` (needed so
+    // it can compensate the scroll position when RTL's live mirror anchor
+    // shifts every column on growth) — `Overflow` mode leaves both axes
+    // free to scroll; `FixedViewport` mode constrains both, making it
+    // behave as a plain passthrough.
     flex_col((
         // Header
         label("Table Demo")
@@ -190,7 +190,7 @@ pub fn table_demo(model: &mut AppModel) -> impl WidgetView<AppModel> + use<'_> {
         .text_size(12.0)
         .color(theme.text_secondary()),
         // The virtualized table
-        table,
+        table_view,
         // Info
         flex_col((flex_row((
             label(format!(

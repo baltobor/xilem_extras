@@ -837,15 +837,100 @@ where
     }
 }
 
+/// Chainable, SwiftUI-style style modifiers.
+///
+/// Every table starts from [`TableStyle::default`]; these tweak individual
+/// knobs on the builder returned by [`table`]. Use [`Self::table_style`] to
+/// replace the whole [`TableStyle`] in one call instead.
+impl<State, R, RowView, F, H, Sel> TableView<State, R, RowView, F, H, Sel>
+where
+    R: Keyed,
+{
+    /// Replaces the entire [`TableStyle`] — colors, row/header heights,
+    /// dividers, layout direction and resize mode.
+    pub fn table_style(mut self, style: TableStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    /// Sets how columns behave once their configured widths exceed the
+    /// viewport: [`ColumnResizeMode::Overflow`] (default) scrolls
+    /// horizontally, [`ColumnResizeMode::FixedViewport`] compresses columns
+    /// to keep the table inside its container.
+    pub fn resize_mode(mut self, mode: ColumnResizeMode) -> Self {
+        self.style.resize_mode = mode;
+        self
+    }
+
+    /// Enables alternating row backgrounds (zebra stripes).
+    pub fn striped(mut self, striped: bool) -> Self {
+        self.style.striped = striped;
+        self
+    }
+
+    /// Always shows a full-height divider line at every column boundary
+    /// (normally only shown while actively dragging a divider).
+    pub fn column_divider(mut self, enabled: bool) -> Self {
+        self.style.column_dividers = enabled;
+        self
+    }
+
+    /// Overrides the layout direction that would otherwise be auto-detected
+    /// from the column header titles.
+    pub fn direction(mut self, direction: FlowDirection) -> Self {
+        self.style.direction = Some(direction);
+        self
+    }
+
+    /// Sets the hover background color.
+    pub fn hover_bg(mut self, color: Color) -> Self {
+        self.style.hover_bg = color;
+        self
+    }
+
+    /// Sets the selected-row background color.
+    pub fn selected_bg(mut self, color: Color) -> Self {
+        self.style.selected_bg = color;
+        self
+    }
+
+    /// Sets the header background color.
+    pub fn header_bg(mut self, color: Color) -> Self {
+        self.style.header_bg = color;
+        self
+    }
+
+    /// Sets the row height in pixels.
+    pub fn row_height(mut self, height: f64) -> Self {
+        self.style.row_height = height;
+        self
+    }
+
+    /// Sets the header height in pixels.
+    pub fn header_height(mut self, height: f64) -> Self {
+        self.style.header_height = height;
+        self
+    }
+}
+
 /// Creates a high-performance virtualized table view for large datasets.
 ///
 /// Only renders visible rows plus a buffer zone, making it efficient
 /// for tables with thousands of rows.
 ///
+/// The table renders with [`TableStyle::default`]. Adjust its appearance
+/// and layout with the chainable, SwiftUI-style modifiers on the returned
+/// [`TableView`] — [`resize_mode`](TableView::resize_mode),
+/// [`striped`](TableView::striped),
+/// [`column_divider`](TableView::column_divider),
+/// [`hover_bg`](TableView::hover_bg), … — or swap the whole [`TableStyle`]
+/// at once with [`table_style`](TableView::table_style).
+///
 /// # Arguments
 ///
-/// * `data` - The collection of rows (must implement `Keyed`)
+/// * `data` - The collection of rows (must implement `TableRow`)
 /// * `columns` - Column definitions
+/// * `column_widths` - Per-column width overrides (resizable columns)
 /// * `selection` - Selection state
 /// * `sort_order` - Current sort state
 /// * `row_builder` - Function that builds a view for each row: `(state, index, is_selected, is_striped, column_widths, column_x_offsets, direction) -> RowView`.
@@ -859,7 +944,8 @@ where
 /// # Example
 ///
 /// ```ignore
-/// use xilem_extras::{table, column, TableAction};
+/// use xilem_extras::xilem::table::{table, column, TableAction};
+/// use xilem_extras::masonry::table::ColumnResizeMode;
 ///
 /// table(
 ///     &model.employees,
@@ -868,6 +954,7 @@ where
 ///         column("department", "Department").flex(1.5).build(),
 ///         column("salary", "Salary").fixed(100.0).build(),
 ///     ],
+///     &model.column_widths,
 ///     &model.selection,
 ///     &model.sort_order,
 ///     |state, idx, is_selected, is_striped, _widths, _x_offsets, _direction| {
@@ -883,16 +970,18 @@ where
 ///         }
 ///     },
 /// )
+/// .resize_mode(ColumnResizeMode::FixedViewport)
+/// .striped(true)
 /// ```
-pub fn table<'a, State, R, RowView, Sel, F, H>(
-    data: &'a [R],
-    columns: &'a [ColumnDef],
-    column_widths: &'a ColumnWidths,
-    selection: &'a Sel,
-    sort_order: &'a SortOrder,
+pub fn table<State, R, RowView, Sel, F, H>(
+    data: &[R],
+    columns: &[ColumnDef],
+    column_widths: &ColumnWidths,
+    selection: &Sel,
+    sort_order: &SortOrder,
     row_builder: F,
     handler: H,
-) -> impl WidgetView<State, ()> + use<'a, State, R, RowView, Sel, F, H>
+) -> TableView<State, R, RowView, F, H, Sel>
 where
     State: 'static,
     R: TableRow + Clone + 'static,
@@ -905,54 +994,7 @@ where
         + 'static,
     H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
 {
-    table_styled(
-        data,
-        columns,
-        column_widths,
-        selection,
-        sort_order,
-        TableStyle::default(),
-        row_builder,
-        handler,
-    )
-}
-
-/// Creates a high-performance virtualized table view with custom styling.
-///
-/// Same as [`table`] but accepts a [`TableStyle`] for customization.
-///
-/// In [`ColumnResizeMode::Overflow`] (the default), columns render at their
-/// configured width and are never proportionally shrunk to fit — if
-/// resizing pushes the total width past the viewport, the table scrolls
-/// horizontally via its own internal `Portal` (no external wrapping
-/// needed; the vertical axis stays constrained, since the table already
-/// handles its own vertical scrolling/virtualization internally).
-/// [`ColumnResizeMode::FixedViewport`] instead compresses columns to keep
-/// the table within its container, and that same internal `Portal` simply
-/// has both axes constrained (no scrolling, equivalent to not being
-/// wrapped at all).
-pub fn table_styled<'a, State, R, RowView, Sel, F, H>(
-    data: &'a [R],
-    columns: &'a [ColumnDef],
-    column_widths: &'a ColumnWidths,
-    selection: &'a Sel,
-    sort_order: &'a SortOrder,
-    style: TableStyle,
-    row_builder: F,
-    handler: H,
-) -> impl WidgetView<State, ()> + use<'a, State, R, RowView, Sel, F, H>
-where
-    State: 'static,
-    R: TableRow + Clone + 'static,
-    R::Key: Clone + Send + Sync + 'static,
-    RowView: WidgetView<State, ()> + 'static,
-    Sel: SelectionState<R::Key> + Clone + Send + Sync + 'static,
-    F: Fn(&mut State, usize, bool, bool, &[f64], &[f64], FlowDirection) -> RowView
-        + Send
-        + Sync
-        + 'static,
-    H: Fn(&mut State, TableAction<R::Key>) + Clone + Send + Sync + 'static,
-{
+    let style = TableStyle::default();
     // Compute sorted indices: maps visual_idx -> data_idx
     let sorted_indices = sort_order.sort_indices(data);
 

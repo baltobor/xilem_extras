@@ -19,7 +19,7 @@ pub use sort_state::{SortDescriptor, SortDirection, SortOrder};
 pub use state::TableScrollState;
 
 pub use table_cell::table_cell;
-pub use table_view::{TableAction, TableStyle, TableView, TableViewState, table, table_styled};
+pub use table_view::{TableAction, TableStyle, TableView, TableViewState, table};
 
 pub use crate::masonry::table::{
     ColumnLayoutAction, ColumnResizeAction, ResizableHeader, TableHeaderClickAction,

@@ -3,7 +3,7 @@
 
 //! Xilem view for placing row cells at exact column positions.
 //!
-//! Rows must be placed at the *absolute* `column_x_offsets` a `table_styled`
+//! Rows must be placed at the *absolute* `column_x_offsets` a `table`
 //! row builder receives, matching the header's own placement exactly — a
 //! plain sequential layout (e.g. `flex_row`) cannot make one column's
 //! growth shift a column before it, which RTL requires. `row_cells` places
